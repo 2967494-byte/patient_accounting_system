@@ -1,0 +1,127 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="flex-between mb-4">
+        <h2>Врачи</h2>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="document.getElementById('import-file').click()" class="btn"
+                style="background-color: #10b981; color: white;">
+                Импорт (Excel/CSV)
+            </button>
+            <button onclick="document.getElementById('add-doctor-modal').style.display='block'" class="btn btn-primary">
+                Добавить врача
+            </button>
+        </div>
+
+        <!-- Hidden Import Form -->
+        <form id="import-form" action="{{ url_for('admin.import_doctors') }}" method="POST"
+            enctype="multipart/form-data" style="display: none;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="file" id="import-file" name="file" accept=".csv, .xlsx"
+                onchange="document.getElementById('import-form').submit()">
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>ФИО</th>
+                <th>Специализация</th>
+                <th>Менеджер</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doctor in doctors %}
+            <tr>
+                <td>{{ doctor.id }}</td>
+                <td>{{ doctor.name }}</td>
+                <td>{{ doctor.specialization or '-' }}</td>
+                <td>{{ doctor.manager or '-' }}</td>
+                <td>
+                    <button
+                        onclick="editDoctor('{{ doctor.id }}', '{{ doctor.name }}', '{{ doctor.specialization or '' }}', '{{ doctor.manager or '' }}')"
+                        class="btn" style="background: transparent; color: #4b5563; padding: 0.25rem;">
+                        ✎
+                    </button>
+                    <button onclick="deleteDoctor('{{ doctor.id }}')" class="btn"
+                        style="background: transparent; color: #ef4444; padding: 0.25rem;">
+                        ✕
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="add-doctor-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
+    <div style="background: white; margin: 100px auto; padding: 2rem; width: 400px; border-radius: 0.5rem;">
+        <h3 id="modal-title">Добавить врача</h3>
+        <form id="doctor-form" method="POST" action="{{ url_for('admin.add_doctor') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label style="display: block; margin-bottom: 0.5rem;">ФИО</label>
+                <input type="text" name="name" required style="width: 100%; padding: 0.5rem;">
+            </div>
+            <div class="mb-4">
+                <label style="display: block; margin-bottom: 0.5rem;">Специализация</label>
+                <input type="text" name="specialization" style="width: 100%; padding: 0.5rem;">
+            </div>
+            <div class="mb-4">
+                <label style="display: block; margin-bottom: 0.5rem;">Менеджер</label>
+                <select name="manager" style="width: 100%; padding: 0.5rem;">
+                    <option value="">-- Выберите менеджера --</option>
+                    {% for manager in managers %}
+                    <option value="{{ manager.name }}">{{ manager.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" onclick="closeModal()" class="btn" style="background: #e5e7eb;">Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function closeModal() {
+        document.getElementById('add-doctor-modal').style.display = 'none';
+        document.getElementById('doctor-form').reset();
+        document.getElementById('modal-title').innerText = 'Добавить врача';
+        document.getElementById('doctor-form').action = "{{ url_for('admin.add_doctor') }}";
+    }
+
+    function editDoctor(id, name, specialization, manager) {
+        document.getElementById('add-doctor-modal').style.display = 'block';
+        document.getElementById('modal-title').innerText = 'Редактировать врача';
+        const form = document.getElementById('doctor-form');
+        form.action = `/admin/doctors/${id}/update`;
+        form.querySelector('[name="name"]').value = name;
+        form.querySelector('[name="specialization"]').value = specialization;
+        form.querySelector('[name="manager"]').value = manager;
+    }
+
+    function deleteDoctor(id) {
+        if (confirm('Вы уверены, что хотите удалить этого врача?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/doctors/${id}/delete`;
+
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrf_token';
+            csrf.value = "{{ csrf_token() }}";
+            form.appendChild(csrf);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

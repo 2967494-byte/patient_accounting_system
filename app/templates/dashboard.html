@@ -1,0 +1,113 @@
+{% extends "app_base.html" %}
+
+{% block content %}
+<main class="calendar-container">
+    <div class="calendar-header">
+        <div class="time-header-spacer"></div> <!-- Spacer for time column -->
+        <div class="nav-button prev-week nav-button-wrapper">
+            <a href="{{ url_for('main.dashboard', start_date=prev_week, center_id=current_center_id) }}"
+                class="nav-arrow">&larr;</a>
+        </div>
+        {% for date in dates %}
+        <div class="day-header">
+            <div class="day-name">{{ date.name }}</div>
+            <div class="day-date">{{ date.display_date }}</div>
+        </div>
+        {% endfor %}
+        <div class="nav-button next-week nav-button-wrapper">
+            <a href="{{ url_for('main.dashboard', start_date=next_week, center_id=current_center_id) }}"
+                class="nav-arrow">&rarr;</a>
+        </div>
+    </div>
+
+    <div class="calendar-grid">
+        <!-- Time column -->
+        <div class="time-column">
+            {% for time in time_slots %}
+            <div class="time-slot-label">
+                {{ time }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Days columns -->
+        {% for date in dates %}
+        <div class="day-column">
+            {% for time in time_slots %}
+            {% set is_special = (current_user.role in ['admin', 'lab_tech']) and (time.endswith(':15') or
+            time.endswith(':45')) %}
+            {% set is_weekend_restricted = (date.obj.weekday() >= 5) and (time < "09:00" or time> "17:30") %}
+                <div class="time-slot-cell {{ 'special-slot' if is_special else '' }} {{ 'weekend-restricted' if is_weekend_restricted else '' }}"
+                    data-date="{{ date.iso_date }}" data-time="{{ time }}">
+                    <!-- Booking content will go here -->
+                </div>
+                {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</main>
+
+<!-- Appointment Modal -->
+<div id="appointment-modal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modal-title">Новая запись</h2>
+        <form id="appointment-form">
+            <input type="hidden" id="appt-id">
+            <input type="hidden" id="appt-date">
+            <input type="hidden" id="appt-time">
+
+            <div class="form-group">
+                <label>ФИО Пациента</label>
+                <input type="text" id="patient-name" required>
+            </div>
+            <div class="form-group">
+                <label>Телефон</label>
+                <input type="tel" id="patient-phone" required placeholder="+7 (___) ___ - __ - __">
+            </div>
+            <div class="form-group">
+                <label>Врач</label>
+                <input type="text" id="doctor" placeholder="ФИО врача (необязательно)">
+            </div>
+            <div class="form-group">
+                <label>Услуга</label>
+                <input type="text" id="service" list="services-list" required placeholder="Выберите услугу">
+                <datalist id="services-list">
+                    {% for service in services %}
+                    <option value="{{ service.name }}">
+                        {% endfor %}
+                </datalist>
+            </div>
+
+            <div class="form-item-info hidden" id="author-info"></div>
+
+            <div style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">
+                Автор: <span style="font-weight: 500; color: #1f2937;">{{ current_user.username }}</span>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
+                <button type="submit" class="btn-save">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const phoneInput = document.getElementById('patient-phone');
+
+        phoneInput.addEventListener('input', function (e) {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+            if (!x[2]) {
+                e.target.value = x[1] ? '+7' : '';
+            } else {
+                e.target.value = '+7 (' + x[2] + (x[3] ? ') ' + x[3] : '') + (x[4] ? ' - ' + x[4] : '') + (x[5] ? ' - ' + x[5] : '');
+            }
+        });
+
+        // Initialize if empty but focused (optional, maybe not needed if placeholder is there)
+    });
+</script>
+{% endblock %}

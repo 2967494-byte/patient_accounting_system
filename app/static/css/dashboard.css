@@ -1,0 +1,581 @@
+:root {
+    --primary-color: #4f46e5;
+    --bg-color: #f3f4f6;
+    --card-bg: #ffffff;
+    --text-main: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+    --slot-height: 40px;
+}
+
+html,
+body {
+    height: 100%;
+    /* overflow: hidden;  <-- REMOVED to allow scroll */
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    /* Changed from height: 100% to min-height */
+    /* overflow: hidden; <-- REMOVED */
+}
+
+.top-bar {
+    background: var(--card-bg);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+    /* Never shrink the header */
+}
+
+.top-bar h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.user-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.btn-logout {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* Main Navigation (Calendar / Journal) */
+.main-nav {
+    display: flex;
+    gap: 1.5rem;
+    /* margin-left removed */
+}
+
+.nav-tab {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.nav-tab:hover {
+    color: var(--text-main);
+}
+
+.nav-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+
+.calendar-container {
+    flex: 1 1 0;
+    /* Grow, Shrink, Start from 0 height to force scroll */
+    overflow-y: auto;
+    padding: 1rem;
+    position: relative;
+    /* Context for sticky */
+    /* display: flex; Removed to rely on standard block flow scroll behavior */
+    /* flex-direction: column; */
+}
+
+/* Calendar Header (Days) */
+.calendar-header {
+    display: flex;
+    padding-bottom: 0.5rem;
+    position: sticky;
+    top: 0;
+    background: var(--bg-color);
+    z-index: 10;
+}
+
+.time-header-spacer {
+    width: 60px;
+    /* Matches time-column width */
+    flex-shrink: 0;
+    border-right: 1px solid transparent;
+    /* Align with grid */
+}
+
+.day-header {
+    flex: 1 1 0;
+    min-width: 0;
+    /* Critical for truncation in flex container */
+    text-align: center;
+    font-weight: 600;
+    padding: 0.5rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-left: none;
+    margin-right: -1px;
+    /* Overlap borders */
+}
+
+.day-header:first-child {
+    border-top-left-radius: 8px;
+}
+
+.day-header:last-child {
+    border-top-right-radius: 8px;
+}
+
+.day-name {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.day-date {
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+/* Calendar Grid */
+.calendar-grid {
+    display: flex;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.time-column {
+    width: 60px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-color);
+    background: #f9fafb;
+}
+
+.time-slot-label {
+    height: var(--slot-height);
+    display: flex;
+    align-items: center;
+    /* Center vertically relative to the slot? No, times usually sit on the line or middle. */
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    box-sizing: border-box;
+}
+
+.day-column {
+    flex: 1 1 0;
+    min-width: 0;
+    /* Critical for truncation in flex container */
+    border-right: 1px solid var(--border-color);
+    /* Min-width to prevent squishing on very small screens? User said "fit screen width" so let it shrink/grow. */
+}
+
+.day-header:first-child {
+    border-top-left-radius: 8px;
+}
+
+.day-header:last-child {
+    border-top-right-radius: 8px;
+}
+
+.day-name {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.day-date {
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+/* Calendar Grid */
+.calendar-grid {
+    display: flex;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.time-column {
+    width: 60px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-color);
+    background: #f9fafb;
+}
+
+.time-slot-label {
+    height: var(--slot-height);
+    display: flex;
+    align-items: center;
+    /* Center vertically relative to the slot? No, times usually sit on the line or middle. */
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    box-sizing: border-box;
+}
+
+.day-column {
+    flex: 1;
+    border-right: 1px solid var(--border-color);
+    /* Min-width to prevent squishing on very small screens? User said "fit screen width" so let it shrink/grow. */
+}
+
+.day-column:last-child {
+    border-right: none;
+}
+
+.time-slot-cell {
+    height: var(--slot-height);
+    border-bottom: 1px solid var(--border-color);
+    box-sizing: border-box;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.time-slot-cell:hover {
+    background-color: #eef2ff;
+    /* Light indigo hover */
+}
+
+/* Hide scrollbar for cleaner look if needed, but let's keep it standard */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ... existing styles ... */
+
+.time-slot-cell.booked {
+    background-color: #fdf2f8;
+    /* Pink-50 */
+    border-left: 3px solid #db2777;
+    /* Pink-600 */
+}
+
+.time-slot-cell.restricted {
+    cursor: not-allowed;
+    background-color: #fce7f3;
+    /* Pink-100, slightly darker/same */
+    /* Keep border */
+}
+
+.time-slot-cell.special-slot {
+    background-color: #fff1f2;
+    /* Rose-50, very pale pink */
+}
+
+.appt-content {
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.appt-name {
+    font-weight: 600;
+    color: #9d174d;
+    /* Pink-800 */
+}
+
+.time-slot-cell.weekend-restricted {
+    background: #e5e7eb !important;
+    /* Solid light grey, override special-slot */
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 1;
+    /* Reset opacity ensuring full cover */
+}
+
+.appt-service {
+    color: #be185d;
+    /* Pink-700 */
+}
+
+/* Dashboard specific styles */
+.header-actions {
+    display: flex;
+    align-items: center;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s, color 0.2s;
+    margin-right: 0.5rem;
+}
+
+.btn-icon:hover {
+    background-color: var(--bg-color);
+    color: var(--primary-color);
+}
+
+.btn-admin {
+    margin-right: 1rem;
+}
+
+.profile-link {
+    color: var(--text-main);
+    text-decoration: none;
+    margin-right: 1rem;
+    font-weight: 600;
+}
+
+.tabs-container {
+    padding: 1rem 2rem 0;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    gap: 2rem;
+}
+
+.tab-link {
+    text-decoration: none;
+    padding-bottom: 0.75rem;
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.tab-link:hover {
+    color: var(--primary-color);
+}
+
+.tab-link.active {
+    color: #4f46e5;
+    border-bottom-color: #4f46e5;
+}
+
+.nav-button-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5rem;
+}
+
+.nav-arrow {
+    text-decoration: none;
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    line-height: 1;
+}
+
+.nav-arrow:hover {
+    opacity: 0.8;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    color: var(--text-main);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+    /* Fix width overflow */
+}
+
+.form-item-info {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f3f4f6;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-size: 0.875rem;
+}
+
+.btn-cancel {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.btn-save {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-save:hover {
+    background-color: #4338ca;
+}
+
+/* Search Modal Styles */
+.search-modal-content {
+    max-width: 600px;
+}
+
+.search-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.search-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.btn-close-search {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+    flex: 1;
+    /* Take available width */
+}
+
+/* Ensure button height matches input */
+.search-bar button {
+    white-space: nowrap;
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+.search-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-item:last-child {
+    border-bottom: none;
+}
+
+.search-item-info {
+    flex: 1;
+}
+
+.search-patient {
+    font-weight: 600;
+    color: var(--text-main);
+    display: block;
+}
+
+.search-details {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.no-results {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+}

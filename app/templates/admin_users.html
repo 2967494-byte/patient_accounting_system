@@ -1,0 +1,197 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="flex-between mb-4">
+        <h2>Пользователи</h2>
+        <div class="filters" style="display: flex; gap: 10px; align-items: center;">
+            <button onclick="document.getElementById('addUserModal').style.display='block'" class="btn btn-primary"
+                style="padding: 0.5rem 1rem;">+ Добавить</button>
+            <form action="{{ url_for('admin.users') }}" method="GET"
+                style="display: flex; gap: 10px; align-items: center; margin: 0;">
+                <select name="role" onchange="this.form.submit()"
+                    style="padding: 0.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db;">
+                    <option value="">Все роли</option>
+                    <option value="admin" {% if current_role=='admin' %}selected{% endif %}>Админ</option>
+                    <option value="org" {% if current_role=='org' %}selected{% endif %}>Организация</option>
+                    <option value="lab_tech" {% if current_role=='lab_tech' %}selected{% endif %}>Лаборант</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Имя пользователя</th>
+                <th>Email</th>
+                <th>Город</th>
+                <th>Центр</th>
+                <th>Роль</th>
+                <th>Статус</th>
+                <th>Действия</th>
+                <th>Дата регистрации</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.city.name if user.city else '-' }}</td>
+                <td>
+                    <form action="{{ url_for('admin.update_user_center', user_id=user.id) }}" method="POST"
+                        style="margin: 0;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="center_id" onchange="this.form.submit()"
+                            style="padding: 0.25rem; border-radius: 0.25rem; border: 1px solid #d1d5db; max-width: 150px;">
+                            <option value="">-- Нет --</option>
+                            {% for center in centers %}
+                            <option value="{{ center.id }}" {% if user.center_id==center.id %}selected{% endif %}>{{
+                                center.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </td>
+                <td>
+                    <form action="{{ url_for('admin.update_user_role', user_id=user.id) }}" method="POST"
+                        style="margin: 0;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="role" onchange="this.form.submit()"
+                            style="padding: 0.25rem; border-radius: 0.25rem; border: 1px solid #d1d5db;">
+                            <option value="org" {% if user.role=='org' %}selected{% endif %}>Организация</option>
+                            <option value="lab_tech" {% if user.role=='lab_tech' %}selected{% endif %}>Лаборант</option>
+                            <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Админ</option>
+                        </select>
+                    </form>
+                </td>
+                <td>
+                    {% if user.is_blocked %}
+                    <span style="color: red; font-weight: bold;">Заблокирован</span>
+                    {% elif user.is_confirmed %}
+                    <span style="color: green;">Подтвержден</span>
+                    {% else %}
+                    <span style="color: orange;">Не подтвержден</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        {% if not user.is_confirmed %}
+                        <form action="{{ url_for('admin.confirm_user', user_id=user.id) }}" method="POST"
+                            style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" title="Подтвердить"
+                                style="background: none; border: none; cursor: pointer; color: green; font-size: 1.2rem;">
+                                &#10004; <!-- Checkmark -->
+                            </button>
+                        </form>
+                        {% endif %}
+                        <!-- Block/Unblock Actions -->
+                        {% if not user.role == 'admin' %}
+                        {% if user.is_blocked %}
+                        <form action="{{ url_for('admin.unblock_user', user_id=user.id) }}" method="POST"
+                            style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" title="Разблокировать"
+                                style="background: none; border: none; cursor: pointer; color: green; font-size: 1.2rem;">
+                                🔓
+                            </button>
+                        </form>
+                        {% else %}
+                        <form action="{{ url_for('admin.block_user', user_id=user.id) }}" method="POST"
+                            style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" title="Заблокировать"
+                                style="background: none; border: none; cursor: pointer; color: red; font-size: 1.2rem;">
+                                🔒
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </td>
+                <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="modal"
+    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content"
+        style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 50%; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>Добавить пользователя</h2>
+            <span onclick="document.getElementById('addUserModal').style.display='none'"
+                style="cursor: pointer; font-size: 24px;">&times;</span>
+        </div>
+        <form action="{{ url_for('admin.add_user') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="margin-bottom: 15px;">
+                <label>Имя пользователя:</label>
+                <input type="text" name="username" required placeholder="ИвановИИ"
+                    style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Email:</label>
+                <input type="email" name="email" required style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Пароль:</label>
+                <input type="password" name="password" required style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Роль:</label>
+                <select name="role" required style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="org">Организация</option>
+                    <option value="lab_tech">Лаборант</option>
+                    <option value="admin">Администратор</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Организация:</label>
+                <select name="organization_id" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="">-- Нет --</option>
+                    {% for org in organizations %}
+                    <option value="{{ org.id }}">{{ org.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Город (для лаборантов/орг):</label>
+                <select name="city_id" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="">-- Нет --</option>
+                    {% for city in cities %}
+                    <option value="{{ city.id }}">{{ city.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Центр (для лаборантов):</label>
+                <select name="center_id" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="">-- Нет --</option>
+                    {% for center in centers %}
+                    <option value="{{ center.id }}">{{ center.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Создать</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Close modal when clicking outside
+    window.onclick = function (event) {
+        var modal = document.getElementById('addUserModal');
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+</script>
+
+{% endblock %}

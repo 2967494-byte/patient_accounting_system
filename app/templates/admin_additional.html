@@ -1,0 +1,121 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <h2>Дополнительно</h2>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+
+    <!-- Managers Section -->
+    <div class="card">
+        <h3 class="mb-4">Менеджеры</h3>
+
+        <!-- Add Manager Form -->
+        <form action="{{ url_for('admin.add_manager') }}" method="POST" class="mb-4"
+            style="display: flex; gap: 0.5rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="text" name="name" placeholder="Имя менеджера" class="form-input"
+                style="flex: 1; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;" required>
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+
+        <!-- Managers Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for manager in managers %}
+                <tr>
+                    <td>{{ manager.id }}</td>
+                    <td>
+                        <form action="{{ url_for('admin.update_manager', id=manager.id) }}" method="POST"
+                            style="display: flex; gap: 0.5rem;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="text" name="name" value="{{ manager.name }}"
+                                style="border: 1px solid #e5e7eb; border-radius: 0.25rem; padding: 0.25rem; width: 100%;"
+                                required>
+                            <button type="submit" class="btn"
+                                style="background: transparent; color: #4f46e5; padding: 0.25rem;">💾</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.delete_manager', id=manager.id) }}" method="POST"
+                            onsubmit="return confirm('Вы уверены?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit" class="btn"
+                                style="background: transparent; color: #ef4444; padding: 0.25rem;">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; color: #9ca3af; padding: 1rem;">Нет менеджеров</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Payment Methods Section -->
+    <div class="card">
+        <h3 class="mb-4">Способы Оплаты</h3>
+
+        <!-- Add Payment Method Form -->
+        <form action="{{ url_for('admin.add_payment_method') }}" method="POST" class="mb-4"
+            style="display: flex; gap: 0.5rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="text" name="name" placeholder="Название способа" class="form-input"
+                style="flex: 1; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;" required>
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+
+        <!-- Payment Methods Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Название</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for method in payment_methods %}
+                <tr>
+                    <td>{{ method.id }}</td>
+                    <td>
+                        <form action="{{ url_for('admin.update_payment_method', id=method.id) }}" method="POST"
+                            style="display: flex; gap: 0.5rem;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="text" name="name" value="{{ method.name }}"
+                                style="border: 1px solid #e5e7eb; border-radius: 0.25rem; padding: 0.25rem; width: 100%;"
+                                required>
+                            <button type="submit" class="btn"
+                                style="background: transparent; color: #4f46e5; padding: 0.25rem;">💾</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.delete_payment_method', id=method.id) }}" method="POST"
+                            onsubmit="return confirm('Вы уверены?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit" class="btn"
+                                style="background: transparent; color: #ef4444; padding: 0.25rem;">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; color: #9ca3af; padding: 1rem;">Нет способов оплаты</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}

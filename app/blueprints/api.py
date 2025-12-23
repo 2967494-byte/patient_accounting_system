@@ -1,0 +1,244 @@
+from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
+from app.extensions import db, csrf
+from app.models import Appointment, Service, AdditionalService
+from datetime import datetime
+
+api = Blueprint('api', __name__)
+
+@api.route('/appointments', methods=['POST'])
+@login_required
+def create_appointment():
+    try:
+        data = request.get_json()
+        
+        # Validation
+        required = ['patient_name', 'service', 'date', 'time']
+        for field in required:
+            if not data.get(field):
+                return jsonify({'error': f'Field {field} is required'}), 400
+
+        # Parse date
+        try:
+            appt_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+
+        # Create appointment
+        appointment = Appointment(
+            patient_name=data['patient_name'],
+            patient_phone=data.get('patient_phone', '-'),
+            doctor=data.get('doctor', 'Unknown'),
+            service=data['service'],
+            date=appt_date,
+            time=data['time'],
+            author_id=current_user.id
+        )
+        
+        if 'clinic_id' in data and data['clinic_id']:
+             appointment.clinic_id = data['clinic_id']
+
+        if 'doctor_id' in data and data['doctor_id']:
+             appointment.doctor_id = data['doctor_id']
+
+        if 'center_id' in data and data['center_id']:
+             appointment.center_id = data['center_id']
+
+        if 'payment_method_id' in data and data['payment_method_id']:
+             appointment.payment_method_id = data['payment_method_id']
+
+        if 'contract_number' in data: appointment.contract_number = data['contract_number']
+        if 'quantity' in data and data['quantity']: appointment.quantity = int(data['quantity'])
+        if 'cost' in data and data['cost']: appointment.cost = float(data['cost'])
+        if 'discount' in data and data['discount']: appointment.discount = float(data['discount'])
+        if 'discount' in data and data['discount']: appointment.discount = float(data['discount'])
+        if 'comment' in data: appointment.comment = data['comment']
+        if 'is_child' in data: appointment.is_child = bool(data['is_child'])
+        # Note: manager_id logic might be needed if tracking specific manager separate from clinic
+
+        if 'additional_service' in data and data['additional_service']:
+            # Expecting ID
+            add_svc = AdditionalService.query.get(data['additional_service'])
+            if add_svc:
+                appointment.additional_services.append(add_svc)
+                if 'additional_service_quantity' in data:
+                    appointment.additional_service_quantity = int(data['additional_service_quantity'])
+
+        db.session.add(appointment)
+        db.session.commit()
+
+        return jsonify(appointment.to_dict()), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/appointments', methods=['GET'])
+@login_required
+def get_appointments():
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    clinic_id_str = request.args.get('clinic_id')
+
+    query = Appointment.query
+
+    if clinic_id_str:
+         try:
+             query = query.filter_by(clinic_id=int(clinic_id_str))
+         except ValueError:
+             pass
+    
+    center_id_str = request.args.get('center_id')
+    
+    # Enforce center restriction for Lab Techs
+    if current_user.role == 'lab_tech':
+        if current_user.center_id:
+            query = query.filter_by(center_id=current_user.center_id)
+        else:
+            # If no center assigned, return empty or error? Empty seems safer.
+            query = query.filter(db.false()) 
+    elif center_id_str and center_id_str != 'null':
+         try:
+             query = query.filter_by(center_id=int(center_id_str))
+         except ValueError:
+             pass
+    
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        query = query.filter(Appointment.date >= start_date)
+    
+    if end_date_str:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        query = query.filter(Appointment.date <= end_date)
+
+    appointments = query.all()
+    results = []
+    for appt in appointments:
+        data = appt.to_dict()
+        # Org restriction: If role is 'org' and not author -> hide details
+        if current_user.role == 'org' and appt.author_id != current_user.id:
+            data['patient_name'] = ""
+            data['patient_phone'] = ""
+            data['doctor'] = ""
+            data['service'] = ""
+            data['is_restricted'] = True
+        else:
+            data['is_restricted'] = False
+        results.append(data)
+
+    return jsonify(results)
+
+@api.route('/appointments/<int:id>', methods=['PUT'])
+@login_required
+def update_appointment(id):
+    appointment = Appointment.query.get_or_404(id)
+    
+    data = request.get_json()
+    
+    if 'patient_name' in data: appointment.patient_name = data['patient_name']
+    if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
+    if 'doctor' in data: appointment.doctor = data['doctor']
+    if 'service' in data: appointment.service = data['service']
+    
+    if 'contract_number' in data: appointment.contract_number = data['contract_number']
+    if 'clinic_id' in data: appointment.clinic_id = data['clinic_id']
+    if 'quantity' in data: appointment.quantity = int(data['quantity'])
+    if 'cost' in data: appointment.cost = float(data['cost'])
+    if 'payment_method_id' in data: appointment.payment_method_id = data['payment_method_id']
+    if 'discount' in data: appointment.discount = float(data['discount'])
+    if 'discount' in data: appointment.discount = float(data['discount'])
+    if 'comment' in data: appointment.comment = data['comment']
+    if 'is_child' in data: appointment.is_child = bool(data['is_child'])
+
+    # Handle Additional Service update (This might be tricky if multiple, but assuming replacement or addition for now? 
+    # Current UI acts like single selection for the row. Simple approach: clear and set.)
+    if 'additional_service' in data:
+        appointment.additional_services = [] # Clear existing
+        if data['additional_service']:
+            add_svc = AdditionalService.query.get(data['additional_service'])
+            if add_svc:
+                appointment.additional_services.append(add_svc)
+                if 'additional_service_quantity' in data:
+                    appointment.additional_service_quantity = int(data['additional_service_quantity'])
+        else:
+             # If clearing service, also clear quantity (or set to default 1)
+             appointment.additional_service_quantity = 1
+    
+    # We do not allow changing date/time here for now to keep it simple, 
+    # unless moving drag-n-drop is implemented later.
+    
+    db.session.commit()
+    return jsonify(appointment.to_dict())
+
+@api.route('/appointments/<int:id>', methods=['DELETE'])
+@login_required
+def delete_appointment(id):
+    appointment = Appointment.query.get_or_404(id)
+    
+    # Ownership/Role check? (Assuming Org admins can delete their own orgs data, Admin everyone)
+    if current_user.role == 'org' and appointment.author_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        db.session.delete(appointment)
+        db.session.commit()
+        return jsonify({'message': 'Deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/search/patients', methods=['GET'])
+@login_required
+def search_patients():
+    query_str = request.args.get('q', '').strip()
+    if not query_str:
+        return jsonify([])
+
+    # Search by patient name (case insensitive)
+    appointments = Appointment.query.filter(
+        Appointment.patient_name.ilike(f'%{query_str}%')
+    ).order_by(Appointment.date.desc(), Appointment.time.desc()).limit(20).all()
+
+    results = []
+    for appt in appointments:
+         # Check restrictions
+        if current_user.role == 'org' and appt.author_id != current_user.id:
+            continue # Don't show results for other orgs if restricted
+        
+        data = appt.to_dict()
+        data['clinic_name'] = appt.clinic.name if appt.clinic else "Unknown"
+        results.append(data)
+
+    return jsonify(results)
+
+@api.route('/service-price/<int:service_id>', methods=['GET'])
+@login_required
+def get_service_price(service_id):
+    service = Service.query.get_or_404(service_id)
+    date_str = request.args.get('date')
+    if date_str:
+        try:
+            query_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            query_date = datetime.now().date()
+    else:
+        query_date = datetime.now().date()
+        
+    price = service.get_price(query_date)
+    return jsonify({'price': price})
+
+@api.route('/additional-service-price/<int:service_id>', methods=['GET'])
+@login_required
+def get_additional_service_price(service_id):
+    service = AdditionalService.query.get_or_404(service_id)
+    date_str = request.args.get('date')
+    if date_str:
+        try:
+            query_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            query_date = datetime.now().date()
+    else:
+        query_date = datetime.now().date()
+        
+    price = service.get_price(query_date)
+    return jsonify({'price': price})
