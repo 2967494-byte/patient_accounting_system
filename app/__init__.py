@@ -1,6 +1,10 @@
 import os
 from flask import Flask, render_template
 from .extensions import db, migrate, login_manager, csrf
+from .telegram_bot import telegram_bot
+import atexit
+import sys
+
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -14,6 +18,8 @@ def create_app(test_config=None):
     migrate.init_app(app, db) 
     login_manager.init_app(app)
     csrf.init_app(app)
+    telegram_bot.init_app(app)
+
     
     # Login manager settings
     login_manager.login_view = 'auth.login'
@@ -48,4 +54,25 @@ def create_app(test_config=None):
 
 
 
+    # Error Handler
+    @app.errorhandler(500)
+    def internal_error(error):
+        telegram_bot.send_error_notification(error)
+        return render_template('500.html'), 500 # Assuming 500.html exists or use generic error
+
+    # Startup Notification (only if not in debug reload mode or use lock)
+    # Simple check to avoid double send in dev reloader:
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+         with app.app_context():
+             telegram_bot.send_startup_notification()
+
+    # Shutdown Notification
+    def on_exit():
+        # Context might be needed depending on implementation, but requests usually creates one new.
+        # However, at exit, app context might be gone. TelegramBot.send_message uses internal valid checks.
+        telegram_bot.send_shutdown_notification()
+    
+    atexit.register(on_exit)
+
     return app
+

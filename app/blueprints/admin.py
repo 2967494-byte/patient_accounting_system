@@ -2,7 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import User, Location, Doctor, Service, AdditionalService, ServicePrice, AdditionalServicePrice, Clinic, Manager, PaymentMethod, Appointment, Organization
+from app.telegram_bot import telegram_bot
+import psutil
 from werkzeug.security import generate_password_hash
+
 from datetime import datetime
 import csv
 import openpyxl
@@ -95,6 +98,50 @@ def require_admin():
 @admin.route('/')
 def index():
     return redirect(url_for('admin.users'))
+
+@admin.route('/monitoring')
+@login_required
+def monitoring():
+    # Database Status
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        db_status = True
+    except Exception:
+        db_status = False
+    
+    # Bot Status
+    bot_configured = bool(telegram_bot.token and telegram_bot.chat_id)
+    
+    # System Stats
+    cpu_percent = psutil.cpu_percent(interval=None) # Non-blocking
+    
+    mem = psutil.virtual_memory()
+    ram_total_gb = round(mem.total / (1024**3), 2)
+    ram_used_gb = round(mem.used / (1024**3), 2)
+    ram_percent = mem.percent
+    
+    disk = psutil.disk_usage('/')
+    disk_total_gb = round(disk.total / (1024**3), 2)
+    disk_free_gb = round(disk.free / (1024**3), 2)
+    disk_percent = disk.percent
+    
+    return render_template('admin_monitoring.html', 
+                           db_status=db_status,
+                           bot_configured=bot_configured,
+                           cpu_percent=cpu_percent,
+                           ram_total_gb=ram_total_gb,
+                           ram_used_gb=ram_used_gb,
+                           ram_percent=ram_percent,
+                           disk_total_gb=disk_total_gb,
+                           disk_free_gb=disk_free_gb,
+                           disk_percent=disk_percent
+                           )
+
+@admin.route('/monitoring/test-message', methods=['POST'])
+@login_required
+def test_telegram_message():
+    success = telegram_bot.send_message("✅ <b>ТЕСТОВОЕ СООБЩЕНИЕ</b>\n\nБот работает корректно!")
+    return jsonify({'success': success})
 
 @admin.route('/users/add', methods=['POST'])
 def add_user():

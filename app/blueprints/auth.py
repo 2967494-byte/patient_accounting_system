@@ -79,6 +79,11 @@ def register():
         db.session.commit()
         
         flash('Поздравляем, вы успешно зарегистрировались!', 'success')
+        
+        # Notify Telegram
+        from app.telegram_bot import telegram_bot
+        telegram_bot.send_new_user_notification(user)
+        
         return redirect(url_for('auth.login'))
     
     # If validation fails, we need to show errors. 

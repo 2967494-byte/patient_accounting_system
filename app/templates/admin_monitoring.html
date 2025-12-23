@@ -1,0 +1,177 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="admin-header">
+    <h2>Системный мониторинг</h2>
+    <div class="header-actions">
+        <button onclick="sendTestMessage()" class="btn btn-primary">Тестовое сообщение в Telegram</button>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Status Cards -->
+    <div class="card status-card">
+        <h3>Система</h3>
+        <div class="status-indicator online">
+            <span class="status-dot"></span> Online
+        </div>
+    </div>
+
+    <div class="card status-card">
+        <h3>База данных</h3>
+        <div class="status-indicator {% if db_status %}online{% else %}offline{% endif %}">
+            <span class="status-dot"></span> {{ 'Подключено' if db_status else 'Ошибка' }}
+        </div>
+    </div>
+
+    <div class="card status-card">
+        <h3>Telegram Бот</h3>
+        <div class="status-indicator {% if bot_configured %}online{% else %}warning{% endif %}">
+            <span class="status-dot"></span> {{ 'Настроен' if bot_configured else 'Не настроен' }}
+        </div>
+    </div>
+</div>
+
+<div class="resources-grid"
+    style="margin-top: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+    <!-- CPU -->
+    <div class="card resource-card">
+        <h3>CPU</h3>
+        <div class="progress-container">
+            <div class="progress-bar"
+                style="width: {{ cpu_percent }}%; background-color: {% if cpu_percent > 80 %}#ef4444{% elif cpu_percent > 50 %}#f59e0b{% else %}#10b981{% endif %};">
+            </div>
+        </div>
+        <div class="resource-stats">
+            <span>Использование: {{ cpu_percent }}%</span>
+        </div>
+    </div>
+
+    <!-- RAM -->
+    <div class="card resource-card">
+        <h3>RAM</h3>
+        <div class="progress-container">
+            <div class="progress-bar"
+                style="width: {{ ram_percent }}%; background-color: {% if ram_percent > 80 %}#ef4444{% elif ram_percent > 50 %}#f59e0b{% else %}#10b981{% endif %};">
+            </div>
+        </div>
+        <div class="resource-stats">
+            <span>Всего: {{ ram_total_gb }} GB</span>
+            <span>Занято: {{ ram_used_gb }} GB ({{ ram_percent }}%)</span>
+        </div>
+    </div>
+
+    <!-- Disk -->
+    <div class="card resource-card">
+        <h3>Диск (/)</h3>
+        <div class="progress-container">
+            <div class="progress-bar"
+                style="width: {{ disk_percent }}%; background-color: {% if disk_percent > 80 %}#ef4444{% elif disk_percent > 50 %}#f59e0b{% else %}#10b981{% endif %};">
+            </div>
+        </div>
+        <div class="resource-stats">
+            <span>Всего: {{ disk_total_gb }} GB</span>
+            <span>Свободно: {{ disk_free_gb }} GB</span>
+            <span>Занято: {{ disk_percent }}%</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+    }
+
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        margin-top: 0.5rem;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .online .status-dot {
+        background-color: #10b981;
+    }
+
+    .status-indicator.online {
+        color: #065f46;
+    }
+
+    .offline .status-dot {
+        background-color: #ef4444;
+    }
+
+    .status-indicator.offline {
+        color: #991b1b;
+    }
+
+    .warning .status-dot {
+        background-color: #f59e0b;
+    }
+
+    .status-indicator.warning {
+        color: #92400e;
+    }
+
+    .progress-container {
+        height: 1.5rem;
+        background-color: #e5e7eb;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+
+    .progress-bar {
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+
+    .resource-stats {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+</style>
+
+<script>
+    async function sendTestMessage() {
+        if (!confirm('Отправить тестовое сообщение?')) return;
+
+        try {
+            const response = await fetch('{{ url_for("admin.test_telegram_message") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Сообщение отправлено!');
+            } else {
+                alert('Ошибка отправки. Проверьте логи.');
+            }
+        } catch (e) {
+            alert('Ошибка сети');
+        }
+    }
+</script>
+{% endblock %}
