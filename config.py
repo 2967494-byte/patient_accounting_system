@@ -1,18 +1,23 @@
 import os
 from dotenv import load_dotenv
 
+# Загружаем переменные окружения
 load_dotenv()
 
-
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-patient-system'
-
-    # Environment determination
-    is_production = os.environ.get('DATABASE_URL') is not None
+    # Безопасность - всегда через переменные окружения
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-this-in-production'
+    
+    # Определяем среду по hostname (универсально)
+    import socket
+    hostname = socket.gethostname()
+    is_production = hostname == 'maryam'  # ваш продакшен сервер
     
     if is_production:
-        database_url = os.environ.get('DATABASE_URL', '')
+        # Продакшен на сервере maryam
+        database_url = os.environ.get('DATABASE_URL') or 'postgresql+psycopg://patient_user:strong_password_123@localhost:5432/patient_accounting'
         
+        # Корректируем URL если нужно
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
         elif database_url.startswith("postgresql://"):
@@ -20,13 +25,14 @@ class Config:
         
         SQLALCHEMY_DATABASE_URI = database_url
         DEBUG = False
-        UPLOAD_FOLDER = '/opt/patient_accounting_system/app/static/uploads'
+        # УНИВЕРСАЛЬНЫЙ путь для продакшена (работает на вашем сервере)
+        UPLOAD_FOLDER = '/home/patient/patient_accounting_system/app/static/uploads'
         
     else:
-        # Local development
-        # Using a distinct database name for the new system
+        # Локальная разработка (любой другой сервер)
         SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg://postgres:postgres@localhost:5432/patient_accounting'
         DEBUG = True
+        # УНИВЕРСАЛЬНЫЙ путь для разработки
         UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app', 'static', 'uploads')
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -36,5 +42,10 @@ class Config:
     # Telegram Bot
     TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
     TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
-
-    # Add other configurations as needed (Mail, etc.)
+    
+    # Создаем папку uploads если не существует
+    if not os.path.exists(UPLOAD_FOLDER):
+        try:
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        except Exception as e:
+            print(f"Warning: Could not create upload folder: {e}")
