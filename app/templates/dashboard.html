@@ -85,11 +85,52 @@
             </div>
 
             <div class="modal-actions">
-                <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
-                <button type="submit" class="btn-save">Сохранить</button>
+                <button type="button" id="btn-delete" class="btn-delete hidden"
+                    onclick="deleteAppointment()">Удалить</button>
+                <div class="right-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
+                    <button type="submit" class="btn-save">Сохранить</button>
+                </div>
             </div>
         </form>
     </div>
+</div>
+
+<style>
+    .btn-delete {
+        background-color: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        margin-right: auto;
+        /* Push to left */
+    }
+
+    .btn-delete:hover {
+        background-color: #dc2626;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: space-between;
+        /* Allow spread */
+        align-items: center;
+        margin-top: 1.5rem;
+    }
+
+    .right-actions {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+</style>
+</form>
+</div>
 </div>
 {% endblock %}
 

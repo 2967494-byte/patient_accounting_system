@@ -158,27 +158,14 @@ function openCreateModal(date, time) {
 
     const modal = document.getElementById('appointment-modal');
     modal.classList.remove('hidden');
+
+    // Hide delete button for new
+    const btnDelete = document.getElementById('btn-delete');
+    if (btnDelete) btnDelete.classList.add('hidden');
 }
 
 async function openEditModal(id) {
-    // Fetch details? Or use data stored in cell? 
-    // Ideally fetch fresh data or store all props in cell. Let's rely on cell data update or separate fetch.
-    // For simplicity, let's just use what we have or re-fetch. 
-    // Better to re-fetch or store full object.
-    // Let's implement fetch by ID or filter from loaded list. 
-    // Since we don't have get-by-id easily exposed without extra call, let's rely on refetching all or just simple filter if we had them in memory.
-    // Actually, let's just make the cell click provide the data if we attached it to the element during render.
-
-    // We didn't add data attributes for all fields. Let's fetch local "cache" or just re-fetch list is expensive.
-    // Quickest way: attributes on the cell when rendering.
-
-    // Wait, the requirement says "При повторном нажатии в модальном окне показывается информация и кнопка - редактировать".
-    // Does this mean read-only first? "показывается информация и кнопка - редактировать".
-    // I entered "Edit Modal" directly. 
-    // Let's make it open in "View/Edit" mode.
-
     try {
-        // We will simple load the data from attributes which we will populate in fetchAppointments
         const cell = document.querySelector(`.time-slot-cell[data-id="${id}"]`);
         if (!cell) return;
 
@@ -197,6 +184,10 @@ async function openEditModal(id) {
         authorDiv.textContent = `Автор записи: ${author}`;
         authorDiv.classList.remove('hidden');
 
+        // Show Delete Button
+        const btnDelete = document.getElementById('btn-delete');
+        if (btnDelete) btnDelete.classList.remove('hidden');
+
         document.getElementById('appointment-modal').classList.remove('hidden');
     } catch (e) {
         console.error(e);
@@ -207,19 +198,51 @@ function closeModal() {
     document.getElementById('appointment-modal').classList.add('hidden');
 }
 
+async function deleteAppointment() {
+    const id = document.getElementById('appt-id').value;
+    if (!id) return;
+
+    if (!confirm('Вы уверены, что хотите удалить эту запись?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/appointments/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            closeModal();
+            fetchAppointments(); // Reload grid
+        } else {
+            const err = await response.json();
+            alert('Error: ' + (err.error || 'Failed to delete'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete appointment');
+    }
+}
+
 async function fetchAppointments() {
     try {
         let url = '/api/appointments';
         if (typeof currentCenterId !== 'undefined' && currentCenterId !== null) {
             url += `?center_id=${currentCenterId}`;
         }
-        const response = await fetch(url); // Fetch filtered by center
+        const response = await fetch(url);
         if (!response.ok) return;
         const appointments = await response.json();
 
         // Clear existing
         document.querySelectorAll('.time-slot-cell').forEach(cell => {
             cell.classList.remove('booked');
+            cell.classList.remove('restricted'); // Clear restricted class too
+            cell.title = ""; // Clear title
             cell.innerHTML = '';
             delete cell.dataset.id;
             // Remove other data attributes
