@@ -20,10 +20,74 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSlots(date, centerId, currentApptId, currentVal);
     }
 
-    if (dateInput) dateInput.addEventListener('change', triggerSlotUpdate);
+    if (dateInput) {
+        dateInput.addEventListener('change', triggerSlotUpdate);
+        dateInput.addEventListener('input', triggerSlotUpdate); // For real-time updates if needed
+    }
     if (centerInput) centerInput.addEventListener('change', triggerSlotUpdate);
 
-    // Load existing appointments
+    // ... (rest of code)
+
+    async function fetchSlots(date, centerId, excludeId, selectedTime) {
+        const timeSelect = document.getElementById('appt-time');
+        if (!timeSelect) return;
+
+        // Show loading state differently? Or just keep current.
+        // NOTE: If we spam requests on 'input', we should debounce. 
+        // But for date input, 'input' usually fires on full date completion or clear. 
+        // We'll keep it simple.
+
+        timeSelect.innerHTML = '<option value="">Загрузка...</option>';
+        timeSelect.disabled = true; // Disable while loading
+
+        if (!date || !centerId) {
+            timeSelect.innerHTML = '<option value="">Выберите дату и центр</option>';
+            timeSelect.disabled = true;
+            return;
+        }
+
+        try {
+            let url = `/api/slots?date=${date}&center_id=${centerId}`;
+            if (excludeId) url += `&exclude_id=${excludeId}`;
+
+            const response = await fetch(url);
+            const slots = await response.json();
+
+            timeSelect.innerHTML = '';
+            timeSelect.disabled = false;
+
+            if (slots.length === 0) {
+                timeSelect.innerHTML = '<option value="">Нет свободного времени</option>';
+                // If we have selectedTime (e.g. current illegal time), show it?
+                // Only if editing?
+            }
+
+            let found = false;
+            slots.forEach(time => {
+                const opt = document.createElement('option');
+                opt.value = time;
+                opt.textContent = time;
+                if (time === selectedTime) {
+                    opt.selected = true;
+                    found = true;
+                }
+                timeSelect.appendChild(opt);
+            });
+
+            if (selectedTime && !found) {
+                const opt = document.createElement('option');
+                opt.value = selectedTime;
+                opt.textContent = selectedTime + " (Текущее/Недоступно)";
+                opt.selected = true;
+                timeSelect.appendChild(opt);
+            }
+
+        } catch (e) {
+            console.error("Failed to fetch slots", e);
+            timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+            timeSelect.disabled = false;
+        }
+    }
     fetchAppointments();
 
     // Event Delegation for cells
