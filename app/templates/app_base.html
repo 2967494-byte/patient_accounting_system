@@ -82,7 +82,7 @@
         const csrfToken = "{{ csrf_token() }}";
         const currentCenterId = {{ current_center_id | default ('null') }};
     </script>
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ range(1, 10000) | random }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 
