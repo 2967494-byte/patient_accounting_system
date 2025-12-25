@@ -419,6 +419,12 @@ body {
     border-radius: 0.5rem;
     width: 90%;
     max-width: 500px;
+    max-height: 90vh;
+    /* Ensure it fits on screen */
+    overflow-y: auto;
+    /* Enable internal scrolling */
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
@@ -427,6 +433,7 @@ body {
     margin-bottom: 1.5rem;
     font-size: 1.25rem;
     color: var(--text-main);
+    flex-shrink: 0;
 }
 
 .form-group {
