@@ -14,80 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentApptId = document.getElementById('appt-id').value;
         // If we have a selected time (e.g. while editing), we want to preserve it if valid, 
         // or ensure it's in the list if it's the current one.
-        // We'll trust fetchSlots to handle avail logic, but we might pass current time to select it?
-        // Actually best to save current Value before update
         const currentVal = document.getElementById('appt-time').value;
         fetchSlots(date, centerId, currentApptId, currentVal);
     }
 
     if (dateInput) {
         dateInput.addEventListener('change', triggerSlotUpdate);
-        dateInput.addEventListener('input', triggerSlotUpdate); // For real-time updates if needed
+        dateInput.addEventListener('input', triggerSlotUpdate);
     }
     if (centerInput) centerInput.addEventListener('change', triggerSlotUpdate);
 
-    // ... (rest of code)
-
-    async function fetchSlots(date, centerId, excludeId, selectedTime) {
-        const timeSelect = document.getElementById('appt-time');
-        if (!timeSelect) return;
-
-        // Show loading state differently? Or just keep current.
-        // NOTE: If we spam requests on 'input', we should debounce. 
-        // But for date input, 'input' usually fires on full date completion or clear. 
-        // We'll keep it simple.
-
-        timeSelect.innerHTML = '<option value="">Загрузка...</option>';
-        timeSelect.disabled = true; // Disable while loading
-
-        if (!date || !centerId) {
-            timeSelect.innerHTML = '<option value="">Выберите дату и центр</option>';
-            timeSelect.disabled = true;
-            return;
-        }
-
-        try {
-            let url = `/api/slots?date=${date}&center_id=${centerId}`;
-            if (excludeId) url += `&exclude_id=${excludeId}`;
-
-            const response = await fetch(url);
-            const slots = await response.json();
-
-            timeSelect.innerHTML = '';
-            timeSelect.disabled = false;
-
-            if (slots.length === 0) {
-                timeSelect.innerHTML = '<option value="">Нет свободного времени</option>';
-                // If we have selectedTime (e.g. current illegal time), show it?
-                // Only if editing?
-            }
-
-            let found = false;
-            slots.forEach(time => {
-                const opt = document.createElement('option');
-                opt.value = time;
-                opt.textContent = time;
-                if (time === selectedTime) {
-                    opt.selected = true;
-                    found = true;
-                }
-                timeSelect.appendChild(opt);
-            });
-
-            if (selectedTime && !found) {
-                const opt = document.createElement('option');
-                opt.value = selectedTime;
-                opt.textContent = selectedTime + " (Текущее/Недоступно)";
-                opt.selected = true;
-                timeSelect.appendChild(opt);
-            }
-
-        } catch (e) {
-            console.error("Failed to fetch slots", e);
-            timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
-            timeSelect.disabled = false;
-        }
-    }
+    // Load existing appointments
     fetchAppointments();
 
     // Event Delegation for cells
@@ -208,7 +145,7 @@ async function performSearch() {
             const div = document.createElement('div');
             div.className = 'search-item';
 
-            const dateStr = new Date(appt.date).toLocaleDateString('ru-RU'); // Simple format
+            const dateStr = new Date(appt.date).toLocaleDateString('ru-RU');
 
             div.innerHTML = `
                 <div class="search-item-info">
@@ -262,7 +199,6 @@ async function openEditModal(id) {
         document.getElementById('modal-title').textContent = 'Редактирование записи';
         document.getElementById('appt-id').value = id;
         document.getElementById('appt-date').value = cell.dataset.date;
-        // document.getElementById('appt-time').value = cell.dataset.time; // Remove direct set waiting for slots
 
         document.getElementById('patient-name').value = cell.dataset.patient_name;
         document.getElementById('patient-phone').value = cell.dataset.patient_phone;
@@ -355,7 +291,6 @@ async function fetchAppointments() {
             cell.removeAttribute('data-patient_phone');
             cell.removeAttribute('data-doctor');
             cell.removeAttribute('data-service');
-            cell.removeAttribute('data-service');
             cell.removeAttribute('data-author_name');
             cell.removeAttribute('data-center_id');
         });
@@ -382,7 +317,6 @@ async function fetchAppointments() {
                     cell.dataset.patient_phone = appt.patient_phone;
                     cell.dataset.doctor = appt.doctor;
                     cell.dataset.service = appt.service;
-                    cell.dataset.service = appt.service;
                     cell.dataset.author_name = appt.author_name;
                     cell.dataset.center_id = appt.center_id;
                 }
@@ -396,13 +330,14 @@ async function fetchAppointments() {
 
 async function fetchSlots(date, centerId, excludeId, selectedTime) {
     const timeSelect = document.getElementById('appt-time');
-    // timeSelect might not exist if dashboard not loaded fully? But logic runs in modal which key
     if (!timeSelect) return;
 
     timeSelect.innerHTML = '<option value="">Загрузка...</option>';
+    timeSelect.disabled = true;
 
     if (!date || !centerId) {
-        timeSelect.innerHTML = '';
+        timeSelect.innerHTML = '<option value="">Выберите дату и центр</option>';
+        timeSelect.disabled = true;
         return;
     }
 
@@ -414,6 +349,11 @@ async function fetchSlots(date, centerId, excludeId, selectedTime) {
         const slots = await response.json();
 
         timeSelect.innerHTML = '';
+        timeSelect.disabled = false;
+
+        if (slots.length === 0) {
+            timeSelect.innerHTML = '<option value="">Нет свободного времени</option>';
+        }
 
         let found = false;
         slots.forEach(time => {
@@ -427,22 +367,19 @@ async function fetchSlots(date, centerId, excludeId, selectedTime) {
             timeSelect.appendChild(opt);
         });
 
-        // If selectedTime is not in valid slots (e.g. taken), append it anyway to allow current value?
-        // No, if we are moving, we must pick valid.
-        // But if we are just opening edit modal, the current time SHOULD be in slots because we passed excludeId.
-        // If logic is correct, it should be there.
-        // If it was somehow restricted or conflict, we might show it but mark invalid?
-        // Let's keep it simple: if not found, add it as selected but red?
+        // Ensure selected time is shown even if technically unavailable for others (unless logic above handles it via excludeId)
+        // Check if logic handles current value
         if (selectedTime && !found) {
             const opt = document.createElement('option');
             opt.value = selectedTime;
-            opt.textContent = selectedTime + " (Текущее)";
+            opt.textContent = selectedTime + " (Текущее/Недоступно)";
             opt.selected = true;
             timeSelect.appendChild(opt);
         }
 
     } catch (e) {
         console.error("Failed to fetch slots", e);
-        timeSelect.innerHTML = '<option value="">Ошибка</option>';
+        timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+        timeSelect.disabled = false;
     }
 }
