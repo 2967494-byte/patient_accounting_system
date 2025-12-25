@@ -123,7 +123,9 @@ class Appointment(db.Model):
             'service': self.service,
             'date': self.date.isoformat(),
             'time': self.time,
-            'author_name': self.author.username if self.author else 'Unknown'
+            'author_name': self.author.username if self.author else 'Unknown',
+            'center_id': self.center_id,
+            'center_name': self.center.name if self.center else 'Unknown'
         }
 
 class Doctor(db.Model):

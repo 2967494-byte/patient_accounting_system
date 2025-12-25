@@ -139,6 +139,22 @@ def update_appointment(id):
     if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
     if 'doctor' in data: appointment.doctor = data['doctor']
     if 'service' in data: appointment.service = data['service']
+
+    if 'date' in data and data['date']:
+        try:
+            appointment.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format'}), 400
+    
+    if 'time' in data and data['time']:
+        appointment.time = data['time']
+
+    if 'center_id' in data:
+         try:
+             cid = int(data['center_id'])
+             appointment.center_id = cid
+         except (ValueError, TypeError):
+             pass # or return error
     
     if 'contract_number' in data: appointment.contract_number = data['contract_number']
     if 'clinic_id' in data: appointment.clinic_id = data['clinic_id']
@@ -164,8 +180,7 @@ def update_appointment(id):
              # If clearing service, also clear quantity (or set to default 1)
              appointment.additional_service_quantity = 1
     
-    # We do not allow changing date/time here for now to keep it simple, 
-    # unless moving drag-n-drop is implemented later.
+    # Date/Time/Center changes handled above
     
     db.session.commit()
     return jsonify(appointment.to_dict())
@@ -242,3 +257,53 @@ def get_additional_service_price(service_id):
         
     price = service.get_price(query_date)
     return jsonify({'price': price})
+
+@api.route('/slots', methods=['GET'])
+@login_required
+def get_slots():
+    date_str = request.args.get('date')
+    center_id = request.args.get('center_id')
+    exclude_appt_id = request.args.get('exclude_id')
+    
+    if not date_str or not center_id:
+        return jsonify([])
+
+    try:
+        query_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        center_id = int(center_id)
+    except ValueError:
+        return jsonify([])
+
+    # Generate all possible slots 08:00 - 19:30
+    slots = []
+    start_minutes = 8 * 60
+    end_minutes = 19 * 60 + 30
+    for m in range(start_minutes, end_minutes + 1, 15):
+        hh = m // 60
+        mm = m % 60
+        time_str = f"{hh:02d}:{mm:02d}"
+        
+        # Role restriction for 'org'
+        if current_user.role == 'org':
+            if not (time_str.endswith(':15') or time_str.endswith(':45')):
+                continue
+        
+        slots.append(time_str)
+
+    # Fetch existing appointments to block slots
+    query = Appointment.query.filter_by(
+        date=query_date,
+        center_id=center_id
+    )
+    
+    existing = query.all()
+    occupied = set()
+    for appt in existing:
+        if exclude_appt_id and str(appt.id) == str(exclude_appt_id):
+            continue
+        occupied.add(appt.time)
+
+    # Filter available
+    available = [s for s in slots if s not in occupied]
+    
+    return jsonify(available)

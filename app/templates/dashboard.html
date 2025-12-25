@@ -53,8 +53,27 @@
         <h2 id="modal-title">Новая запись</h2>
         <form id="appointment-form">
             <input type="hidden" id="appt-id">
-            <input type="hidden" id="appt-date">
-            <input type="hidden" id="appt-time">
+
+            <div class="form-group">
+                <label>Центр</label>
+                <select id="appt-center" required>
+                    {% for center in centers %}
+                    <option value="{{ center.id }}">{{ center.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Дата</label>
+                <input type="date" id="appt-date" required>
+            </div>
+
+            <div class="form-group">
+                <label>Время</label>
+                <select id="appt-time" required>
+                    <!-- Populated via JS -->
+                </select>
+            </div>
 
             <div class="form-group">
                 <label>ФИО Пациента</label>
