@@ -117,5 +117,62 @@
         </table>
     </div>
 
+    <!-- Care Section -->
+    <div class="card" style="border: 1px solid #ef4444; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);">
+        <h3 class="mb-4" style="color: #ef4444; display: flex; align-items: center; gap: 0.5rem;">
+            ⚠️ С осторожностью
+        </h3>
+
+        <!-- Clear Data -->
+        <div class="mb-6">
+            <h4 class="mb-2" style="font-size: 1.1em; color: #374151;">Очистить данные журнала</h4>
+            <p class="text-sm text-gray-500 mb-2">Удаление всех записей за выбранный период.</p>
+            <form action="{{ url_for('admin.clear_journal_data') }}" method="POST"
+                onsubmit="return confirm('Вы уверены? Данные будут удалены безвозвратно.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                    <select name="center_id" class="form-input"
+                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
+                        <option value="">Выберите центр</option>
+                        {% for center in centers %}
+                        <option value="{{ center.id }}">{{ center.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="month" name="month" class="form-input"
+                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
+                    <input type="password" name="password" placeholder="Пароль для подтверждения" class="form-input"
+                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
+                    <button type="submit" class="btn"
+                        style="background-color: #ef4444; color: white; padding: 0.5rem; border-radius: 0.375rem; border: none; cursor: pointer;">Очистить</button>
+                </div>
+            </form>
+        </div>
+
+        <hr style="margin: 1.5rem 0; border-top: 1px solid #e5e7eb;">
+
+        <!-- Recalculate Data -->
+        <div>
+            <h4 class="mb-2" style="font-size: 1.1em; color: #374151;">Пересчет данных</h4>
+            <p class="text-sm text-gray-500 mb-2">Пересчет сумм на основе истории цен.</p>
+            <form action="{{ url_for('admin.recalculate_journal_data') }}" method="POST"
+                onsubmit="return confirm('Вы уверены? Суммы будут пересчитаны.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                    <select name="center_id" class="form-input"
+                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
+                        <option value="">Выберите центр</option>
+                        {% for center in centers %}
+                        <option value="{{ center.id }}">{{ center.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="month" name="month" class="form-input"
+                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
+                    <button type="submit" class="btn"
+                        style="background-color: #f59e0b; color: white; padding: 0.5rem; border-radius: 0.375rem; border: none; cursor: pointer;">Пересчитать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
 {% endblock %}

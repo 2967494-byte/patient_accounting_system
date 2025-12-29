@@ -11,6 +11,8 @@ import csv
 import openpyxl
 from werkzeug.utils import secure_filename
 import io
+import calendar
+from datetime import date
 
 admin = Blueprint('admin', __name__, template_folder='templates')
 
@@ -25,7 +27,117 @@ def require_admin():
 def additional():
     managers = Manager.query.all()
     payment_methods = PaymentMethod.query.all()
-    return render_template('admin_additional.html', managers=managers, payment_methods=payment_methods)
+    centers = Location.query.filter_by(type='center').all()
+    return render_template('admin_additional.html', managers=managers, payment_methods=payment_methods, centers=centers)
+
+@admin.route('/journal/clear', methods=['POST'])
+@login_required
+def clear_journal_data():
+    center_id = request.form.get('center_id')
+    month_str = request.form.get('month')
+    password = request.form.get('password')
+    
+    if not center_id or not month_str:
+        flash('Центр и Месяц обязательны', 'error')
+        return redirect(url_for('admin.additional'))
+        
+    if password != 'NikolEnikeeva':
+        flash('Неверный пароль', 'error')
+        return redirect(url_for('admin.additional'))
+
+    try:
+        year, month = map(int, month_str.split('-'))
+        start_date = date(year, month, 1)
+        # Handle end of month
+        _, last_day = calendar.monthrange(year, month)
+        end_date = date(year, month, last_day)
+        
+        # Delete appointments
+        num_deleted = Appointment.query.filter(
+            Appointment.center_id == int(center_id),
+            Appointment.date >= start_date,
+            Appointment.date <= end_date
+        ).delete(synchronize_session=False)
+        
+        db.session.commit()
+        flash(f'Удалено записей: {num_deleted}', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка: {str(e)}', 'error')
+
+    return redirect(url_for('admin.additional'))
+
+@admin.route('/journal/recalculate', methods=['POST'])
+@login_required
+def recalculate_journal_data():
+    center_id = request.form.get('center_id')
+    month_str = request.form.get('month')
+    
+    if not center_id or not month_str:
+        flash('Центр и Месяц обязательны', 'error')
+        return redirect(url_for('admin.additional'))
+        
+    try:
+        year, month = map(int, month_str.split('-'))
+        start_date = date(year, month, 1)
+        _, last_day = calendar.monthrange(year, month)
+        end_date = date(year, month, last_day)
+
+        appointments = Appointment.query.filter(
+            Appointment.center_id == int(center_id),
+            Appointment.date >= start_date,
+            Appointment.date <= end_date
+        ).all()
+        
+        updated_count = 0
+        
+        for appt in appointments:
+            if not appt.service: continue
+            
+            # Find service object by name to get price logic
+            # Note: appt.service is string name. 
+            service_obj = Service.query.filter(Service.name.ilike(appt.service)).first()
+            
+            price = 0.0
+            if service_obj:
+               price = service_obj.get_price(appt.date)
+               
+            # Additional services cost
+            add_svc_cost = 0.0
+            for add_svc in appt.additional_services:
+                add_svc_cost += add_svc.get_price(appt.date)
+                
+            qty = appt.quantity if appt.quantity else 1
+            add_qty = appt.additional_service_quantity if appt.additional_service_quantity else 1
+            
+            discount = appt.discount if appt.discount else 0.0
+            
+            # Recalculate Total
+            # Formula: (ServicePrice * Qty) + (AddServicePriceTotal * AddQty) - Discount
+            # Note: AddServicePriceTotal is sum of unit prices of all attached additional services
+            
+            # Wait, additional_services is a list. Do we multiply sum by add_qty OR 
+            # does add_qty apply to each? 
+            # In API create_appointment: 
+            # add_services_cost = sum(add_svc.get_price(appt.date) for add_svc in appt.additional_services)
+            # total_cost = (service_price * appt.quantity) + (add_services_cost * appt.additional_service_quantity)
+            # This matches plan.
+            
+            new_cost = (price * qty) + (add_svc_cost * add_qty) - discount
+            if new_cost < 0: new_cost = 0.0
+            
+            appt.cost = new_cost
+            updated_count += 1
+            
+        db.session.commit()
+        flash(f'Пересчитано записей: {updated_count}', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка: {str(e)}', 'error')
+        
+    return redirect(url_for('admin.additional'))
 
 # --- Managers Management ---
 
