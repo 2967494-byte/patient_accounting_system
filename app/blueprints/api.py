@@ -50,15 +50,16 @@ def create_appointment():
             primary_service_name = "\n".join([s.name for s in services_to_add])
 
         # Create Appointment
-        new_appointment = Appointment(
-            center_id=data.get('center_id'), # Assuming this is passed or logic handled elsewhere
+        # Create Appointment
+        appointment = Appointment(
+            center_id=data.get('center_id'),
             date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
             time=data.get('time', '09:00'),
             patient_name=data['patient_name'],
             patient_phone=data.get('patient_phone', ''),
             clinic_id=data.get('clinic_id'),
             doctor_id=data.get('doctor_id'),
-            service=primary_service_name, # Storing joined names
+            service=primary_service_name, # joined names
             quantity=quantity,
             contract_number=data.get('contract_number'),
             payment_method_id=data.get('payment_method_id'),
@@ -67,42 +68,22 @@ def create_appointment():
             is_child=data.get('is_child', False),
             author_id=current_user.id
         )
-        
-        if 'clinic_id' in data and data['clinic_id']:
-             appointment.clinic_id = data['clinic_id']
 
-        if 'doctor_id' in data and data['doctor_id']:
-             appointment.doctor_id = data['doctor_id']
-
-        if 'center_id' in data and data['center_id']:
-             appointment.center_id = data['center_id']
-
-        if 'payment_method_id' in data and data['payment_method_id']:
-             appointment.payment_method_id = data['payment_method_id']
-
-        if 'contract_number' in data: appointment.contract_number = data['contract_number']
-        if 'quantity' in data and data['quantity']: appointment.quantity = int(data['quantity'])
-        if 'cost' in data and data['cost']: appointment.cost = float(data['cost'])
-        if 'discount' in data and data['discount']: appointment.discount = float(data['discount'])
-        if 'discount' in data and data['discount']: appointment.discount = float(data['discount'])
-        if 'comment' in data: appointment.comment = data['comment']
-        if 'is_child' in data: appointment.is_child = bool(data['is_child'])
-        # Note: manager_id logic might be needed if tracking specific manager separate from clinic
+        # Add Main Services Relations
+        for svc in services_to_add:
+            appointment.services.append(svc)
 
         # Handle Additional Services (List)
         if 'additional_services_ids' in data and isinstance(data['additional_services_ids'], list):
-            # Sum quantity if multiple? Or use a global quantity?
-            # Model has one `additional_service_quantity`.
-            # We'll set it to sum of len(ids) or use the input quantity?
-            # Input `additional_service_quantity` is usually for the *set*.
-            # Let's attach all.
             for as_id in data['additional_services_ids']:
                 add_svc = AdditionalService.query.get(as_id)
                 if add_svc:
                     appointment.additional_services.append(add_svc)
             
+            # Additional Service Quantity
             if 'additional_service_quantity' in data:
                  appointment.additional_service_quantity = int(data['additional_service_quantity'])
+                 
         elif 'additional_service' in data and data['additional_service']:
             # Legacy/Fallback
             add_svc = AdditionalService.query.get(data['additional_service'])
@@ -110,6 +91,28 @@ def create_appointment():
                 appointment.additional_services.append(add_svc)
                 if 'additional_service_quantity' in data:
                     appointment.additional_service_quantity = int(data['additional_service_quantity'])
+
+        # Calculate Cost
+        # Sum of Main Services + Sum of Additional Services - Discount
+        # Note: quantity applies to Main Services
+        total_service_cost = sum([s.price for s in appointment.services]) * quantity
+        
+        # Additional Services Cost
+        # Assuming additional_service_quantity applies to the batch of additional services? 
+        # Or usually it's 1.
+        add_qty = appointment.additional_service_quantity or 1
+        total_add_cost = sum([a.price for a in appointment.additional_services]) * add_qty
+        
+        raw_cost = total_service_cost + total_add_cost - appointment.discount
+        if raw_cost < 0: raw_cost = 0
+        
+        # Payment Method Check (Free)
+        if appointment.payment_method:
+             pm_name = appointment.payment_method.name.lower()
+             if pm_name not in ['наличные', 'карта']:
+                 raw_cost = 0
+        
+        appointment.cost = raw_cost
 
         db.session.add(appointment)
         db.session.commit()
