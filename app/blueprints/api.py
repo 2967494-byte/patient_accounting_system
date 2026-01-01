@@ -7,31 +7,64 @@ from datetime import datetime
 api = Blueprint('api', __name__)
 
 @api.route('/appointments', methods=['POST'])
-@login_required
+@login_required # Ensure user is logged in
 def create_appointment():
+    data = request.get_json()
     try:
-        data = request.get_json()
+        # Default Quantity Logic (for simplicity, we assume 1 visit = 1 of each service unless specified otherwise)
+        # If user sends `quantity`, it applies to the primary service or all? 
+        # For now, let's assume quantity applies to the VISIT (so usually 1).
+        quantity = int(data.get('quantity', 1))
+
+        # Main Services handling
+        # Expecting 'services_ids' list. If not, fallback to 'service' (name) -> find ID? 
+        # Or 'service' (ID)?
+        # Ideally frontend now sends 'services_ids'.
+        services_to_add = []
+        primary_service_name = ""
         
-        # Validation
-        required = ['patient_name', 'service', 'date', 'time']
-        for field in required:
-            if not data.get(field):
-                return jsonify({'error': f'Field {field} is required'}), 400
+        # Check for 'services_ids' (List of IDs)
+        if 'services_ids' in data and isinstance(data['services_ids'], list):
+            for s_id in data['services_ids']:
+                svc = Service.query.get(s_id)
+                if svc:
+                    services_to_add.append(svc)
+        
+        # Fallback/Legacy: 'service' field (might be Name or ID)
+        # If services_ids is empty, try 'service'
+        if not services_to_add and 'service' in data:
+            # Try to find by ID first? Or Name? 
+            # Frontend sends NAME in `service` currently for legacy.
+            # But the new Modal sends IDs in `services_ids`.
+            # If we receive `service` (name), we try to look it up.
+            svc = Service.query.filter_by(name=data['service']).first()
+            if svc:
+                services_to_add.append(svc)
+            else:
+                # If just a string and no service found (e.g. freetext?), we still save the string but no relation?
+                # The model requires `service` string.
+                primary_service_name = data['service']
 
-        # Parse date
-        try:
-            appt_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+        if services_to_add:
+            # Join names for legacy string
+            primary_service_name = "\n".join([s.name for s in services_to_add])
 
-        # Create appointment
-        appointment = Appointment(
+        # Create Appointment
+        new_appointment = Appointment(
+            center_id=data.get('center_id'), # Assuming this is passed or logic handled elsewhere
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            time=data.get('time', '09:00'),
             patient_name=data['patient_name'],
-            patient_phone=data.get('patient_phone', '-'),
-            doctor=data.get('doctor', 'Unknown'),
-            service=data['service'],
-            date=appt_date,
-            time=data['time'],
+            patient_phone=data.get('patient_phone', ''),
+            clinic_id=data.get('clinic_id'),
+            doctor_id=data.get('doctor_id'),
+            service=primary_service_name, # Storing joined names
+            quantity=quantity,
+            contract_number=data.get('contract_number'),
+            payment_method_id=data.get('payment_method_id'),
+            discount=float(data.get('discount', 0)),
+            comment=data.get('comment'),
+            is_child=data.get('is_child', False),
             author_id=current_user.id
         )
         
@@ -56,8 +89,22 @@ def create_appointment():
         if 'is_child' in data: appointment.is_child = bool(data['is_child'])
         # Note: manager_id logic might be needed if tracking specific manager separate from clinic
 
-        if 'additional_service' in data and data['additional_service']:
-            # Expecting ID
+        # Handle Additional Services (List)
+        if 'additional_services_ids' in data and isinstance(data['additional_services_ids'], list):
+            # Sum quantity if multiple? Or use a global quantity?
+            # Model has one `additional_service_quantity`.
+            # We'll set it to sum of len(ids) or use the input quantity?
+            # Input `additional_service_quantity` is usually for the *set*.
+            # Let's attach all.
+            for as_id in data['additional_services_ids']:
+                add_svc = AdditionalService.query.get(as_id)
+                if add_svc:
+                    appointment.additional_services.append(add_svc)
+            
+            if 'additional_service_quantity' in data:
+                 appointment.additional_service_quantity = int(data['additional_service_quantity'])
+        elif 'additional_service' in data and data['additional_service']:
+            # Legacy/Fallback
             add_svc = AdditionalService.query.get(data['additional_service'])
             if add_svc:
                 appointment.additional_services.append(add_svc)

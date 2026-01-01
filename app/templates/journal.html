@@ -73,14 +73,30 @@
     }
 
     /* Column 7: Research - specific limit */
+    /* Column 7: Research - specific limit */
     .journal-table th:nth-child(7),
     .journal-table td:nth-child(7) {
-        min-width: 100px;
-        max-width: 250px;
+        min-width: 80px;
+        max-width: 150px;
+        white-space: normal;
+        /* Allow wrapping */
+        vertical-align: top;
     }
 
-    .journal-table td:nth-child(7) select {
+    /* Column 9: Additional Services - specific limit */
+    .journal-table th:nth-child(9),
+    .journal-table td:nth-child(9) {
+        min-width: 80px;
+        max-width: 150px;
+        white-space: normal;
+        /* Allow wrapping */
+        vertical-align: top;
+    }
+
+    .journal-table td:nth-child(7) select,
+    .journal-table td:nth-child(9) select {
         max-width: 100%;
+        white-space: normal;
     }
 
     /* Оплата */
@@ -328,12 +344,23 @@
                         <input type="text" name="patient_name" value="{{ appointment.patient_name }}"
                             title="{{ appointment.patient_name }}" class="journal-input" disabled required>
                     </td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">
-                        <select name="service" class="journal-select" onchange="calculateTotal(this)" disabled required>
+                    <td style="padding: 0.25rem 0.5rem; white-space: normal;">
+                        <div class="view-mode">
+                            {% if appointment.services %}
+                            {% for s in appointment.services %}
+                            <div style="margin-bottom: 2px;">{{ s.name }}</div>
+                            {% endfor %}
+                            {% else %}
+                            {{ appointment.service }}
+                            {% endif %}
+                        </div>
+                        <select name="service" class="journal-select edit-mode" style="display: none;"
+                            onchange="calculateTotal(this)" disabled required>
                             <option value="">--</option>
+                            {% set current_svc = appointment.services[0] if appointment.services else None %}
                             {% for s in services %}
-                            <option value="{{ s.id }}" {% if appointment.service==s.name or
-                                appointment.service==s.id|string %}selected{% endif %}>{{ s.name }}</option>
+                            <option value="{{ s.id }}" {% if (current_svc and current_svc.id==s.id) or (not current_svc
+                                and appointment.service==s.name) %}selected{% endif %}>{{ s.name }}</option>
                             {% endfor %}
                         </select>
                     </td>
@@ -342,97 +369,103 @@
                             class="journal-input" style="text-align: center;" disabled required>
                     </td>
                     <td style="padding: 0.25rem 0.5rem;">
-                        <select name="additional_service" class="journal-select" onchange="calculateTotal(this)"
-                            disabled>
-                            <option value="">--</option>
-                            {% set current_add_svc = appointment.additional_services[0] if
-                            appointment.additional_services else None %}
-                            {% for ads in additional_services %}
-                            <option value="{{ ads.id }}" {% if current_add_svc and current_add_svc.id==ads.id
-                                %}selected{% endif %}>{{ ads.name }} - {{ ads.price }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td style="padding: 0.25rem 0.5rem;">
-                        <select name="payment_method_id" class="journal-select" onchange="calculateTotal(this)" disabled
-                            required>
-                            <option value="">--</option>
-                            {% for method in payment_methods %}
-                            <option value="{{ method.id }}" {% if appointment.payment_method_id==method.id %}selected{%
-                                endif %}>{{ method.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td style="padding: 0.25rem 0.5rem;">
-                        <input type="number" name="discount" value="{{ appointment.discount or 0 }}"
-                            class="journal-input" disabled required oninput="calculateTotal(this)">
-                    </td>
-                    <td style="padding: 0.75rem 0.5rem;">
-                        <input type="number" name="cost" value="{{ appointment.cost }}" class="journal-input-readonly"
-                            readonly>
-                    </td>
-                    <td style="padding: 0.25rem 0.5rem;">
-                        <input type="text" name="comment" value="{{ appointment.comment or '' }}" class="journal-input"
-                            title="{{ appointment.comment or '' }}" disabled>
-                    </td>
-                    <td style="padding: 0.75rem 0.5rem;">{{ appointment.lab_tech or (appointment.author.username if
-                        appointment.author else '-') }}</td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">
-                        <input type="text" name="manager" class="journal-input-readonly"
-                            value="{{ appointment.doctor_rel.manager if appointment.doctor_rel and appointment.doctor_rel.manager else '-' }}"
-                            readonly>
-                    </td>
-                    <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap;">
-                        <button class="btn-icon" onclick="toggleEdit(this)" title="Редактировать">✎</button>
-                        <button class="btn-icon" onclick="deleteEntry(this)" title="Удалить"
-                            style="color: #ef4444;">🗑️</button>
-                    </td>
-                </tr>
-                {% endfor %}
-                {% endif %}
+                        {% if appointment.additional_services %}
+                        {% for ads in appointment.additional_services %}
+                        <div style="margin-bottom: 2px;">{{ ads.name }}</div>
+                        {% endfor %}
+                        {% else %}
+                        -
+                        {% endif %}
+    </div>
+    <!-- Hidden select for inline edit of FIRST service only (Legacy support) -->
+    <select name="additional_service" class="journal-select edit-mode" style="display: none;"
+        onchange="calculateTotal(this)" disabled>
+        <option value="">--</option>
+        {% set current_add_svc = appointment.additional_services[0] if
+        appointment.additional_services else None %}
+        {% for ads in additional_services %}
+        <option value="{{ ads.id }}" {% if current_add_svc and current_add_svc.id==ads.id %}selected{% endif %}>{{
+            ads.name }} - {{ ads.price }}</option>
+        {% endfor %}
+    </select>
+    </td>
+    <td style="padding: 0.25rem 0.5rem;">
+        <select name="payment_method_id" class="journal-select" onchange="calculateTotal(this)" disabled required>
+            <option value="">--</option>
+            {% for method in payment_methods %}
+            <option value="{{ method.id }}" {% if appointment.payment_method_id==method.id %}selected{% endif %}>{{
+                method.name }}</option>
+            {% endfor %}
+        </select>
+    </td>
+    <td style="padding: 0.25rem 0.5rem;">
+        <input type="number" name="discount" value="{{ appointment.discount or 0 }}" class="journal-input" disabled
+            required oninput="calculateTotal(this)">
+    </td>
+    <td style="padding: 0.75rem 0.5rem;">
+        <input type="number" name="cost" value="{{ appointment.cost }}" class="journal-input-readonly" readonly>
+    </td>
+    <td style="padding: 0.25rem 0.5rem;">
+        <input type="text" name="comment" value="{{ appointment.comment or '' }}" class="journal-input"
+            title="{{ appointment.comment or '' }}" disabled>
+    </td>
+    <td style="padding: 0.75rem 0.5rem;">{{ appointment.lab_tech or (appointment.author.username if
+        appointment.author else '-') }}</td>
+    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">
+        <input type="text" name="manager" class="journal-input-readonly"
+            value="{{ appointment.doctor_rel.manager if appointment.doctor_rel and appointment.doctor_rel.manager else '-' }}"
+            readonly>
+    </td>
+    <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap;">
+        <button class="btn-icon" onclick="toggleEdit(this)" title="Редактировать">✎</button>
+        <button class="btn-icon" onclick="deleteEntry(this)" title="Удалить" style="color: #ef4444;">🗑️</button>
+    </td>
+    </tr>
+    {% endfor %}
+    {% endif %}
 
+    </table>
+</div>
+
+<!-- Summary Table -->
+{% if summary_stats %}
+<div class="summary-section" style="margin-top: 2rem;">
+    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Сводка за день</h3>
+    <div style="overflow-x: auto;">
+        <table
+            style="width: auto; min-width: 500px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+            <thead>
+                <tr style="background-color: #f3f4f6; text-align: left;">
+                    <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Категория
+                    </th>
+                    <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Количество
+                    </th>
+                    <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Сумма (₽)
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов</td>
+                    <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
+                    <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
+                        "%.2f"|format(summary_stats.total_sum) }}</td>
+                </tr>
+                {% for method_name, stats in summary_stats.methods.items() %}
+                {% if stats.count > 0 or True %}
+                <!-- Show all methods even if 0? User asked specific list. Let's show all available methods for structure. -->
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 0.75rem 1rem; color: #374151;">{{ method_name }}</td>
+                    <td style="padding: 0.75rem 1rem; color: #374151;">{{ stats.count }}</td>
+                    <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(stats.sum) }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
         </table>
     </div>
-
-    <!-- Summary Table -->
-    {% if summary_stats %}
-    <div class="summary-section" style="margin-top: 2rem;">
-        <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Сводка за день</h3>
-        <div style="overflow-x: auto;">
-            <table
-                style="width: auto; min-width: 500px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
-                <thead>
-                    <tr style="background-color: #f3f4f6; text-align: left;">
-                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Категория
-                        </th>
-                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Количество
-                        </th>
-                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Сумма (₽)
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
-                        <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
-                            "%.2f"|format(summary_stats.total_sum) }}</td>
-                    </tr>
-                    {% for method_name, stats in summary_stats.methods.items() %}
-                    {% if stats.count > 0 or True %}
-                    <!-- Show all methods even if 0? User asked specific list. Let's show all available methods for structure. -->
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ method_name }}</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ stats.count }}</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(stats.sum) }}</td>
-                    </tr>
-                    {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endif %}
+</div>
+{% endif %}
 </div>
 
 <!-- Modal -->
@@ -492,41 +525,59 @@
                 </div>
             </div>
 
-            <!-- Row 3: Service, Quantity -->
-            <div style="display: flex; gap: 15px;">
-                <div style="flex: 2;">
-                    <label
-                        style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Исследование</label>
-                    <select name="service" class="journal-select" onchange="calculateTotal()" required>
-                        <option value="">-- Выберите --</option>
-                        {% for s in services %}
-                        <option value="{{ s.id }}">{{ s.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div style="flex: 1;">
-                    <label style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Кол-во</label>
-                    <input type="number" name="quantity" value="1" class="journal-input" style="text-align: center;"
-                        oninput="calculateTotal()" required>
+            <!-- Row 3: Services (Dynamic) -->
+            <div id="services-container">
+                <div class="service-row" style="display: flex; gap: 15px; margin-bottom: 10px;">
+                    <div style="flex: 2;">
+                        <label
+                            style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Исследование</label>
+                        <select name="service" class="journal-select service-select" onchange="calculateTotal()"
+                            required>
+                            <option value="">-- Выберите --</option>
+                            {% for s in services %}
+                            <option value="{{ s.id }}" data-price="{{ s.price }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 1; display: flex; align-items: flex-end; gap: 5px;">
+                        <div>
+                            <label
+                                style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Кол-во</label>
+                            <input type="number" name="quantity" value="1" class="journal-input service-qty"
+                                style="text-align: center;" oninput="calculateTotal()" required>
+                        </div>
+                        <button type="button" onclick="addServiceRow()" class="btn"
+                            style="background: #10b981; color: white; border: none; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; margin-left: 10px;">+</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Row 4: Additional Service, Add. Quantity -->
-            <div style="display: flex; gap: 15px;">
-                <div style="flex: 2;">
-                    <label style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Доп.
-                        услуга</label>
-                    <select name="additional_service" class="journal-select" onchange="calculateTotal()">
-                        <option value="">-- Нет --</option>
-                        {% for ads in additional_services %}
-                        <option value="{{ ads.id }}">{{ ads.name }} - {{ ads.price }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div style="flex: 1;">
-                    <label style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Кол-во</label>
-                    <input type="number" name="additional_service_quantity" value="1" class="journal-input"
-                        style="text-align: center;" oninput="calculateTotal()">
+            <!-- Row 4: Additional Services (Dynamic) -->
+            <div id="additional-services-container">
+                <div class="additional-service-row" style="display: flex; gap: 15px; margin-bottom: 10px;">
+                    <div style="flex: 2;">
+                        <label style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Доп.
+                            услуга</label>
+                        <select name="additional_service" class="journal-select add-service-select"
+                            onchange="calculateTotal()">
+                            <option value="">-- Нет --</option>
+                            {% for ads in additional_services %}
+                            <option value="{{ ads.id }}" data-price="{{ ads.price }}">{{ ads.name }} - {{ ads.price }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 1; display: flex; align-items: flex-end; gap: 5px;">
+                        <div>
+                            <label
+                                style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Кол-во</label>
+                            <input type="number" name="additional_service_quantity" value="1"
+                                class="journal-input add-service-qty" style="text-align: center;"
+                                oninput="calculateTotal()">
+                        </div>
+                        <button type="button" onclick="addAdditionalServiceRow()" class="btn"
+                            style="background: #10b981; color: white; border: none; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; margin-left: 10px;">+</button>
+                    </div>
                 </div>
             </div>
 
@@ -681,50 +732,116 @@
     }
 
     async function handleSave() {
-        // Read data from Modal Form
         const form = document.getElementById('entryForm');
-        const inputs = form.querySelectorAll('input, select');
-        const data = {};
 
-        // Use a date picker value from the top of the page
+        // --- READ COMMON DATA ---
+        const commonData = {};
         const dateInput = document.getElementById('journal-date');
-        data['date'] = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+        commonData['date'] = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
 
-        // Get Center ID from URL or Template
         const urlParams = new URLSearchParams(window.location.search);
         let centerId = urlParams.get('center_id');
-        if (!centerId) {
-            centerId = CURRENT_CENTER_ID;
-        }
-
-        if (centerId && centerId !== 'None') {
-            data['center_id'] = centerId;
-        }
+        if (!centerId) centerId = CURRENT_CENTER_ID;
+        if (centerId && centerId !== 'None') commonData['center_id'] = centerId;
 
         const now = new Date();
         const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-        data['time'] = timeString;
+        commonData['time'] = timeString;
 
-        let valid = true;
-        inputs.forEach(input => {
-            if (input.name && !input.disabled && input.type !== 'hidden') {
-                if (input.type === 'checkbox') {
-                    data[input.name] = input.checked;
-                } else {
-                    data[input.name] = input.value;
-                    if (input.hasAttribute('required') && !input.value) {
-                        input.style.borderColor = 'red';
-                        valid = false;
-                    } else {
-                        input.style.borderColor = '#e5e7eb';
-                    }
-                }
-            } else if (input.type === 'hidden') {
-                data[input.name] = input.value;
+        // Collect fields that are single-entry
+        ['contract_number', 'is_child', 'patient_name', 'clinic_id', 'doctor_id', 'payment_method_id', 'discount', 'comment', 'manager'].forEach(name => {
+            const input = form.querySelector(`[name="${name}"]`);
+            if (input) {
+                if (input.type === 'checkbox') commonData[name] = input.checked;
+                else if (input.value) commonData[name] = input.value;
             }
         });
 
-        if (!valid) return;
+        // --- VALIDATION (Basic) ---
+        if (!commonData['patient_name'] || !commonData['clinic_id'] || !commonData['doctor_id']) {
+            alert("Пожалуйста, заполните обязательные поля (Пациент, Клиника, Врач)");
+            return;
+        }
+
+        // --- GATHER SERVICES (Main) ---
+        const serviceContainer = document.getElementById('services-container');
+        const serviceRows = serviceContainer.querySelectorAll('.service-row');
+        const serviceIds = [];
+        let mainQty = 1; // Default visit quantity
+        // If user enters multiple rows, we collect all IDs.
+        // We assume "quantity" in row is 1 or we sum them?
+        // Usually appointments have Qty=1.
+        // If user puts 2 on a row, we might need to handle it.
+        // But for "Research", usually it's unique items.
+        // Let's collect IDs. If row qty > 1, add ID multiple times?
+        // Backend `services` is M2M. List of helper objects?
+        // `appointment_main_services` table has (appt_id, service_id). It's a SET probably (unique PK pair).
+        // Standard M2M enforces unique pairs unless we use a custom association object.
+        // If user does "MRI Brain x 2", M2M might dedupe.
+        // For now, let's assume unique services per visit.
+        serviceRows.forEach(row => {
+            const sel = row.querySelector('.service-select');
+            if (sel && sel.value) serviceIds.push(sel.value);
+            // Ignore row quantity for ID list (assumed 1).
+        });
+
+        if (serviceIds.length === 0) {
+            alert("Выберите хотя бы одно исследование");
+            return;
+        }
+
+        // --- GATHER ADDITIONAL SERVICES ---
+        const addSvcContainer = document.getElementById('additional-services-container');
+        const addSvcRows = addSvcContainer.querySelectorAll('.additional-service-row');
+        const addSvcIds = [];
+
+        addSvcRows.forEach(row => {
+            const sel = row.querySelector('.add-service-select');
+            if (sel && sel.value) addSvcIds.push(sel.value);
+        });
+
+        // --- CONSTRUCT SINGLE PAYLOAD ---
+        const payload = { ...commonData };
+        payload['services_ids'] = serviceIds;
+        payload['additional_services_ids'] = addSvcIds;
+
+        // Quantity fields
+        payload['quantity'] = 1; // Visit quantity
+        payload['additional_service_quantity'] = 1;
+
+        // Calculate Cost for the single payload
+        let totalCost = 0;
+
+        // Sum up main services cost
+        serviceRows.forEach(row => {
+            const sel = row.querySelector('.service-select');
+            const qtyInput = row.querySelector('.service-qty');
+            if (sel && sel.value) {
+                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
+                const qty = parseInt(qtyInput ? qtyInput.value : 1);
+                totalCost += price * qty;
+            }
+        });
+
+        // Sum up additional services cost
+        addSvcRows.forEach(row => {
+            const asSel = row.querySelector('.add-service-select');
+            const asQtyInput = row.querySelector('.add-service-qty');
+            if (asSel && asSel.value) {
+                const asPrice = parseFloat(asSel.options[asSel.selectedIndex].getAttribute('data-price')) || 0;
+                const asQty = parseInt(asQtyInput ? asQtyInput.value : 1);
+                totalCost += asPrice * asQty;
+            }
+        });
+
+        // Apply discount
+        if (payload['discount']) {
+            totalCost -= parseFloat(payload['discount']);
+        }
+
+        if (totalCost < 0) totalCost = 0;
+        payload['cost'] = totalCost;
+
 
         try {
             const response = await fetch('/api/appointments', {
@@ -733,44 +850,91 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                const result = await response.json();
-
-                // Add new row to table
-                try {
-                    addNewRow(result);
-                } catch (e) {
-                    console.error("addNewRow failed", e);
-                    alert("UI Error (Row): " + e.message);
-                }
-
-                // Update Summary Table
-                try {
-                    updateSummaryTable(data, inputs);
-                } catch (e) {
-                    console.error("updateSummary failed", e);
-                    // alert("UI Error (Summary): " + e.message); // suppress summary error to be less annoying if row worked
-                }
-
-                // Close modal
-                closeJournalModal();
+                // Determine Reload or Append
+                // Since structure changed significantly (multi-service), append logic is complex.
+                // Just reload page.
+                window.location.reload();
             } else {
-                try {
-                    const err = await response.json();
-                    alert('Error: ' + (err.error || 'Unknown error'));
-                } catch (jsonErr) {
-                    const text = await response.text();
-                    console.error('Server error response:', text);
-                    alert('Server Error (not JSON): ' + text.substring(0, 200));
-                }
+                const err = await response.json();
+                alert('Error: ' + (err.error || 'Unknown error'));
             }
         } catch (e) {
             console.error(e);
             alert('Network error: ' + e.message);
         }
+    }
+
+    function addServiceRow() {
+        const container = document.getElementById('services-container');
+        const firstRow = container.querySelector('.service-row');
+        const newRow = firstRow.cloneNode(true);
+
+        // Reset values
+        newRow.querySelector('select').selectedIndex = 0;
+        newRow.querySelector('input').value = 1;
+
+        // Change + button to - button
+        const btn = newRow.querySelector('button');
+        btn.textContent = '-';
+        btn.style.backgroundColor = '#ef4444'; // Red
+        btn.onclick = function () { this.closest('.service-row').remove(); calculateTotal(); };
+
+        container.appendChild(newRow);
+    }
+
+    function addAdditionalServiceRow() {
+        const container = document.getElementById('additional-services-container');
+        const firstRow = container.querySelector('.additional-service-row');
+        const newRow = firstRow.cloneNode(true);
+
+        // Reset values
+        newRow.querySelector('select').selectedIndex = 0;
+        newRow.querySelector('input').value = 1;
+
+        // Change + to -
+        const btn = newRow.querySelector('button');
+        btn.textContent = '-';
+        btn.style.backgroundColor = '#ef4444';
+        btn.onclick = function () { this.closest('.additional-service-row').remove(); calculateTotal(); };
+
+        container.appendChild(newRow);
+    }
+
+    function calculateTotal() {
+        let total = 0;
+
+        // Services
+        document.querySelectorAll('.service-row').forEach(row => {
+            const sel = row.querySelector('.service-select');
+            const qty = row.querySelector('.service-qty').value || 0;
+            if (sel && sel.value) {
+                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
+                total += price * qty;
+            }
+        });
+
+        // Add Services
+        document.querySelectorAll('.additional-service-row').forEach(row => {
+            const sel = row.querySelector('.add-service-select');
+            const qty = row.querySelector('.add-service-qty').value || 0;
+            if (sel && sel.value) {
+                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
+                total += price * qty;
+            }
+        });
+
+        // Discount
+        const discountInput = document.querySelector('input[name="discount"]');
+        if (discountInput) {
+            total -= (parseFloat(discountInput.value) || 0);
+        }
+
+        if (total < 0) total = 0;
+        document.getElementById('modal-total-display').textContent = total.toFixed(2);
     }
 
     function addNewRow(data) {
@@ -861,93 +1025,113 @@
     // If called from Modal inputs (which don't have closest('tr')), we should target Modal fields.
 
     async function calculateTotal(element) {
-        // Check if we are in Modal or Table
-        // The modal inputs invoke calculateTotal(). The table inputs invoke calculateTotal(this).
-        // If element is undefined, it's likely from Modal oninput="calculateTotal()" (if I set it that way)
-        // or I can pass 'modal' or something.
-
-        let context = null;
+        // --- 1. Table Edit Context (Single Row, Async API) ---
         if (element && element.closest && element.closest('tr')) {
-            context = element.closest('tr');
-        } else {
-            context = document.getElementById('entryForm');
+            const context = element.closest('tr');
+
+            const serviceSelect = context.querySelector('select[name="service"]');
+            const quantityInput = context.querySelector('input[name="quantity"]');
+            const additionalServiceSelect = context.querySelector('select[name="additional_service"]');
+            const additionalServiceQuantityInput = context.querySelector('input[name="additional_service_quantity"]');
+            const discountInput = context.querySelector('input[name="discount"]');
+            const costInput = context.querySelector('input[name="cost"]');
+            const dateInput = document.getElementById('journal-date');
+            const date = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
+            if (!costInput) return;
+
+            let total = 0;
+
+            // Fetch Service Price
+            if (serviceSelect && serviceSelect.value) {
+                try {
+                    const res = await fetch(`/api/service-price/${serviceSelect.value}?date=${date}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        let qty = 1;
+                        if (quantityInput) qty = parseInt(quantityInput.value) || 1;
+                        total += data.price * qty;
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            // Fetch Additional Service Price
+            if (additionalServiceSelect && additionalServiceSelect.value) {
+                try {
+                    const res = await fetch(`/api/additional-service-price/${additionalServiceSelect.value}?date=${date}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        let qty = 1;
+                        if (additionalServiceQuantityInput) qty = parseInt(additionalServiceQuantityInput.value) || 1;
+                        total += data.price * qty;
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            // Subtract Discount
+            if (discountInput && discountInput.value) {
+                total -= (parseFloat(discountInput.value) || 0);
+            }
+
+            // Payment method check
+            const paymentSelect = context.querySelector('select[name="payment_method_id"]');
+            if (paymentSelect && paymentSelect.selectedIndex >= 0) {
+                const paymentName = paymentSelect.options[paymentSelect.selectedIndex].text.toLowerCase().trim();
+                const financialMethods = ['наличные', 'карта'];
+                if (!financialMethods.includes(paymentName)) total = 0;
+            }
+
+            if (total < 0) total = 0;
+            costInput.value = total;
+            return;
         }
 
-        const serviceSelect = context.querySelector('select[name="service"]');
-        const quantityInput = context.querySelector('input[name="quantity"]');
-
-        const additionalServiceSelect = context.querySelector('select[name="additional_service"]');
-        const additionalServiceQuantityInput = context.querySelector('input[name="additional_service_quantity"]');
-
-        const discountInput = context.querySelector('input[name="discount"]');
-        const costInput = context.querySelector('input[name="cost"]');
-        const costDisplay = document.getElementById('modal-total-display'); // Only in modal
-
-        const dateInput = document.getElementById('journal-date');
-        const date = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
-
-        if (!costInput) return;
-
+        // --- 2. Modal Context (Multi-Row, Sync Data Attributes) ---
+        // This handles the new "Batch" entry form
         let total = 0;
 
-        // Fetch Service Price
-        if (serviceSelect && serviceSelect.value) {
-            try {
-                const res = await fetch(`/api/service-price/${serviceSelect.value}?date=${date}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    let price = data.price;
-                    // Quantity
-                    let qty = 1;
-                    if (quantityInput) qty = parseInt(quantityInput.value) || 1;
-                    // Is service price per item? Usually yes.
-                    total += price * qty;
-                }
-            } catch (e) {
-                console.error(e);
+        // Sum Services
+        const serviceRows = document.querySelectorAll('.service-row');
+        serviceRows.forEach(row => {
+            const sel = row.querySelector('.service-select');
+            const qtyInput = row.querySelector('.service-qty');
+            if (sel && sel.value) {
+                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
+                const qty = parseInt(qtyInput.value) || 0;
+                total += price * qty;
             }
-        }
+        });
 
-        // Fetch Additional Service Price
-        if (additionalServiceSelect && additionalServiceSelect.value) {
-            try {
-                const res = await fetch(`/api/additional-service-price/${additionalServiceSelect.value}?date=${date}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    let price = data.price;
-                    let qty = 1;
-                    if (additionalServiceQuantityInput) qty = parseInt(additionalServiceQuantityInput.value) || 1;
-                    total += price * qty;
-                }
-            } catch (e) {
-                console.error(e);
+        // Sum Additional Services
+        const addSvcRows = document.querySelectorAll('.additional-service-row');
+        addSvcRows.forEach(row => {
+            const sel = row.querySelector('.add-service-select');
+            const qtyInput = row.querySelector('.add-service-qty');
+            if (sel && sel.value) {
+                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
+                const qty = parseInt(qtyInput.value) || 0;
+                total += price * qty;
             }
+        });
+
+        // Discount
+        const discountInput = document.querySelector('#entryForm input[name="discount"]');
+        if (discountInput) {
+            total -= (parseFloat(discountInput.value) || 0);
         }
 
-        // Subtract Discount
-        let discount = 0;
-        if (discountInput && discountInput.value) {
-            discount = parseFloat(discountInput.value) || 0;
-        }
-        total = total - discount;
-
-        // Ensure not negative
-        if (total < 0) total = 0;
-
-        // Financial accounting logic: Only Cash and Card should have a cost in the Journal
-        const paymentSelect = context.querySelector('select[name="payment_method_id"]');
+        // Payment Method Check (Modal)
+        const paymentSelect = document.querySelector('#entryForm select[name="payment_method_id"]');
         if (paymentSelect && paymentSelect.selectedIndex >= 0) {
             const paymentName = paymentSelect.options[paymentSelect.selectedIndex].text.toLowerCase().trim();
             const financialMethods = ['наличные', 'карта'];
-
-            // If the selected method is NOT in financialMethods, set total to 0
-            if (!financialMethods.includes(paymentName)) {
-                total = 0;
-            }
+            if (!financialMethods.includes(paymentName)) total = 0;
         }
 
-        costInput.value = total;
-        if (costDisplay) costDisplay.textContent = total.toFixed(2);
+        if (total < 0) total = 0;
+
+        let display = document.getElementById('modal-total-display');
+        if (display) display.textContent = total.toFixed(2);
     }
 
     function updateSummaryTable(data, inputs) {
@@ -1033,6 +1217,8 @@
     async function toggleEdit(btn) {
         const row = btn.closest('tr');
         const inputs = row.querySelectorAll('input, select');
+        const viewModes = row.querySelectorAll('.view-mode');
+        const editModes = row.querySelectorAll('.edit-mode');
         const isEditing = btn.textContent === '💾'; // Currently saving?
 
         if (!isEditing) {
@@ -1042,6 +1228,10 @@
                     input.disabled = false;
                 }
             });
+            // Show edit widgets, hide view widgets
+            viewModes.forEach(el => el.style.display = 'none');
+            editModes.forEach(el => el.style.display = 'inline-block'); // or block
+
             btn.textContent = '💾';
             btn.title = "Сохранить";
             btn.style.color = '#10b981';
@@ -1053,6 +1243,9 @@
             let valid = true;
             inputs.forEach(input => {
                 if (input.name && !input.disabled && input.name !== 'manager') {
+                    // Start of simplistic generic collection. 
+                    // Note: This won't capture multiple additional services if we don't have inputs for them.
+                    // It only captures the 'select' value (the first one).
                     data[input.name] = input.value;
                     if (input.hasAttribute('required') && !input.value) {
                         input.style.borderColor = 'red';
@@ -1077,9 +1270,19 @@
 
                 if (response.ok) {
                     inputs.forEach(input => input.disabled = true);
+                    // Revert display
+                    viewModes.forEach(el => el.style.display = 'block');
+                    editModes.forEach(el => el.style.display = 'none');
+
+                    // Ideally we should update the View Mode text with the new values?
+                    // Reloading page is safest for complex M2M updates until we implement a better JS updater.
+                    window.location.reload();
+
+                    /* 
                     btn.textContent = '✎';
                     btn.title = "Редактировать";
-                    btn.style.color = '#6b7280';
+                    btn.style.color = '#6b7280'; 
+                    */
                 } else {
                     alert('Error saving changes');
                 }

@@ -70,34 +70,66 @@ class Location(db.Model):
             'children': [child.to_dict() for child in self.children]
         }
 
+
 appointment_services = db.Table('appointment_services',
     db.Column('appointment_id', db.Integer, db.ForeignKey('appointments.id'), primary_key=True),
     db.Column('additional_service_id', db.Integer, db.ForeignKey('additional_services.id'), primary_key=True)
 )
+
+# Association table for Main Services (Research)
+appointment_main_services = db.Table('appointment_main_services',
+    db.Column('appointment_id', db.Integer, db.ForeignKey('appointments.id'), primary_key=True),
+    db.Column('service_id', db.Integer, db.ForeignKey('services.id'), primary_key=True)
+)
+
+# Existing association for Additional Services (renaming variable for clarity if needed, but keeping table name to avoid migration issues if possible, though table name 'appointment_services' is confusing. 
+# It maps to additional_services.id. 
+# I will NOT touch the existing 'appointment_services' table definition to avoid breaking existing data/schema unless necessary.
+# But I will verify what Appointment uses.
 
 class Appointment(db.Model):
     __tablename__ = 'appointments'
 
     id = db.Column(db.Integer, primary_key=True)
     patient_name = db.Column(db.String(100), nullable=False)
-    patient_phone = db.Column(db.String(50), nullable=False)
-    doctor = db.Column(db.String(100), nullable=True) # Keeping for legacy/display if needed, but primary link is ID now
+    patient_phone = db.Column(db.String(50), nullable=True) # made nullable just in case
+    doctor = db.Column(db.String(100), nullable=True) 
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=True)
-    service = db.Column(db.String(200), nullable=False)
+    
+    # Legacy/Primary service string (for display/search if needed, or migration)
+    service = db.Column(db.String(200), nullable=True) 
+    
+    # New M2M relationship
+    services = db.relationship('Service', secondary=appointment_main_services, backref='appointments')
+
     date = db.Column(db.Date, nullable=False)
-    time = db.Column(db.String(5), nullable=False) # Format HH:MM
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    time = db.Column(db.String(5), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # made nullable
     clinic_id = db.Column(db.Integer, db.ForeignKey('clinics.id'), nullable=True)
     center_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
     
-    # New Fields for Journal
     contract_number = db.Column(db.String(50), nullable=True)
-    quantity = db.Column(db.Integer, default=1)
+    quantity = db.Column(db.Integer, default=1) # Total quantity of main services? Or just legacy?
+    
+    # Existing Additional Services Relationship (using the 'appointment_services' table defined previously, or 'appointment_additional_services'?)
+    # Line 73 defined `appointment_services` table mapping to `additional_services.id`.
+    additional_services = db.relationship('AdditionalService', secondary='appointment_services', backref='appointments')
+    
     additional_service_quantity = db.Column(db.Integer, default=1)
     cost = db.Column(db.Float, default=0.0)
     amount_paid = db.Column(db.Float, default=0.0)
     discount = db.Column(db.Float, default=0.0)
     comment = db.Column(db.Text, nullable=True)
+    
+    payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=True)
+    payment_method = db.relationship('PaymentMethod')
+
+    is_child = db.Column(db.Boolean, default=False)
+    lab_tech = db.Column(db.String(100), nullable=True)
+    
+    author = db.relationship('User', foreign_keys=[author_id])
+    doctor_rel = db.relationship('Doctor', backref='appointments')
+
     lab_tech = db.Column(db.String(100), nullable=True)
     manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=True)
