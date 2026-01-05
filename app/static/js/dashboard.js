@@ -62,12 +62,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 date: document.getElementById('appt-date').value,
                 time: document.getElementById('appt-time').value,
                 center_id: document.getElementById('appt-center').value || ((typeof currentCenterId !== 'undefined') ? currentCenterId : null),
-                // New Fields
-                is_child: document.getElementById('is-child').checked,
-                contract_number: document.getElementById('contract-number').value,
-                payment_method_id: document.getElementById('payment-method').value,
-                discount: document.getElementById('discount').value,
-                comment: document.getElementById('comment').value
+                // New Fields (Optional / Check if exist)
+                is_child: document.getElementById('is-child') ? document.getElementById('is-child').checked : false,
+                contract_number: document.getElementById('contract-number') ? document.getElementById('contract-number').value : null,
+                payment_method_id: document.getElementById('payment-method') ? document.getElementById('payment-method').value : null,
+                discount: document.getElementById('discount') ? document.getElementById('discount').value : 0,
+                comment: document.getElementById('comment') ? document.getElementById('comment').value : ''
             };
 
             try {

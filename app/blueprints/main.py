@@ -127,18 +127,17 @@ def dashboard():
     centers = []
     current_center_id = None
     
-    if current_user.role == 'lab_tech':
-        if current_user.center:
-            centers = [current_user.center]
-            current_center_id = current_user.center_id
-        else:
-             flash('Ваш аккаунт не привязан к центру. Обратитесь к администратору.', 'error')
-    elif current_user.city_id:
+    # Allow logic to be simpler: If city_id is set, show city centers.
+    # User requested 'lab_tech' to see 'all calendars' (presumably all centers in their city, like Admin/Org).
+    if current_user.city_id:
         centers = Location.query.filter_by(parent_id=current_user.city_id, type='center').all()
     else:
-        flash('Внимание: У вашего пользователя не указан Город. Обратитесь к администратору.', 'warning')
-        
-    if current_user.role != 'lab_tech':
+        # Fallback if no city (e.g. super admin global? or error)
+        # For now just warn as before
+        if current_user.role != 'admin': # Admin might not have city?
+             flash('Внимание: У вашего пользователя не указан Город. Обратитесь к администратору.', 'warning')
+
+    if True: # Always allow selection if centers exist (removed 'if role != lab_tech' block)
         center_id_arg = request.args.get('center_id')
         if center_id_arg:
             try:

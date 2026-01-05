@@ -140,14 +140,12 @@ def get_appointments():
     
     center_id_str = request.args.get('center_id')
     
-    # Enforce center restriction for Lab Techs
-    if current_user.role == 'lab_tech':
-        if current_user.center_id:
-            query = query.filter_by(center_id=current_user.center_id)
-        else:
-            # If no center assigned, return empty or error? Empty seems safer.
-            query = query.filter(db.false()) 
-    elif center_id_str and center_id_str != 'null':
+    # Removed strict Lab Tech restriction to allow viewing all centers in the city
+    if center_id_str and center_id_str != 'null': # Allow override if param provided
+         try:
+             query = query.filter_by(center_id=int(center_id_str))
+         except ValueError:
+             pass
          try:
              query = query.filter_by(center_id=int(center_id_str))
          except ValueError:
