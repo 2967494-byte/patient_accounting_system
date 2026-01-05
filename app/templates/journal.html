@@ -271,13 +271,74 @@
                 Импорт (Excel)
             </button>
             {% endif %}
-            <button onclick="openJournalModal()" class="btn btn-primary"
-                style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 1.25rem;">+</span> Добавить
-            </button>
+            <div class="header-actions" style="display: flex; gap: 10px;">
+                <!-- Add from Appointment Button -->
+                <button class="btn" onclick="openAppointmentSelectionModal()"
+                    style="background-color: #6b7280; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer;">
+                    + Добавить из записи
+                </button>
+                <button class="btn btn-primary" onclick="openModal()"
+                    style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer;">
+                    + Добавить запись
+                </button>
+            </div>
         </div>
     </div>
 
+    <!-- Select Appointment Modal -->
+    <!-- Select Appointment Modal -->
+    <div id="select-appointment-modal" class="modal hidden"
+        style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+        <div class="modal-content"
+            style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 600px; border-radius: 8px;">
+            <div class="modal-header" style="overflow: hidden; margin-bottom: 1rem;">
+                <span class="close" onclick="closeAppointmentSelectionModal()"
+                    style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1;">&times;</span>
+                <h2 style="margin: 0; color: #1f2937;">Выберите запись</h2>
+            </div>
+            <div class="modal-body">
+                <table class="journal-table" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #e5e7eb;">
+                            <th style="width: 70px; padding: 0.5rem; text-align: left; color: #374151;">Время</th>
+                            <th style="width: 30%; padding: 0.5rem; text-align: left; color: #374151;">Пациент</th>
+                            <th style="width: 40%; padding: 0.5rem; text-align: left; color: #374151;">Услуга</th>
+                            <th style="width: 100px; padding: 0.5rem; text-align: center; color: #374151;">Действие</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if todays_appointments %}
+                        {% for appt in todays_appointments %}
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem; color: #111827;">{{ appt.time }}</td>
+                            <td style="padding: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #111827;"
+                                title="{{ appt.patient_name }}">{{ appt.patient_name }}</td>
+                            <td style="padding: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #111827;"
+                                title="{% for s in appt.services %}{{ s.name }}{% if not loop.last %}, {% endif %}{% endfor %}">
+                                {% for s in appt.services %}
+                                {{ s.name }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td style="padding: 0.5rem; text-align: center;">
+                                <button class="btn btn-sm btn-primary"
+                                    style="padding: 0.25rem 0.75rem; font-size: 0.875rem; background-color: #3b82f6; color: white; border: none; border-radius: 0.25rem; cursor: pointer;"
+                                    onclick='openJournalFromAppointment({{ appt.to_dict()|tojson }})'>Выбрать</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align:center; padding: 1rem; color: #6b7280;">Нет
+                                незарегистрированных записей на сегодня</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Add Modal -->
     <!-- Custom Top Scrollbar -->
     <div id="top-scroll-wrapper" class="journal-table-wrapper"
         style="overflow-x: auto; overflow-y: hidden; height: 24px; min-height: 24px; margin-bottom: 0; border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; flex: 0 0 auto;">
@@ -301,7 +362,8 @@
                     </th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb; vertical-align: middle;">
                         Кол-во</th>
-                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb; vertical-align: middle;">Доп
+                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb; vertical-align: middle;">
+                        Доп
                         услуги</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Оплата</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Скидка</th>
@@ -319,7 +381,8 @@
                     style="border-bottom: 1px solid #e5e7eb; background: #fff;">
                     <td class="row-number" style="padding: 0.75rem 0.5rem; text-align: center; color: #6b7280;">{{
                         loop.index }}</td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.contract_number or '' }}
+                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.contract_number or ''
+                        }}
                     </td>
                     <td style="padding: 0.25rem 0.5rem; text-align: center;">
                         {% if appointment.is_child %}
@@ -354,7 +417,8 @@
                     <td style="padding: 0.25rem 0.5rem;">{{ appointment.payment_method.name if
                         appointment.payment_method else '-' }}</td>
                     <td style="padding: 0.25rem 0.5rem;">{{ appointment.discount or 0 }}</td>
-                    <td style="padding: 0.75rem 0.5rem; font-weight: 500;">{{ "%.2f"|format(appointment.cost) }}</td>
+                    <td style="padding: 0.75rem 0.5rem; font-weight: 500;">{{ "%.2f"|format(appointment.cost) }}
+                    </td>
                     <td style="padding: 0.25rem 0.5rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"
                         title="{{ appointment.comment or '' }}">{{ appointment.comment or '' }}</td>
                     <td style="padding: 0.75rem 0.5rem;">{{ appointment.lab_tech or (appointment.author.username if
@@ -391,14 +455,16 @@
                             <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
                                 Количество
                             </th>
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Сумма
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Сумма
                                 (₽)
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов</td>
+                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов
+                            </td>
                             <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
                             <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
                                 "%.2f"|format(summary_stats.total_sum) }}</td>
@@ -441,10 +507,12 @@
                         </tr>
                         <tr style="border-bottom: 1px solid #e5e7eb;">
                             <td style="padding: 0.75rem 1rem; color: #374151;">Количество детей</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.children_count }}</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.children_count }}
+                            </td>
                         </tr>
                         <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество КТ, в том
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество КТ, в
+                                том
                                 числе:
                             </td>
                             <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{
@@ -452,7 +520,8 @@
                                 }}</td>
                         </tr>
                         <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">
+                                Взрослых
                             </td>
                             <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_adults }}</td>
                         </tr>
@@ -463,14 +532,16 @@
                         </tr>
 
                         <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество ОПТГ, в том
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество ОПТГ, в
+                                том
                                 числе:</td>
                             <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{
                                 summary_stats.optg_count
                                 }}</td>
                         </tr>
                         <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">
+                                Взрослых
                             </td>
                             <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_adults }}</td>
                         </tr>
@@ -581,7 +652,8 @@
                             onchange="calculateTotal()">
                             <option value="">-- Нет --</option>
                             {% for ads in additional_services %}
-                            <option value="{{ ads.id }}" data-price="{{ ads.price }}">{{ ads.name }} - {{ ads.price }}
+                            <option value="{{ ads.id }}" data-price="{{ ads.price }}">{{ ads.name }} - {{ ads.price
+                                }}
                             </option>
                             {% endfor %}
                         </select>
@@ -1509,6 +1581,71 @@
             console.error(e);
             alert('Network error: ' + e.message);
         }
+    }
+    // --- Appointment Selection & Import Logic ---
+
+    function openAppointmentSelectionModal() {
+        const el = document.getElementById('select-appointment-modal');
+        if (el) {
+            el.style.display = 'block';
+            el.classList.remove('hidden');
+        }
+    }
+
+    function closeAppointmentSelectionModal() {
+        const el = document.getElementById('select-appointment-modal');
+        if (el) el.style.display = 'none';
+    }
+
+    // Alias for button compatibility
+    function openModal() {
+        openJournalModal();
+    }
+
+    // Adapter for legacy duplicate name if needed (the duplicate was openEditJournalModal)
+    // The existing openEditJournalModal at 817 is correct.
+
+    function openJournalFromAppointment(appt) {
+        closeAppointmentSelectionModal();
+        openJournalModal(); // Use the existing function
+
+        setTimeout(() => {
+            const form = document.getElementById('entryForm');
+            if (!form) return;
+
+            if (appt.patient_name) {
+                const nameInput = form.querySelector('input[name="patient_name"]');
+                if (nameInput) nameInput.value = appt.patient_name;
+            }
+
+            if (appt.doctor_id) {
+                const docSelect = form.querySelector('select[name="doctor_id"]');
+                if (docSelect) {
+                    docSelect.value = appt.doctor_id;
+                    if (typeof updateManager === 'function') updateManager(docSelect);
+                }
+            }
+
+            if (appt.services && appt.services.length > 0) {
+                const serviceId = appt.services[0].id;
+                const serviceSelect = form.querySelector('select[name="service"]');
+                if (serviceSelect) {
+                    serviceSelect.value = serviceId;
+                    if (typeof calculateTotal === 'function') calculateTotal(serviceSelect);
+                }
+            }
+        }, 100);
+    }
+
+    // Comprehensive outside click handler replacing duplicated ones
+    window.onclick = function (event) {
+        const modal1 = document.getElementById('entryModal');
+        const modal2 = document.getElementById('select-appointment-modal');
+        const modal3 = document.getElementById('importJournalModal');
+
+        if (event.target == modal1) closeJournalModal();
+        if (event.target == modal2) closeAppointmentSelectionModal();
+        if (event.target == modal3) modal3.style.display = "none";
     }
 </script>
 

@@ -343,4 +343,9 @@ def journal():
         elif appt.service:
              categorize_service(appt.service, appt.is_child)
 
-    return render_template('journal.html', centers=centers, current_center_id=current_center_id, appointments=appointments, current_date=current_date.strftime('%Y-%m-%d'), services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats)
+    # Filter for "Select Appointment" modal: Only show appointments that are NOT "registered" (no payment method)
+    # This prevents creating duplicates if the user thinks of "Journal" as "Completed" 
+    # and "Appointment" as "Scheduled".
+    todays_appointments = [a for a in appointments if a.payment_method_id is None]
+
+    return render_template('journal.html', centers=centers, current_center_id=current_center_id, todays_appointments=todays_appointments, appointments=appointments, current_date=current_date, services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats)

@@ -153,8 +153,9 @@ class Appointment(db.Model):
             'id': self.id,
             'patient_name': self.patient_name,
             'patient_phone': self.patient_phone,
-            'doctor': self.doctor,
-            'service': self.service,
+            'doctor_id': self.doctor_id, # return ID for form pre-fill
+            'doctor_name': self.doctor_rel.name if self.doctor_rel else (self.doctor or 'Unknown'),
+            'services': [{'id': s.id, 'name': s.name} for s in self.services],
             'date': self.date.isoformat(),
             'time': self.time,
             'author_name': self.author.username if self.author else 'Unknown',
