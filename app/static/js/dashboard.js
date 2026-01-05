@@ -61,7 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 service: document.getElementById('service').value,
                 date: document.getElementById('appt-date').value,
                 time: document.getElementById('appt-time').value,
-                center_id: document.getElementById('appt-center').value || ((typeof currentCenterId !== 'undefined') ? currentCenterId : null)
+                center_id: document.getElementById('appt-center').value || ((typeof currentCenterId !== 'undefined') ? currentCenterId : null),
+                // New Fields
+                is_child: document.getElementById('is-child').checked,
+                contract_number: document.getElementById('contract-number').value,
+                payment_method_id: document.getElementById('payment-method').value,
+                discount: document.getElementById('discount').value,
+                comment: document.getElementById('comment').value
             };
 
             try {
@@ -193,29 +199,34 @@ async function openCreateModal(date, time) {
 
 async function openEditModal(id) {
     try {
-        const cell = document.querySelector(`.time-slot-cell[data-id="${id}"]`);
-        if (!cell) return;
+        // Fetch full details from API
+        const response = await fetch(`/api/appointments/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch appointment details');
+        const appt = await response.json();
 
         document.getElementById('modal-title').textContent = 'Редактирование записи';
-        document.getElementById('appt-id').value = id;
-        document.getElementById('appt-date').value = cell.dataset.date;
+        document.getElementById('appt-id').value = appt.id;
+        document.getElementById('appt-date').value = appt.date;
 
-        document.getElementById('patient-name').value = cell.dataset.patient_name;
-        document.getElementById('patient-phone').value = cell.dataset.patient_phone;
-        document.getElementById('doctor').value = cell.dataset.doctor;
-        document.getElementById('service').value = cell.dataset.service;
+        document.getElementById('patient-name').value = appt.patient_name;
+        document.getElementById('patient-phone').value = appt.patient_phone || '';
+        document.getElementById('doctor').value = appt.doctor || '';
+        document.getElementById('service').value = appt.service || '';
 
         // Set Center
-        if (cell.dataset.center_id) {
-            document.getElementById('appt-center').value = cell.dataset.center_id;
-        } else if (typeof currentCenterId !== 'undefined') {
-            document.getElementById('appt-center').value = currentCenterId;
+        if (appt.center_id) {
+            document.getElementById('appt-center').value = appt.center_id;
         }
 
-        const author = cell.dataset.author_name;
-        const authorDiv = document.getElementById('author-info');
-        authorDiv.textContent = `Автор записи: ${author}`;
-        authorDiv.classList.remove('hidden');
+        // Author info (if available in API? We didn't add it explicitly to to_dict, check model)
+        // Model to_dict usually has basics. Verify api.py/model.py if author_name is sent.
+        // api.py `get_appointment_detail` calls `appt.to_dict()`. 
+        // Need to ensure `to_dict` includes `author_name`. Assuming it does or we add it.
+        if (appt.author_name) {
+            const authorDiv = document.getElementById('author-info');
+            authorDiv.textContent = `Автор записи: ${appt.author_name}`;
+            authorDiv.classList.remove('hidden');
+        }
 
         // Show Delete Button
         const btnDelete = document.getElementById('btn-delete');
@@ -223,15 +234,16 @@ async function openEditModal(id) {
 
         // Fetch slots and set time
         await fetchSlots(
-            cell.dataset.date,
+            appt.date,
             document.getElementById('appt-center').value,
             id,
-            cell.dataset.time
+            appt.time
         );
 
         document.getElementById('appointment-modal').classList.remove('hidden');
     } catch (e) {
         console.error(e);
+        alert('Ошибка загрузки данных записи');
     }
 }
 

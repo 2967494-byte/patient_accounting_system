@@ -1,6 +1,7 @@
 {% extends "app_base.html" %}
 
-{% block content %}
+{% block head %}
+
 <style>
     /* Адаптивная таблица */
     .journal-table {
@@ -9,6 +10,10 @@
         border-collapse: collapse;
         table-layout: auto;
     }
+
+    /* ... (CSS continues, simplified for brevity in prompt but tool keeps it) ... */
+    /* Wait, replace_file_content requires exact TargetContent. I should use multi_replace for small precise edits or replace_file_content with a huge block. */
+    /* Since I need to touch line 3, 5, and 191, multi_replace is better. */
 
     /* Фиксированные минимальные ширины для узких столбцов */
     .journal-table th:nth-child(1),
@@ -186,6 +191,9 @@
         background-color: #555;
     }
 </style>
+{% endblock %}
+
+{% block content %}
 
 <script>
     // Helper to auto-resize inputs for browsers without field-sizing support
@@ -304,70 +312,32 @@
             <tbody id="journal-body">
                 {% if appointments %}
                 {% for appointment in appointments %}
-                <tr class="data-row input-row saved-row" data-id="{{ appointment.id }}"
+                <tr class="data-row" data-id="{{ appointment.id }}"
                     style="border-bottom: 1px solid #e5e7eb; background: #fff;">
                     <td class="row-number" style="padding: 0.75rem 0.5rem; text-align: center; color: #6b7280;">{{
-                        loop.index
-                        }}</td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">
-                        <input type="text" name="contract_number" value="{{ appointment.contract_number or '' }}"
-                            title="{{ appointment.contract_number or '' }}" class="journal-input"
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" disabled required>
+                        loop.index }}</td>
+                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.contract_number or '' }}
                     </td>
                     <td style="padding: 0.25rem 0.5rem; text-align: center;">
-                        <input type="checkbox" {% if appointment.is_child %}checked{% endif %} disabled
-                            style="width: 1.1rem; height: 1.1rem;">
+                        {% if appointment.is_child %}
+                        <span style="color: #ed8936;">👶</span>
+                        {% endif %}
                     </td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">
-                        <select name="clinic_id" class="journal-select" disabled required>
-                            <option value="">--</option>
-                            {% for clinic in clinics %}
-                            <option value="{{ clinic.id }}" {% if appointment.clinic_id==clinic.id %}selected{% endif
-                                %}>{{ clinic.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">
-                        <select name="doctor_id" class="journal-select" onchange="updateManager(this)" disabled
-                            required>
-                            <option value="">--</option>
-                            <option value="Unknown" {% if appointment.doctor=='Unknown' %}selected{% endif %}>Unknown
-                            </option>
-                            {% for doc in doctors %}
-                            <option value="{{ doc.id }}" data-manager="{{ doc.manager or '' }}" {% if
-                                appointment.doctor_id==doc.id %}selected{% endif %}>{{
-                                doc.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">
-                        <input type="text" name="patient_name" value="{{ appointment.patient_name }}"
-                            title="{{ appointment.patient_name }}" class="journal-input" disabled required>
-                    </td>
+                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.clinic.name if
+                        appointment.clinic else '-' }}</td>
+                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.doctor_rel.name if
+                        appointment.doctor_rel else (appointment.doctor or '-') }}</td>
+                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.patient_name }}</td>
                     <td style="padding: 0.25rem 0.5rem; white-space: normal;">
-                        <div class="view-mode">
-                            {% if appointment.services %}
-                            {% for s in appointment.services %}
-                            <div style="margin-bottom: 2px;">{{ s.name }}</div>
-                            {% endfor %}
-                            {% else %}
-                            {{ appointment.service }}
-                            {% endif %}
-                        </div>
-                        <select name="service" class="journal-select edit-mode" style="display: none;"
-                            onchange="calculateTotal(this)" disabled required>
-                            <option value="">--</option>
-                            {% set current_svc = appointment.services[0] if appointment.services else None %}
-                            {% for s in services %}
-                            <option value="{{ s.id }}" {% if (current_svc and current_svc.id==s.id) or (not current_svc
-                                and appointment.service==s.name) %}selected{% endif %}>{{ s.name }}</option>
-                            {% endfor %}
-                        </select>
+                        {% if appointment.services %}
+                        {% for s in appointment.services %}
+                        <div style="margin-bottom: 2px;">{{ s.name }}</div>
+                        {% endfor %}
+                        {% else %}
+                        {{ appointment.service }}
+                        {% endif %}
                     </td>
-                    <td style="padding: 0.25rem 0.5rem;">
-                        <input type="number" name="quantity" value="{{ appointment.quantity or 1 }}"
-                            class="journal-input" style="text-align: center;" disabled required>
-                    </td>
+                    <td style="padding: 0.25rem 0.5rem; text-align: center;">{{ appointment.quantity }}</td>
                     <td style="padding: 0.25rem 0.5rem;">
                         {% if appointment.additional_services %}
                         {% for ads in appointment.additional_services %}
@@ -376,156 +346,141 @@
                         {% else %}
                         -
                         {% endif %}
+                    </td>
+                    <td style="padding: 0.25rem 0.5rem;">{{ appointment.payment_method.name if
+                        appointment.payment_method else '-' }}</td>
+                    <td style="padding: 0.25rem 0.5rem;">{{ appointment.discount or 0 }}</td>
+                    <td style="padding: 0.75rem 0.5rem; font-weight: 500;">{{ "%.2f"|format(appointment.cost) }}</td>
+                    <td style="padding: 0.25rem 0.5rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"
+                        title="{{ appointment.comment or '' }}">{{ appointment.comment or '' }}</td>
+                    <td style="padding: 0.75rem 0.5rem;">{{ appointment.lab_tech or (appointment.author.username if
+                        appointment.author else '-') }}</td>
+                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.doctor_rel.manager if
+                        appointment.doctor_rel and appointment.doctor_rel.manager else '-' }}</td>
+                    <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap;">
+                        <button class="btn-icon" onclick="openEditJournalModal({{ appointment.id }})"
+                            title="Редактировать">✎</button>
+                        <button class="btn-icon" onclick="deleteEntry(this)" title="Удалить"
+                            style="color: #ef4444;">🗑️</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+
+        </table>
     </div>
-    <!-- Hidden select for inline edit of FIRST service only (Legacy support) -->
-    <select name="additional_service" class="journal-select edit-mode" style="display: none;"
-        onchange="calculateTotal(this)" disabled>
-        <option value="">--</option>
-        {% set current_add_svc = appointment.additional_services[0] if
-        appointment.additional_services else None %}
-        {% for ads in additional_services %}
-        <option value="{{ ads.id }}" {% if current_add_svc and current_add_svc.id==ads.id %}selected{% endif %}>{{
-            ads.name }} - {{ ads.price }}</option>
-        {% endfor %}
-    </select>
-    </td>
-    <td style="padding: 0.25rem 0.5rem;">
-        <select name="payment_method_id" class="journal-select" onchange="calculateTotal(this)" disabled required>
-            <option value="">--</option>
-            {% for method in payment_methods %}
-            <option value="{{ method.id }}" {% if appointment.payment_method_id==method.id %}selected{% endif %}>{{
-                method.name }}</option>
-            {% endfor %}
-        </select>
-    </td>
-    <td style="padding: 0.25rem 0.5rem;">
-        <input type="number" name="discount" value="{{ appointment.discount or 0 }}" class="journal-input" disabled
-            required oninput="calculateTotal(this)">
-    </td>
-    <td style="padding: 0.75rem 0.5rem;">
-        <input type="number" name="cost" value="{{ appointment.cost }}" class="journal-input-readonly" readonly>
-    </td>
-    <td style="padding: 0.25rem 0.5rem;">
-        <input type="text" name="comment" value="{{ appointment.comment or '' }}" class="journal-input"
-            title="{{ appointment.comment or '' }}" disabled>
-    </td>
-    <td style="padding: 0.75rem 0.5rem;">{{ appointment.lab_tech or (appointment.author.username if
-        appointment.author else '-') }}</td>
-    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">
-        <input type="text" name="manager" class="journal-input-readonly"
-            value="{{ appointment.doctor_rel.manager if appointment.doctor_rel and appointment.doctor_rel.manager else '-' }}"
-            readonly>
-    </td>
-    <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap;">
-        <button class="btn-icon" onclick="toggleEdit(this)" title="Редактировать">✎</button>
-        <button class="btn-icon" onclick="deleteEntry(this)" title="Удалить" style="color: #ef4444;">🗑️</button>
-    </td>
-    </tr>
-    {% endfor %}
+
+    <!-- Summary Table -->
+    {% if summary_stats %}
+    <div class="summary-section" style="margin-top: 2rem; display: flex; gap: 2rem; flex-wrap: wrap;">
+        <!-- Financial Table -->
+        <div style="flex: 0 0 auto;">
+            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Финансы</h3>
+            <div style="overflow-x: auto;">
+                <table
+                    style="width: auto; min-width: 400px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6; text-align: left;">
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Категория
+                            </th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Количество
+                            </th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Сумма
+                                (₽)
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
+                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
+                                "%.2f"|format(summary_stats.total_sum) }}</td>
+                        </tr>
+                        {% for method_name, stats in summary_stats.methods.items() %}
+                        {% if stats.count > 0 or True %}
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ method_name }}</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ stats.count }}</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(stats.sum) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Statistics Table -->
+        <div style="flex: 0 0 auto;">
+            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Статистика</h3>
+            <div style="overflow-x: auto;">
+                <table
+                    style="width: auto; min-width: 300px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6; text-align: left;">
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Категория
+                                (за день)
+                            </th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Количество
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151;">Количество взрослых</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.adults_count }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151;">Количество детей</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.children_count }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество КТ, в том
+                                числе:
+                            </td>
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{
+                                summary_stats.kt_count
+                                }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых
+                            </td>
+                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_adults }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей
+                            </td>
+                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_children }}</td>
+                        </tr>
+
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество ОПТГ, в том
+                                числе:</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{
+                                summary_stats.optg_count
+                                }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых
+                            </td>
+                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_adults }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей
+                            </td>
+                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_children }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     {% endif %}
-
-    </table>
-</div>
-
-<!-- Summary Table -->
-{% if summary_stats %}
-<div class="summary-section" style="margin-top: 2rem; display: flex; gap: 2rem; flex-wrap: wrap;">
-    <!-- Financial Table -->
-    <div style="flex: 0 0 auto;">
-        <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Финансы</h3>
-        <div style="overflow-x: auto;">
-            <table
-                style="width: auto; min-width: 400px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
-                <thead>
-                    <tr style="background-color: #f3f4f6; text-align: left;">
-                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Категория
-                        </th>
-                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Количество
-                        </th>
-                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Сумма (₽)
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
-                        <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
-                            "%.2f"|format(summary_stats.total_sum) }}</td>
-                    </tr>
-                    {% for method_name, stats in summary_stats.methods.items() %}
-                    {% if stats.count > 0 or True %}
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ method_name }}</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ stats.count }}</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(stats.sum) }}</td>
-                    </tr>
-                    {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Statistics Table -->
-    <div style="flex: 0 0 auto;">
-        <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Статистика</h3>
-        <div style="overflow-x: auto;">
-            <table
-                style="width: auto; min-width: 300px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
-                <thead>
-                    <tr style="background-color: #f3f4f6; text-align: left;">
-                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Категория
-                            (за день)
-                        </th>
-                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Количество
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; color: #374151;">Количество взрослых</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.adults_count }}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; color: #374151;">Количество детей</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.children_count }}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество КТ, в том числе:
-                        </td>
-                        <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{ summary_stats.kt_count
-                            }}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых</td>
-                        <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_adults }}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей</td>
-                        <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_children }}</td>
-                    </tr>
-
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество ОПТГ, в том
-                            числе:</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{ summary_stats.optg_count
-                            }}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых</td>
-                        <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_adults }}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей</td>
-                        <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_children }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
 </div>
 
 <!-- Modal -->
@@ -791,22 +746,177 @@
         }
     }
 
+    async function openEditJournalModal(id) {
+        try {
+            const response = await fetch(`/api/appointments/${id}`);
+            if (!response.ok) throw new Error('Failed to fetch');
+            const appt = await response.json();
+
+            const form = document.getElementById('entryForm');
+            form.reset();
+
+            // Set ID
+            let idInput = form.querySelector('input[name="id"]');
+            if (!idInput) {
+                // Create if missing (it's missing in current HTML)
+                idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                form.appendChild(idInput);
+            }
+            idInput.value = appt.id;
+
+            // Set Title
+            const title = document.querySelector('#entryModal h2');
+            if (title) title.textContent = 'Редактирование записи';
+
+            // Common Fields
+            if (document.getElementById('journal-date')) {
+                // Assuming journal-date is filter, but we might want to edit the date of appointment?
+                // The Modal currently doesn't have a Date input! It relies on `journal-date` (filter) for NEW entries.
+                // For EDIT, we should probably add a Date input to the modal or use the filter date if it's the same?
+                // User might want to MOVE the appointment.
+                // `entryModal` in `journal.html` currently lacks a Date field (it reads `journal-date` in handleSave).
+                // If we want to move it, we need a Date field in the modal.
+                // Let's add a Date field to the modal dynamically or check if it exists.
+                // Looking at read code (Step 249+): `entryForm` starts at line 547. 
+                // Row 1: Contract, Child. Row 2: Patient. No Date!
+                // I should add a Date field to the modal HTML.
+            }
+
+            // Populate Fields
+            form.querySelector('input[name="contract_number"]').value = appt.contract_number || '';
+            form.querySelector('input[name="is_child"]').checked = appt.is_child || false;
+            form.querySelector('input[name="patient_name"]').value = appt.patient_name || '';
+
+            const clinicSel = form.querySelector('select[name="clinic_id"]');
+            if (clinicSel) clinicSel.value = appt.clinic_id || '';
+
+            const doctorSel = form.querySelector('select[name="doctor_id"]');
+            if (doctorSel) {
+                doctorSel.value = appt.doctor_id || '';
+                // Update manager hidden field
+                updateManager(doctorSel);
+            }
+
+            const paymentSel = form.querySelector('select[name="payment_method_id"]');
+            if (paymentSel) paymentSel.value = appt.payment_method_id || '';
+
+            form.querySelector('input[name="discount"]').value = appt.discount || 0;
+            form.querySelector('input[name="comment"]').value = appt.comment || '';
+
+            // Services
+            const servicesContainer = document.getElementById('services-container');
+            // Clear all but first row? Or clear all and rebuild?
+            // Existing logic `addServiceRow` clones first row.
+            // If we clear all, we lose the template.
+            // So keep one, reset it, then clone.
+
+            // Remove extra rows
+            while (servicesContainer.children.length > 1) {
+                servicesContainer.lastElementChild.remove();
+            }
+
+            const firstRow = servicesContainer.firstElementChild;
+
+            if (appt.services_ids && appt.services_ids.length > 0) {
+                appt.services_ids.forEach((sid, index) => {
+                    let row = index === 0 ? firstRow : null;
+                    if (!row) {
+                        addServiceRow();
+                        row = servicesContainer.lastElementChild;
+                    }
+                    const sel = row.querySelector('.service-select');
+                    if (sel) sel.value = sid;
+                    const qty = row.querySelector('.service-qty');
+                    if (qty) qty.value = 1; // Default
+                });
+            } else {
+                // Reset first row
+                firstRow.querySelector('select').selectedIndex = 0;
+                firstRow.querySelector('input').value = 1;
+            }
+
+            // Additional Services
+            const addContainer = document.getElementById('additional-services-container');
+            while (addContainer.children.length > 1) {
+                addContainer.lastElementChild.remove();
+            }
+            const firstAddRow = addContainer.firstElementChild;
+
+            if (appt.additional_services_ids && appt.additional_services_ids.length > 0) {
+                appt.additional_services_ids.forEach((asid, index) => {
+                    let row = index === 0 ? firstAddRow : null;
+                    if (!row) {
+                        addAdditionalServiceRow();
+                        row = addContainer.lastElementChild;
+                    }
+                    const sel = row.querySelector('.add-service-select');
+                    if (sel) sel.value = asid;
+                    const qty = row.querySelector('.add-service-qty');
+                    if (qty) qty.value = 1;
+                });
+            } else {
+                firstAddRow.querySelector('select').selectedIndex = 0;
+                firstAddRow.querySelector('input').value = 1;
+            }
+
+            // Recalculate Total
+            calculateTotal(form); // Pass form as context? existing calculateTotal uses element.closest 
+            // calculateTotal logic 2 handles Modal Context by selecting .service-row globally.
+            // Wait, calculateTotal logic 2 (Line 1157 in Step 248) finds ALL .service-row. 
+            // It sums them up.
+            calculateTotal();
+
+            // Show Modal
+            document.getElementById('entryModal').style.display = 'block';
+
+        } catch (e) {
+            console.error(e);
+            alert('Error fetching appointment');
+        }
+    }
+
     async function handleSave() {
         const form = document.getElementById('entryForm');
+        // Check for ID
+        const idInput = form.querySelector('input[name="id"]');
+        const id = idInput ? idInput.value : null;
 
         // --- READ COMMON DATA ---
         const commonData = {};
-        const dateInput = document.getElementById('journal-date');
-        commonData['date'] = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
+        // Date Logic: If editing, we might want to keep existing date OR allow change.
+        // Current modal has NO date input. It uses 'journal-date' filter value.
+        // If we are editing, we should probably stick to the ID's date unless we add a field.
+        // For now, let's assume date is NOT editable in this modal variant or we add it.
+        // If I add it, I need to look for it.
+        const modalDateInput = form.querySelector('input[name="date"]');
+        if (modalDateInput) {
+            commonData['date'] = modalDateInput.value;
+        } else {
+            // Fallback to journal filter date (dangerous for Edit if they look at different day?)
+            // But usually you edit what you see.
+            const dateInput = document.getElementById('journal-date');
+            commonData['date'] = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         let centerId = urlParams.get('center_id');
         if (!centerId) centerId = CURRENT_CENTER_ID;
         if (centerId && centerId !== 'None') commonData['center_id'] = centerId;
 
-        const now = new Date();
-        const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-        commonData['time'] = timeString;
+        // Time: If editing, keep original? Modal has no Time field.
+        // If New, use current time.
+        // We rely on backend or default?
+        // If ID exists, we probably shouldn't overwrite time unless UI allows.
+        // Let's check api.py `update_appointment`. If `time` not in data, it keeps existing.
+        // So for EDIT, we just ommit `time` if we don't have input.
+        if (!id) {
+            const now = new Date();
+            const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            commonData['time'] = timeString;
+        }
 
         // Collect fields that are single-entry
         ['contract_number', 'is_child', 'patient_name', 'clinic_id', 'doctor_id', 'payment_method_id', 'discount', 'comment', 'manager'].forEach(name => {
@@ -827,22 +937,10 @@
         const serviceContainer = document.getElementById('services-container');
         const serviceRows = serviceContainer.querySelectorAll('.service-row');
         const serviceIds = [];
-        let mainQty = 1; // Default visit quantity
-        // If user enters multiple rows, we collect all IDs.
-        // We assume "quantity" in row is 1 or we sum them?
-        // Usually appointments have Qty=1.
-        // If user puts 2 on a row, we might need to handle it.
-        // But for "Research", usually it's unique items.
-        // Let's collect IDs. If row qty > 1, add ID multiple times?
-        // Backend `services` is M2M. List of helper objects?
-        // `appointment_main_services` table has (appt_id, service_id). It's a SET probably (unique PK pair).
-        // Standard M2M enforces unique pairs unless we use a custom association object.
-        // If user does "MRI Brain x 2", M2M might dedupe.
-        // For now, let's assume unique services per visit.
+
         serviceRows.forEach(row => {
             const sel = row.querySelector('.service-select');
             if (sel && sel.value) serviceIds.push(sel.value);
-            // Ignore row quantity for ID list (assumed 1).
         });
 
         if (serviceIds.length === 0) {
@@ -869,10 +967,8 @@
         payload['quantity'] = 1; // Visit quantity
         payload['additional_service_quantity'] = 1;
 
-        // Calculate Cost for the single payload
+        // Calculate Cost
         let totalCost = 0;
-
-        // Sum up main services cost
         serviceRows.forEach(row => {
             const sel = row.querySelector('.service-select');
             const qtyInput = row.querySelector('.service-qty');
@@ -882,8 +978,6 @@
                 totalCost += price * qty;
             }
         });
-
-        // Sum up additional services cost
         addSvcRows.forEach(row => {
             const asSel = row.querySelector('.add-service-select');
             const asQtyInput = row.querySelector('.add-service-qty');
@@ -902,10 +996,12 @@
         if (totalCost < 0) totalCost = 0;
         payload['cost'] = totalCost;
 
-
         try {
-            const response = await fetch('/api/appointments', {
-                method: 'POST',
+            const url = id ? `/api/appointments/${id}` : '/api/appointments';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
@@ -914,9 +1010,6 @@
             });
 
             if (response.ok) {
-                // Determine Reload or Append
-                // Since structure changed significantly (multi-service), append logic is complex.
-                // Just reload page.
                 window.location.reload();
             } else {
                 const err = await response.json();

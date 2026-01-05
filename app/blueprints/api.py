@@ -178,6 +178,36 @@ def get_appointments():
 
     return jsonify(results)
 
+@api.route('/appointments/<int:id>', methods=['GET'])
+@login_required
+def get_appointment_detail(id):
+    appt = Appointment.query.get_or_404(id)
+    
+    # Restriction check
+    if current_user.role == 'org' and appt.author_id != current_user.id:
+        # Return limited or 403? 
+        # For editing, they likely shouldn't be able to fetch if they can't edit.
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = appt.to_dict()
+    # Add lists of IDs for multi-selects
+    data['services_ids'] = [s.id for s in appt.services]
+    data['additional_services_ids'] = [s.id for s in appt.additional_services]
+    
+    # Ensure clinic name is present (helper for display if needed)
+    data['clinic_name'] = appt.clinic.name if appt.clinic else ""
+    
+    # Add missing fields for editing
+    data['contract_number'] = appt.contract_number
+    data['is_child'] = appt.is_child
+    data['clinic_id'] = appt.clinic_id
+    data['doctor_id'] = appt.doctor_id
+    data['payment_method_id'] = appt.payment_method_id
+    data['discount'] = appt.discount
+    data['comment'] = appt.comment
+    
+    return jsonify(data)
+
 @api.route('/appointments/<int:id>', methods=['PUT'])
 @login_required
 def update_appointment(id):
@@ -216,22 +246,32 @@ def update_appointment(id):
     if 'comment' in data: appointment.comment = data['comment']
     if 'is_child' in data: appointment.is_child = bool(data['is_child'])
 
-    # Handle Additional Service update (This might be tricky if multiple, but assuming replacement or addition for now? 
-    # Current UI acts like single selection for the row. Simple approach: clear and set.)
-    if 'additional_service' in data:
-        appointment.additional_services = [] # Clear existing
+    # Handle Services (M2M)
+    if 'services_ids' in data:
+        # Clear existing? Or replace? 
+        # Usually replace entirely with new list.
+        appointment.services = []
+        for sid in data['services_ids']:
+             svc = Service.query.get(sid)
+             if svc:
+                 appointment.services.append(svc)
+    
+    # Handle Additional Services (M2M)
+    if 'additional_services_ids' in data:
+        appointment.additional_services = []
+        for asid in data['additional_services_ids']:
+             asvc = AdditionalService.query.get(asid)
+             if asvc:
+                 appointment.additional_services.append(asvc)
+
+    # Legacy support / Fallback for single 'additional_service' field from old legacy calls
+    elif 'additional_service' in data: # Only if plural not provided
+        appointment.additional_services = [] 
         if data['additional_service']:
             add_svc = AdditionalService.query.get(data['additional_service'])
             if add_svc:
                 appointment.additional_services.append(add_svc)
-                if 'additional_service_quantity' in data:
-                    appointment.additional_service_quantity = int(data['additional_service_quantity'])
-        else:
-             # If clearing service, also clear quantity (or set to default 1)
-             appointment.additional_service_quantity = 1
-    
-    # Date/Time/Center changes handled above
-    
+
     db.session.commit()
     return jsonify(appointment.to_dict())
 
