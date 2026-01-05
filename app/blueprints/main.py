@@ -46,6 +46,56 @@ def profile():
     cities = Location.query.filter_by(type='city').all()
     return render_template('profile.html', cities=cities)
 
+@main.route('/support/chat')
+@login_required
+def chat_dashboard():
+    # Allow Superadmin, Admin, LabTech
+    if current_user.role not in ['superadmin', 'admin', 'lab_tech']:
+        flash('Доступ запрещен', 'danger')
+        return redirect(url_for('main.dashboard'))
+    return render_template('chat_dashboard.html')
+
+@main.context_processor
+def inject_chat_settings():
+    from app.models import GlobalSetting
+    s = GlobalSetting.query.get('chat_image')
+    return dict(chat_image=s.value if s else None)
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'change_password':
+            old_password = request.form.get('old_password')
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_password')
+            
+            if not check_password_hash(current_user.password_hash, old_password):
+                flash('Неверный текущий пароль', 'error')
+            elif new_password != confirm_password:
+                flash('Новые пароли не совпадают', 'error')
+            else:
+                current_user.password_hash = generate_password_hash(new_password)
+                db.session.commit()
+                flash('Пароль успешно изменен', 'success')
+                
+        else:
+            # Update City
+            city_id = request.form.get('city_id')
+            if city_id:
+                 current_user.city_id = int(city_id)
+            
+            # Update Organization Name
+            org_name = request.form.get('organization_name')
+            if org_name and current_user.organization:
+                 current_user.organization.name = org_name
+            
+            db.session.commit()
+            flash('Профиль обновлен', 'success')
+            
+        return redirect(url_for('main.profile'))
+
+    cities = Location.query.filter_by(type='city').all()
+    return render_template('profile.html', cities=cities)
+
 @main.route('/cabinet')
 @login_required
 def cabinet():

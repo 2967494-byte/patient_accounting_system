@@ -7,6 +7,25 @@
     <title>Панель управления - Система Учета Пациентов</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        @keyframes blink {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .blink-animation {
+            animation: blink 1s infinite;
+        }
+    </style>
     {% block head %}{% endblock %}
 </head>
 
@@ -41,6 +60,18 @@
             </div>
 
             <div class="user-controls header-actions">
+                {% if current_user.role in ['superadmin', 'admin', 'lab_tech'] %}
+                <!-- Messaging Icon -->
+                <a href="{{ url_for('main.chat_dashboard') }}" id="chat-notification" class="btn-icon"
+                    style="margin-right: 1rem; position: relative; color: #4b5563; display: none; text-decoration: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span id="unread-badge"
+                        style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 50%; display: none;"></span>
+                </a>
+                {% endif %}
                 <button id="btn-search" class="btn-icon" title="Поиск">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -95,6 +126,72 @@
     </script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ range(1, 10000) | random }}"></script>
     {% block scripts %}{% endblock %}
+    <!-- Chat UI Elements -->
+    {% if current_user.is_authenticated %}
+
+
+
+    <!-- Organization Chat Button (Floating) -->
+    {% if current_user.role == 'org' %}
+    <div id="org-chat-btn" onclick="openChatModal()"
+        style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; cursor: pointer; transition: transform 0.2s;">
+        {% if chat_image %}
+        <img src="{{ url_for('static', filename=chat_image) }}" alt="Support"
+            style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2); object-fit: cover; border: 2px solid white;">
+        {% else %}
+        <div
+            style="width: 60px; height: 60px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); color: white;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Chat Modal (WhatsApp Style) -->
+    <div id="chat-modal" class="modal hidden" style="z-index: 2000;">
+        <div class="modal-content"
+            style="width: 400px; height: 600px; padding: 0; display: flex; flex-direction: column; position: fixed; bottom: 90px; right: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
+            <!-- Header -->
+            <div
+                style="background: #075e54; color: white; padding: 10px 15px; display: flex; align-items: center; gap: 10px;">
+                {% if chat_image %}
+                <img src="{{ url_for('static', filename=chat_image) }}"
+                    style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2);"></div>
+                {% endif %}
+                <div style="flex: 1;">
+                    <h3 style="margin: 0; font-size: 16px;">Поддержка</h3>
+                    <span style="font-size: 12px; opacity: 0.8;">Онлайн</span>
+                </div>
+                <button onclick="closeChatModal()"
+                    style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">&times;</button>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="chat-messages"
+                style="flex: 1; background: #e5ddd5; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                <!-- Messages injected by JS -->
+            </div>
+
+            <!-- Input Area -->
+            <div style="padding: 10px; background: #f0f0f0; display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="chat-input" placeholder="Введите сообщение"
+                    style="flex: 1; padding: 10px; border-radius: 20px; border: none; outline: none;">
+                <button onclick="sendMessage()"
+                    style="background: #075e54; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 </body>
 
 </html>

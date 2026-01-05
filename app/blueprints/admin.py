@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.models import User, Location, Doctor, Service, AdditionalService, ServicePrice, AdditionalServicePrice, Clinic, Manager, PaymentMethod, Appointment, Organization
+from app.models import User, Location, Doctor, Service, AdditionalService, ServicePrice, AdditionalServicePrice, Clinic, Manager, PaymentMethod, Appointment, Organization, GlobalSetting
 from app.telegram_bot import telegram_bot
 import psutil
 from werkzeug.security import generate_password_hash
+import os
 
 from datetime import datetime
 import csv
@@ -28,7 +29,9 @@ def additional():
     managers = Manager.query.all()
     payment_methods = PaymentMethod.query.all()
     centers = Location.query.filter_by(type='center').all()
-    return render_template('admin_additional.html', managers=managers, payment_methods=payment_methods, centers=centers)
+    chat_setting = GlobalSetting.query.get('chat_image')
+    chat_image = chat_setting.value if chat_setting else None
+    return render_template('admin_additional.html', managers=managers, payment_methods=payment_methods, centers=centers, chat_image=chat_image)
 
 @admin.route('/journal/clear', methods=['POST'])
 @login_required
@@ -206,6 +209,44 @@ def delete_payment_method(id):
 @admin.route('/')
 def index():
     return redirect(url_for('admin.users'))
+
+@admin.route('/chat/settings', methods=['POST'])
+@login_required
+def update_chat_settings():
+    if 'chat_image' not in request.files:
+        flash('Нет файла', 'error')
+        return redirect(url_for('admin.additional'))
+    
+    file = request.files['chat_image']
+    if file.filename == '':
+        flash('Файл не выбран', 'error')
+        return redirect(url_for('admin.additional'))
+        
+    if file:
+        filename = secure_filename(file.filename)
+        # Save to static/uploads/chat_icons or similar
+        upload_dir = os.path.join(current_app.static_folder, 'uploads', 'chat')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_path = os.path.join(upload_dir, filename)
+        file.save(file_path)
+        
+        # Save relative path to DB
+        relative_path = f"uploads/chat/{filename}"
+        
+        setting = GlobalSetting.query.get('chat_image')
+        if not setting:
+            setting = GlobalSetting(key='chat_image')
+            db.session.add(setting)
+        
+        setting.value = relative_path
+        db.session.commit()
+        
+        flash('Иконка чата обновлена', 'success')
+        
+    return redirect(url_for('admin.additional'))
+
+
 
 @admin.route('/monitoring')
 @login_required

@@ -52,6 +52,9 @@ def create_app(test_config=None):
     from app.blueprints.admin import admin
     app.register_blueprint(admin, url_prefix='/admin')
 
+    from app.blueprints.chat import chat
+    app.register_blueprint(chat, url_prefix='/api/chat')
+
 
 
     # Error Handler
