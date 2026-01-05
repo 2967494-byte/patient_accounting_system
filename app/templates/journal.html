@@ -296,10 +296,13 @@
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Клиника</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Врач</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Пациент</th>
-                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Исследование
+                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb; vertical-align: middle;">
+                        Исследование
                     </th>
-                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Кол-во</th>
-                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Доп услуги</th>
+                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb; vertical-align: middle;">
+                        Кол-во</th>
+                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb; vertical-align: middle;">Доп
+                        услуги</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Оплата</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Скидка</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Сумма</th>
@@ -328,7 +331,7 @@
                     <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.doctor_rel.name if
                         appointment.doctor_rel else (appointment.doctor or '-') }}</td>
                     <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.patient_name }}</td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: normal;">
+                    <td style="padding: 0.25rem 0.5rem; white-space: normal; vertical-align: middle;">
                         {% if appointment.services %}
                         {% for s in appointment.services %}
                         <div style="margin-bottom: 2px;">{{ s.name }}</div>
@@ -337,8 +340,9 @@
                         {{ appointment.service }}
                         {% endif %}
                     </td>
-                    <td style="padding: 0.25rem 0.5rem; text-align: center;">{{ appointment.quantity }}</td>
-                    <td style="padding: 0.25rem 0.5rem;">
+                    <td style="padding: 0.25rem 0.5rem; text-align: center; vertical-align: middle;">{{
+                        appointment.quantity }}</td>
+                    <td style="padding: 0.25rem 0.5rem; vertical-align: middle;">
                         {% if appointment.additional_services %}
                         {% for ads in appointment.additional_services %}
                         <div style="margin-bottom: 2px;">{{ ads.name }}</div>
