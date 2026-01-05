@@ -38,17 +38,13 @@
             <tr>
                 <td>{{ service.id }}</td>
                 <td>{{ service.name }}</td>
-                <td>{{ service.price }} ₽</td>
+                <td>{{ service.get_price() }} ₽</td>
                 <td>
                     <a href="{{ url_for('admin.service_prices', id=service.id) }}" class="btn"
                         style="background: transparent; color: #10b981; padding: 0.25rem; font-size: 1.2rem; text-decoration: none;"
                         title="Цены по периодам">
                         $
                     </a>
-                    <button onclick="editService('{{ service.id }}', '{{ service.name }}', '{{ service.price }}')"
-                        class="btn" style="background: transparent; color: #4b5563; padding: 0.25rem;">
-                        ✎
-                    </button>
                     <button onclick="deleteService('{{ service.id }}')" class="btn"
                         style="background: transparent; color: #ef4444; padding: 0.25rem;">
                         ✕
