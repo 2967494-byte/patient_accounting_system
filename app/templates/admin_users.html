@@ -12,7 +12,9 @@
                 <select name="role" onchange="this.form.submit()"
                     style="padding: 0.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db;">
                     <option value="">Все роли</option>
-                    <option value="admin" {% if current_role=='admin' %}selected{% endif %}>Админ</option>
+                    <option value="superadmin" {% if current_role=='superadmin' %}selected{% endif %}>Суперадмин
+                    </option>
+                    <option value="admin" {% if current_role=='admin' %}selected{% endif %}>Администратор</option>
                     <option value="org" {% if current_role=='org' %}selected{% endif %}>Организация</option>
                     <option value="lab_tech" {% if current_role=='lab_tech' %}selected{% endif %}>Лаборант</option>
                 </select>
@@ -61,9 +63,11 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <select name="role" onchange="this.form.submit()"
                             style="padding: 0.25rem; border-radius: 0.25rem; border: 1px solid #d1d5db;">
+                            <option value="superadmin" {% if user.role=='superadmin' %}selected{% endif %}>Суперадмин
+                            </option>
+                            <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Администратор</option>
                             <option value="org" {% if user.role=='org' %}selected{% endif %}>Организация</option>
                             <option value="lab_tech" {% if user.role=='lab_tech' %}selected{% endif %}>Лаборант</option>
-                            <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Админ</option>
                         </select>
                     </form>
                 </td>

@@ -19,7 +19,7 @@ admin = Blueprint('admin', __name__, template_folder='templates')
 @admin.before_request
 @login_required
 def require_admin():
-    if current_user.role != 'admin':
+    if current_user.role != 'superadmin':
         flash('Доступ запрещен', 'danger')
         return redirect(url_for('main.dashboard'))
 
@@ -201,11 +201,7 @@ def delete_payment_method(id):
     flash('Способ оплаты удален', 'success')
     return redirect(url_for('admin.additional'))
 
-@admin.before_request
-@login_required
-def require_admin():
-    if not current_user.role == 'admin':
-        abort(403)
+
 
 @admin.route('/')
 def index():

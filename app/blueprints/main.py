@@ -158,7 +158,7 @@ def dashboard():
 @main.route('/journal')
 @login_required
 def journal():
-    if current_user.role == 'org':
+    if current_user.role in ['org', 'admin']:
         flash('Доступ к журналу запрещен для вашей роли.', 'error')
         return redirect(url_for('main.dashboard'))
 

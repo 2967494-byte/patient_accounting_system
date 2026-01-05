@@ -29,7 +29,7 @@
 
                 <a href="{{ url_for('main.dashboard') }}"
                     class="nav-tab {% if request.endpoint == 'main.dashboard' %}active{% endif %}">Календарь</a>
-                {% if current_user.role != 'org' %}
+                {% if current_user.role not in ['org', 'admin'] %}
                 <a href="{{ url_for('main.journal') }}"
                     class="nav-tab {% if request.endpoint == 'main.journal' %}active{% endif %}">Журнал</a>
                 {% endif %}
@@ -48,7 +48,7 @@
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                 </button>
-                {% if current_user.role == 'admin' %}
+                {% if current_user.role == 'superadmin' %}
                 <a href="{{ url_for('admin.index') }}" class="btn-logout btn-admin">Админка</a>
                 {% endif %}
                 <a href="{{ url_for('main.profile') }}" class="profile-link">{{ current_user.username }}</a>

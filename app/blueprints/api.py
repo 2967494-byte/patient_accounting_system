@@ -176,6 +176,7 @@ def get_appointments():
     for appt in appointments:
         data = appt.to_dict()
         # Org restriction: If role is 'org' and not author -> hide details
+        # Superadmin AND Admin can see everything.
         if current_user.role == 'org' and appt.author_id != current_user.id:
             data['patient_name'] = ""
             data['patient_phone'] = ""
@@ -194,8 +195,9 @@ def get_appointment_detail(id):
     appt = Appointment.query.get_or_404(id)
     
     # Restriction check
+    # Org sees only own. Admin/Superadmin/LabTech sees all (LabTech logic handled elsewhere? need to check)
     if current_user.role == 'org' and appt.author_id != current_user.id:
-        # Return limited or 403? 
+        # Return limited or 403?
         # For editing, they likely shouldn't be able to fetch if they can't edit.
         return jsonify({'error': 'Unauthorized'}), 403
 

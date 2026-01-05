@@ -21,7 +21,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
-    role = db.Column(db.String(20), default='org', nullable=False) # 'admin', 'org', 'lab_tech'
+    role = db.Column(db.String(20), default='org', nullable=False) # 'superadmin', 'admin', 'org', 'lab_tech'
     is_confirmed = db.Column(db.Boolean, default=False)
     is_blocked = db.Column(db.Boolean, default=False)
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True) # made nullable for existing users or flexible registration
@@ -36,6 +36,11 @@ class User(UserMixin, db.Model):
         return f'<User {self.username}>'
 
     def is_admin(self):
+        # Maps to Superadmin (Admin Panel Access)
+        return self.role == 'superadmin'
+    
+    def is_administrator(self):
+        # Maps to new Admin role (Calendar Access)
         return self.role == 'admin'
 
 class Location(db.Model):
