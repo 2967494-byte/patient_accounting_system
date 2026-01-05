@@ -250,4 +250,36 @@ def journal():
              if pm_name_lower in FINANCIAL_METHODS:
                  summary_stats['methods'][pm_name]['sum'] += val
 
+    # Statistics for Statistics Table (Adults/Children, KT/OPTG)
+    summary_stats['adults_count'] = 0
+    summary_stats['children_count'] = 0
+    summary_stats['kt_count'] = 0
+    summary_stats['optg_count'] = 0
+
+    for appt in appointments:
+        # Adults/Children
+        if appt.is_child:
+            summary_stats['children_count'] += 1
+        else:
+            summary_stats['adults_count'] += 1
+            
+        # Services (KT vs OPTG)
+        # "КТ" must be in name. Everything else is "ОПТГ".
+        # Check quantity
+        qty = appt.quantity if appt.quantity else 1
+        
+        # Helper to categorize service name
+        def categorize_service(name):
+            if not name: return
+            if 'КТ' in name or 'KT' in name: # Check Cyrillic and Latin just in case (though requirement said "КТ")
+                 summary_stats['kt_count'] += qty
+            else:
+                 summary_stats['optg_count'] += qty
+
+        if appt.services:
+            for s in appt.services:
+                categorize_service(s.name)
+        elif appt.service:
+             categorize_service(appt.service)
+
     return render_template('journal.html', centers=centers, current_center_id=current_center_id, appointments=appointments, current_date=current_date.strftime('%Y-%m-%d'), services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats)

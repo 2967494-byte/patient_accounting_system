@@ -429,40 +429,79 @@
 
 <!-- Summary Table -->
 {% if summary_stats %}
-<div class="summary-section" style="margin-top: 2rem;">
-    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Сводка за день</h3>
-    <div style="overflow-x: auto;">
-        <table
-            style="width: auto; min-width: 500px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
-            <thead>
-                <tr style="background-color: #f3f4f6; text-align: left;">
-                    <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Категория
-                    </th>
-                    <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Количество
-                    </th>
-                    <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Сумма (₽)
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов</td>
-                    <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
-                    <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
-                        "%.2f"|format(summary_stats.total_sum) }}</td>
-                </tr>
-                {% for method_name, stats in summary_stats.methods.items() %}
-                {% if stats.count > 0 or True %}
-                <!-- Show all methods even if 0? User asked specific list. Let's show all available methods for structure. -->
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 0.75rem 1rem; color: #374151;">{{ method_name }}</td>
-                    <td style="padding: 0.75rem 1rem; color: #374151;">{{ stats.count }}</td>
-                    <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(stats.sum) }}</td>
-                </tr>
-                {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="summary-section" style="margin-top: 2rem; display: flex; gap: 2rem; flex-wrap: wrap;">
+    <!-- Financial Table -->
+    <div style="flex: 0 0 auto;">
+        <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Финансы</h3>
+        <div style="overflow-x: auto;">
+            <table
+                style="width: auto; min-width: 400px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                <thead>
+                    <tr style="background-color: #f3f4f6; text-align: left;">
+                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Категория
+                        </th>
+                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Количество
+                        </th>
+                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Сумма (₽)
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
+                        <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
+                            "%.2f"|format(summary_stats.total_sum) }}</td>
+                    </tr>
+                    {% for method_name, stats in summary_stats.methods.items() %}
+                    {% if stats.count > 0 or True %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ method_name }}</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ stats.count }}</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(stats.sum) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Statistics Table -->
+    <div style="flex: 0 0 auto;">
+        <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Статистика</h3>
+        <div style="overflow-x: auto;">
+            <table
+                style="width: auto; min-width: 300px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                <thead>
+                    <tr style="background-color: #f3f4f6; text-align: left;">
+                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Категория
+                            (за день)
+                        </th>
+                        <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Количество
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem 1rem; color: #374151;">Количество взрослых</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.adults_count }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem 1rem; color: #374151;">Количество детей</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.children_count }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem 1rem; color: #374151;">Количество КТ</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.kt_count }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem 1rem; color: #374151;">Количество ОПТГ</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.optg_count }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endif %}
