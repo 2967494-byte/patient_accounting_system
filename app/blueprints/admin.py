@@ -352,12 +352,13 @@ def update_user_role(user_id):
     new_role = request.form.get('role')
     
     role_map = {
+        'superadmin': 'Суперадмин',
         'admin': 'Админ',
         'org': 'Организация',
         'lab_tech': 'Лаборант'
     }
     
-    if new_role not in ['admin', 'org', 'lab_tech']:
+    if new_role not in ['superadmin', 'admin', 'org', 'lab_tech']:
         flash('Недопустимая роль', 'error')
     else:
         user.role = new_role
