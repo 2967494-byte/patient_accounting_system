@@ -10,6 +10,10 @@ def create_app(test_config=None):
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
+    # 1.5 Hours Session Timeout
+    from datetime import timedelta
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=90)
+    
     if test_config:
         app.config.update(test_config)
     

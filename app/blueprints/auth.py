@@ -39,6 +39,7 @@ def login():
                 return render_template('auth/login.html', form=form, registration_form=registration_form, cities=cities)
             
             login_user(user, remember=form.remember_me.data)
+            session.permanent = True
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('main.index'))
         else:
