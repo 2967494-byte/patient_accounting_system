@@ -59,15 +59,7 @@ class Location(db.Model):
             'parent_id': self.parent_id,
             'phone': self.phone,
             'manager': self.manager,
-            'children': [child.to_dict() for child in self.children]
-        }
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'type': self.type,
-            'parent_id': self.parent_id,
+            'color': self.color,
             'children': [child.to_dict() for child in self.children]
         }
 
