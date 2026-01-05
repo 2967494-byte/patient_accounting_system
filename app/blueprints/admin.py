@@ -383,6 +383,7 @@ def add_location():
     name = request.form.get('name')
     type = request.form.get('type')
     parent_id = request.form.get('parent_id')
+    color = request.form.get('color')
 
     if not name or type not in ['city', 'center']:
         return jsonify({'error': 'Неверные данные'}), 400
@@ -390,6 +391,8 @@ def add_location():
     loc = Location(name=name, type=type)
     if parent_id:
         loc.parent_id = int(parent_id)
+    if color:
+        loc.color = color
     
     db.session.add(loc)
     db.session.commit()
@@ -402,6 +405,8 @@ def edit_location(id):
     
     if 'name' in data:
         loc.name = data['name']
+    if 'color' in data:
+        loc.color = data['color']
     
     db.session.commit()
     return jsonify(loc.to_dict())

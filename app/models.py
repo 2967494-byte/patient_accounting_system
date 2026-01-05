@@ -47,6 +47,7 @@ class Location(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
     phone = db.Column(db.String(50), nullable=True)
     manager = db.Column(db.String(100), nullable=True)
+    color = db.Column(db.String(7), default='#3b82f6') # Hex color code
     
     children = db.relationship('Location', backref=db.backref('parent', remote_side=[id]), lazy=True)
 

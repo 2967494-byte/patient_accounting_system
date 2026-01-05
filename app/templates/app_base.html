@@ -11,7 +11,16 @@
 </head>
 
 <body>
-    <div class="app-container">
+    {% set active_color = '#3b82f6' %}
+    {% if centers %}
+    {% for center in centers %}
+    {% if center.id == current_center_id %}
+    {% set active_color = center.color %}
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    <div class="app-container" style="--theme-color: {{ active_color }};">
         <header class="top-bar">
             <div class="header-left" style="display:flex; align-items:center; gap:2rem;">
                 <img src="{{ url_for('static', filename='uploads/photo_5357486134692350867_x.jpg') }}" alt="Logo"
@@ -52,7 +61,8 @@
         <div class="tabs-container">
             {% for center in centers %}
             <a href="{{ url_for(request.endpoint, center_id=center.id, start_date=request.args.get('start_date')) }}"
-                class="tab-link {% if current_center_id == center.id %}active{% endif %}">
+                class="tab-link {% if current_center_id == center.id %}active{% endif %}"
+                style="{% if current_center_id == center.id %}background-color: {{ center.color }}20; border-color: {{ center.color }}; color: {{ center.color }};{% else %}border-left-color: {{ center.color }};{% endif %}">
                 {{ center.name }}
             </a>
             {% endfor %}
