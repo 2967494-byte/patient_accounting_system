@@ -241,6 +241,38 @@ async function openEditModal(id) {
         );
 
         document.getElementById('appointment-modal').classList.remove('hidden');
+
+        // Populate history if available
+        const historyContainer = document.getElementById('history-container');
+        const historyList = document.getElementById('history-list');
+
+        if (appt.history && appt.history.length > 0) {
+            historyContainer.classList.remove('hidden');
+            historyList.innerHTML = appt.history.map(h => {
+                const date = new Date(h.timestamp);
+                const dateStr = date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                return `<div>${dateStr} - ${h.action} (<strong>${h.user}</strong>)</div>`;
+            }).join('');
+        } else {
+            historyContainer.classList.add('hidden');
+        }
+
+        // Keep standard author display but maybe rename logic? 
+        // User asked to hide the current user opening the window. We are in edit modal, so we just show data.
+        // We will keep 'Author: ...' as static info if history is missing, or show both?
+        // User said: "below displays Author with current user... Need to display author and authors of changes".
+        // The `to_dict` returns `author_name` which is the CREATOR. 
+        // So we keep displaying the creator. 
+        // The issue "displays Author with current user" might mean the Modal was showing `current_user` instead of `appt.author`?
+        // Let's look at the existing code I'm replacing/augmenting.
+        // Existing: `authorDiv.textContent = 'Автор записи: ${appt.author_name}'`
+        // That seems correct (it shows the creator).
+        // I will keep it but maybe clarify the label.
+        if (appt.author_name) {
+            const authorDiv = document.getElementById('author-info');
+            authorDiv.textContent = `Создал: ${appt.author_name}`; // Changed label for clarity
+            authorDiv.classList.remove('hidden');
+        }
     } catch (e) {
         console.error(e);
         alert('Ошибка загрузки данных записи');

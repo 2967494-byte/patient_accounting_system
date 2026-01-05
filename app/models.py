@@ -137,6 +137,10 @@ class Appointment(db.Model):
     doctor_rel = db.relationship('Doctor', foreign_keys=[doctor_id])
     payment_method = db.relationship('PaymentMethod', foreign_keys=[payment_method_id])
     additional_services = db.relationship('AdditionalService', secondary=appointment_services, lazy='subquery', backref=db.backref('appointments', lazy=True))
+    
+    history = db.relationship('AppointmentHistory', backref='appointment', lazy=True, cascade='all, delete-orphan')
+
+
 
 
     def to_dict(self):
@@ -150,8 +154,24 @@ class Appointment(db.Model):
             'time': self.time,
             'author_name': self.author.username if self.author else 'Unknown',
             'center_id': self.center_id,
-            'center_name': self.center.name if self.center else 'Unknown'
+            'center_name': self.center.name if self.center else 'Unknown',
+            'history': [{
+                'user': h.user.username if h.user else 'Unknown',
+                'action': h.action,
+                'timestamp': h.timestamp.isoformat()
+            } for h in self.history]
         }
+
+class AppointmentHistory(db.Model):
+    __tablename__ = 'appointment_history'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    action = db.Column(db.String(50), nullable=True) # e.g. 'created', 'updated'
+    
+    user = db.relationship('User')
 
 class Doctor(db.Model):
     __tablename__ = 'doctors'

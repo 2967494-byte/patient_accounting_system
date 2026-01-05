@@ -98,9 +98,13 @@
 
             <div class="form-item-info hidden" id="author-info"></div>
 
-            <div style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">
-                Автор: <span style="font-weight: 500; color: #1f2937;">{{ current_user.username }}</span>
+            <div id="history-container" class="hidden"
+                style="margin-top: 1rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">
+                <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #374151;">История изменений</h4>
+                <div id="history-list" style="font-size: 0.8rem; color: #6b7280;"></div>
             </div>
+
+
 
             <div class="modal-actions">
                 <button type="button" id="btn-delete" class="btn-delete hidden"

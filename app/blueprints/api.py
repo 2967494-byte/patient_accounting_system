@@ -115,6 +115,18 @@ def create_appointment():
         appointment.cost = raw_cost
 
         db.session.add(appointment)
+        db.session.flush() # get ID
+
+        # Log History
+        from app.models import AppointmentHistory
+        history = AppointmentHistory(
+            appointment_id=appointment.id,
+            user_id=current_user.id,
+            action='Создание',
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(history)
+
         db.session.commit()
 
         return jsonify(appointment.to_dict()), 201
@@ -269,6 +281,16 @@ def update_appointment(id):
             add_svc = AdditionalService.query.get(data['additional_service'])
             if add_svc:
                 appointment.additional_services.append(add_svc)
+
+    # Log Update History
+    from app.models import AppointmentHistory
+    history = AppointmentHistory(
+        appointment_id=appointment.id,
+        user_id=current_user.id,
+        action='Изменение',
+        timestamp=datetime.utcnow()
+    )
+    db.session.add(history)
 
     db.session.commit()
     return jsonify(appointment.to_dict())
