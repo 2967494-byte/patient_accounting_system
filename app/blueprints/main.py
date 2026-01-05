@@ -254,7 +254,11 @@ def journal():
     summary_stats['adults_count'] = 0
     summary_stats['children_count'] = 0
     summary_stats['kt_count'] = 0
+    summary_stats['kt_adults'] = 0
+    summary_stats['kt_children'] = 0
     summary_stats['optg_count'] = 0
+    summary_stats['optg_adults'] = 0
+    summary_stats['optg_children'] = 0
 
     for appt in appointments:
         # Adults/Children
@@ -269,17 +273,25 @@ def journal():
         qty = appt.quantity if appt.quantity else 1
         
         # Helper to categorize service name
-        def categorize_service(name):
+        def categorize_service(name, is_child):
             if not name: return
             if 'КТ' in name or 'KT' in name: # Check Cyrillic and Latin just in case (though requirement said "КТ")
                  summary_stats['kt_count'] += qty
+                 if is_child:
+                     summary_stats['kt_children'] += qty
+                 else:
+                     summary_stats['kt_adults'] += qty
             else:
                  summary_stats['optg_count'] += qty
+                 if is_child:
+                     summary_stats['optg_children'] += qty
+                 else:
+                     summary_stats['optg_adults'] += qty
 
         if appt.services:
             for s in appt.services:
-                categorize_service(s.name)
+                categorize_service(s.name, appt.is_child)
         elif appt.service:
-             categorize_service(appt.service)
+             categorize_service(appt.service, appt.is_child)
 
     return render_template('journal.html', centers=centers, current_center_id=current_center_id, appointments=appointments, current_date=current_date.strftime('%Y-%m-%d'), services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats)

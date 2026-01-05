@@ -492,12 +492,33 @@
                         <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.children_count }}</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; color: #374151;">Количество КТ</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.kt_count }}</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество КТ, в том числе:
+                        </td>
+                        <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{ summary_stats.kt_count
+                            }}</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem 1rem; color: #374151;">Количество ОПТГ</td>
-                        <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.optg_count }}</td>
+                        <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых</td>
+                        <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_adults }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей</td>
+                        <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_children }}</td>
+                    </tr>
+
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество ОПТГ, в том
+                            числе:</td>
+                        <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{ summary_stats.optg_count
+                            }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых</td>
+                        <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_adults }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей</td>
+                        <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_children }}</td>
                     </tr>
                 </tbody>
             </table>
