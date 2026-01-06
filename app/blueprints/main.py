@@ -346,6 +346,11 @@ def journal():
     # Filter for "Select Appointment" modal: Only show appointments that are NOT "registered" (no payment method)
     # This prevents creating duplicates if the user thinks of "Journal" as "Completed" 
     # and "Appointment" as "Scheduled".
-    todays_appointments = [a for a in appointments if a.payment_method_id is None]
+    unregistered_appointments = [a for a in appointments if a.payment_method_id is None]
+    
+    # Filter for Journal Table: Only show "registered" appointments (those with a payment method)
+    # This solves the issue where "Booked" appointments appearing in the Journal were being 
+    # deleted by the user, accidentally removing the Calendar event.
+    registered_appointments = [a for a in appointments if a.payment_method_id is not None]
 
-    return render_template('journal.html', centers=centers, current_center_id=current_center_id, todays_appointments=todays_appointments, appointments=appointments, current_date=current_date, services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats)
+    return render_template('journal.html', centers=centers, current_center_id=current_center_id, todays_appointments=unregistered_appointments, appointments=registered_appointments, current_date=current_date, services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats)

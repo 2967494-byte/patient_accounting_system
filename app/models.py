@@ -155,9 +155,12 @@ class Appointment(db.Model):
             'patient_phone': self.patient_phone,
             'doctor_id': self.doctor_id, # return ID for form pre-fill
             'doctor_name': self.doctor_rel.name if self.doctor_rel else (self.doctor or 'Unknown'),
+            # Include the legacy 'service' string field for frontend display (Dashboard relies on it)
+            'service': self.service if self.service else ", ".join([s.name for s in self.services]),
             'services': [{'id': s.id, 'name': s.name} for s in self.services],
             'date': self.date.isoformat(),
             'time': self.time,
+            'doctor': self.doctor, # Return raw doctor string too if needed
             'author_name': self.author.username if self.author else 'Unknown',
             'center_id': self.center_id,
             'center_name': self.center.name if self.center else 'Unknown',

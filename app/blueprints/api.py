@@ -230,7 +230,24 @@ def update_appointment(id):
     if 'patient_name' in data: appointment.patient_name = data['patient_name']
     if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
     if 'doctor' in data: appointment.doctor = data['doctor']
-    if 'service' in data: appointment.service = data['service']
+    if 'doctor' in data: appointment.doctor = data['doctor']
+    
+    # Update Service String AND Relationship if name provided but IDs not provided
+    if 'service' in data: 
+        appointment.service = data['service']
+        
+        # If services_ids NOT provided, try to validly link this service by name
+        # This mirrors POST logic and ensures Dashboard edits (which only send name) 
+        # update the M2M relationship correctly.
+        if 'services_ids' not in data:
+             svc = Service.query.filter_by(name=data['service']).first()
+             if svc:
+                 appointment.services = [svc]
+             else:
+                 # If name doesn't match a generic service, we might want to keep existing?
+                 # Or clear? For Dashboard, we assume single service replacement.
+                 # If we can't find it, we just clear the relation (it's a text-only service)
+                 appointment.services = []
 
     if 'date' in data and data['date']:
         try:
