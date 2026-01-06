@@ -1605,3 +1605,223 @@ def import_clinics():
             flash(f'Ошибка импорта: {str(e)}', 'error')
             
     return redirect(url_for('admin.clinics'))
+# --- ICS Import Logic ---
+from app.utils.ics_utils import parse_ics_content
+import difflib
+
+@admin.route('/import_ics', methods=['GET', 'POST'])
+@login_required
+def import_ics():
+    centers = Location.query.filter_by(type='center').all()
+    
+    # Default start date: 2 months ago
+    from datetime import timedelta
+    default_start_date = (date.today() - timedelta(days=60)).strftime('%Y-%m-%d')
+    
+    if request.method == 'POST':
+        if 'ics_file' not in request.files:
+            flash('Нет файла', 'error')
+            return redirect(request.url)
+            
+        file = request.files['ics_file']
+        if file.filename == '':
+            flash('Нет выбранного файла', 'error')
+            return redirect(request.url)
+            
+        center_id = request.form.get('center_id')
+        if not center_id:
+             flash('Выберите филиал', 'error')
+             return redirect(request.url)
+
+        start_date_str = request.form.get('start_date')
+        filter_date = None
+        if start_date_str:
+            try:
+                filter_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        if file:
+            try:
+                content = file.read().decode('utf-8')
+                parsed_events = parse_ics_content(content)
+                
+                # --- Filter by Date ---
+                if filter_date:
+                    filtered_events = []
+                    for event in parsed_events:
+                        evt_date = datetime.strptime(event['date'], '%Y-%m-%d').date()
+                        if evt_date >= filter_date:
+                            filtered_events.append(event)
+                    parsed_events = filtered_events
+                
+                # --- Fuzzy Matching Context ---
+                services = Service.query.all()
+                doctors = Doctor.query.all()
+                
+                # Pre-calculate normalized names for matching
+                def normalize(s): return s.lower().replace(' ', '') if s else ''
+                
+                svc_map = {normalize(s.name): s.id for s in services}
+                doc_map = {normalize(d.name): d.id for d in doctors}
+                
+                # Prepare enriched events for preview
+                for event in parsed_events:
+                    summary = event['raw_summary']
+                    norm_summary = normalize(summary)
+                    
+                    # 1. Match Service
+                    event['matched_service_id'] = None
+                    # Try direct fuzzy on keywords or specific known substrings
+                    # Simple heuristic: Check if any service name is substring of summary
+                    best_ratio = 0
+                    best_svc_id = None
+                    
+                    for s in services:
+                        # Check "OPTG", "KT", "ORT" special logic because user files use shorthand
+                        # This is specific custom logic based on observation
+                        s_norm = normalize(s.name)
+                        if len(s_norm) < 3: continue # Skip short
+                        
+                        # Direct containment
+                        if s_norm in norm_summary:
+                            best_ratio = 1.0
+                            best_svc_id = s.id
+                            break
+                            
+                        # Fuzzy
+                        ratio = difflib.SequenceMatcher(None, s_norm, norm_summary).ratio()
+                        # If summary is long, ratio might be low even if match is good.
+                        # Better metric: check word overlap?
+                        pass 
+                        
+                    # Improved Heuristic for key types
+                    if not best_svc_id:
+                        summary_lower = summary.lower()
+                        # Keywords mapping to DB names (approximate)
+                        keyword_map = {
+                            'оптг': 'ОПТГ', 
+                            'кт': 'КТ', 
+                            'орт': 'Ортодонт' # Just guessing ID or Name pattern
+                        }
+                        for kw, target_name in keyword_map.items():
+                            if kw in summary_lower:
+                                # Find service with this name
+                                matched_svc = next((s for s in services if target_name.lower() in s.name.lower()), None)
+                                if matched_svc:
+                                    best_svc_id = matched_svc.id
+                                    break
+                    
+                    event['matched_service_id'] = best_svc_id
+                    
+                    # 2. Match Doctor
+                    # Use extracted candidate or scan summary
+                    event['matched_doctor_id'] = None
+                    doc_candidate = event.get('doctor_from_desc')
+                    
+                    if doc_candidate:
+                        # Fuzzy match candidate against DB
+                        matches = difflib.get_close_matches(doc_candidate, [d.name for d in doctors], n=1, cutoff=0.6)
+                        if matches:
+                            target_doc = next(d for d in doctors if d.name == matches[0])
+                            event['matched_doctor_id'] = target_doc.id
+                    
+                    # Fallback: scan summary for doctor names? (Might be expensive/risky)
+                
+                return render_template(
+                    'import_ics.html', 
+                    parsed_events=parsed_events, 
+                    centers=centers, 
+                    services=services, 
+                    doctors=doctors,
+                    center_id=center_id
+                )
+                
+            except Exception as e:
+                flash(f'Ошибка обработки файла: {str(e)}', 'error')
+                return redirect(request.url)
+
+    return render_template('import_ics.html', centers=centers, default_start_date=default_start_date)
+
+@admin.route('/import_ics/confirm', methods=['POST'])
+@login_required
+def confirm_ics_import():
+    center_id = request.form.get('center_id')
+    
+    # Process form list data
+    # format: events[0][date], events[0][skip]...
+    # Flask doesn't parse nested dicts automatically well for arbitrary lists this way easily without third party lib or manual loop
+    # We will manually iterate since we know the structure or expected index count?
+    # Actually, easier to iterate keys.
+    
+    imported_count = 0
+    
+    # Reconstruct data from flat keys
+    events_data = {}
+    for key, value in request.form.items():
+        if key.startswith('events['):
+            # Key format: events[0][field_name]
+            try:
+                _, index_str, field_part = key.split('[')
+                index = int(index_str[:-1]) # remove ]
+                field = field_part[:-1] # remove ]
+                
+                if index not in events_data:
+                    events_data[index] = {}
+                events_data[index][field] = value
+            except ValueError:
+                continue
+                
+    for index, data in events_data.items():
+        if 'skip' in data and data['skip'] == '1':
+            continue
+            
+        try:
+            date_obj = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            time_str = data['time']
+            
+            # Create Appointment
+            new_appt = Appointment(
+                center_id=int(center_id),
+                date=date_obj,
+                time=time_str,
+                patient_name=data.get('patient_name', 'Unknown'),
+                patient_phone=data.get('patient_phone', ''),
+                doctor_id=int(data['doctor_id']) if data.get('doctor_id') else None,
+                # Simple service handling (not linking M2M fully if just quick import, or link first one)
+                # Ideally we link AppointmentService
+                quantity=1,
+                author_id=current_user.id
+            )
+            
+            db.session.add(new_appt)
+            db.session.flush() # to get ID
+            
+            svc_id = data.get('service_id')
+            if svc_id:
+                svc = Service.query.get(int(svc_id))
+                if svc:
+                    # Link
+                    assoc = AppointmentService(service_id=svc.id, appointment_id=new_appt.id, quantity=1)
+                    db.session.add(assoc)
+                    # Also update summary string
+                    new_appt.service = svc.name
+            else:
+                new_appt.service = "Импорт (Неизвестно)"
+            
+            imported_count += 1
+            
+        except Exception as e:
+            # Continue or fail?
+            # Let's log/print and continue for robust partial import
+            print(f"Failed to import row {index}: {e}")
+            continue
+
+    try:
+        db.session.commit()
+        flash(f'Успешно импортировано записей: {imported_count}', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка сохранения: {str(e)}', 'error')
+        
+    return redirect(url_for('admin.import_ics'))
