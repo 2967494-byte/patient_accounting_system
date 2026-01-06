@@ -9,7 +9,7 @@
                 class="nav-arrow">&larr;</a>
         </div>
         {% for date in dates %}
-        <div class="day-header">
+        <div class="day-header {{ 'today-current' if date.iso_date == today_iso else '' }}">
             <div class="day-name">{{ date.name }}</div>
             <div class="day-date">{{ date.display_date }}</div>
         </div>
@@ -24,7 +24,7 @@
         <!-- Time column -->
         <div class="time-column">
             {% for time in time_slots %}
-            <div class="time-slot-label">
+            <div class="time-slot-label {{ 'time-current' if time == current_time_slot else '' }}">
                 {{ time }}
             </div>
             {% endfor %}
@@ -32,12 +32,12 @@
 
         <!-- Days columns -->
         {% for date in dates %}
-        <div class="day-column">
+        <div class="day-column {{ 'today-current' if date.iso_date == today_iso else '' }}">
             {% for time in time_slots %}
             {% set is_special = (current_user.role in ['admin', 'lab_tech']) and (time.endswith(':15') or
             time.endswith(':45')) %}
             {% set is_weekend_restricted = (date.obj.weekday() >= 5) and (time < "09:00" or time> "17:30") %}
-                <div class="time-slot-cell {{ 'special-slot' if is_special else '' }} {{ 'weekend-restricted' if is_weekend_restricted else '' }}"
+                <div class="time-slot-cell {{ 'special-slot' if is_special else '' }} {{ 'weekend-restricted' if is_weekend_restricted else '' }} {{ 'time-current' if time == current_time_slot else '' }}"
                     data-date="{{ date.iso_date }}" data-time="{{ time }}">
                     <!-- Booking content will go here -->
                 </div>

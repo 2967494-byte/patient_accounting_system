@@ -382,10 +382,25 @@ body {
 }
 
 .nav-button-wrapper {
+    position: absolute;
+    top: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 0.5rem;
+    z-index: 20;
+}
+
+.nav-button.prev-week {
+    left: 0;
+    width: 60px;
+    /* Match time column width */
+}
+
+.nav-button.next-week {
+    right: 0;
+    width: 40px;
+    /* Hover on the right edge */
 }
 
 .nav-arrow {
@@ -393,10 +408,20 @@ body {
     font-size: 1.5rem;
     color: var(--primary-color);
     line-height: 1;
+    background: rgba(255, 255, 255, 0.8);
+    /* Semi-transparent background */
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
 }
 
 .nav-arrow:hover {
-    opacity: 0.8;
+    background: var(--primary-color);
+    color: white;
 }
 
 /* Modal Styles */
@@ -602,4 +627,124 @@ body {
     padding: 20px;
     text-align: center;
     color: var(--text-muted);
+}
+
+/* Highlight Current Day */
+.day-column.today-current {
+    background-color: #f7feff;
+    /* Very light blue background */
+    border-left: 1px solid #cceeff;
+    border-right: 1px solid #cceeff;
+}
+
+.day-header.today-current {
+    background-color: #e0f7fa;
+    /* Slightly darker blue for header */
+    border-bottom: 2px solid #00bcd4;
+    /* Accent color border */
+    color: #006064;
+    /* Darker text */
+    font-weight: bold;
+}
+
+/* Highlight Current Time Row */
+.time-slot-label.time-current {
+    background-color: #e0f7fa;
+    border-left: 4px solid #00bcd4;
+    color: #006064;
+    font-weight: bold;
+}
+
+.time-slot-cell.time-current {
+    background-color: #f7feff;
+    /* Same light blue as day column to blend or slight dark? */
+    /* If both day and time intersect, it will be slightly darker if we use rgba, or just solid. */
+    border-top: 1px solid #b2ebf2;
+    border-bottom: 1px solid #b2ebf2;
+}
+
+/* Status Highlighting */
+
+/* Apply styles to the CELL (full height) instead of content */
+.time-slot-cell.status-completed {
+    background-color: #dcfce7 !important;
+    /* Green-100 */
+    border-left: 3px solid #16a34a !important;
+    /* Green-600 */
+}
+
+.time-slot-cell.status-late {
+    background-color: #ffedd5 !important;
+    /* Orange-100 */
+    border-left: 3px solid #ea580c !important;
+    /* Orange-600 */
+}
+
+/* Reset base booked style if explicit status is present */
+.time-slot-cell.booked.status-completed,
+.time-slot-cell.booked.status-late {
+    border-left: 3px solid;
+    /* Use the status border */
+    /* background is handled above */
+}
+
+/* Ensure matching borders override 'none' from previous resetting attempt if conflict. 
+   Actually, let's simplify. 
+   .time-slot-cell.status-completed will have the border.
+   .time-slot-cell.booked has border-left: 3px solid pink.
+   .time-slot-cell.status-completed has border-left: 3px solid green !important.
+   So !important wins. We don't need to explicitly unset 'booked' if we override it.
+*/
+
+.appt-content.status-completed,
+.appt-content.status-late {
+    background-color: transparent !important;
+    border-left: none !important;
+}
+
+.appt-content.status-completed {
+    color: #14532d !important;
+    /* Green-900 */
+}
+
+/* Ensure text colors match */
+.appt-content.status-completed .appt-name,
+.appt-content.status-completed .appt-service {
+    color: #14532d !important;
+}
+
+.appt-content.status-late {
+    color: #9a3412 !important;
+    /* Orange-800 */
+}
+
+/* Ensure text colors inside late status match */
+.appt-content.status-late .appt-name,
+.appt-content.status-late .appt-service {
+    color: #9a3412 !important;
+}
+
+/* Pending (Current) Status - Blue Theme */
+.time-slot-cell.status-pending {
+    background-color: #e0f2fe !important;
+    /* Sky-100 */
+    border-left: 3px solid #0369a1 !important;
+    /* Sky-700 */
+}
+
+.time-slot-cell.booked.status-pending {
+    border-left: 3px solid;
+    /* Use status border */
+}
+
+.appt-content.status-pending {
+    background-color: transparent !important;
+    border-left: none !important;
+    color: #075985 !important;
+    /* Sky-800 */
+}
+
+.appt-content.status-pending .appt-name,
+.appt-content.status-pending .appt-service {
+    color: #075985 !important;
 }

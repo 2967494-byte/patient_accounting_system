@@ -138,6 +138,8 @@ def create_appointment():
 @api.route('/appointments', methods=['GET'])
 @login_required
 def get_appointments():
+    import difflib # Import here to avoid modifying top of file extensively
+
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     clinic_id_str = request.args.get('clinic_id')
@@ -152,7 +154,6 @@ def get_appointments():
     
     center_id_str = request.args.get('center_id')
     
-    # Removed strict Lab Tech restriction to allow viewing all centers in the city
     if center_id_str and center_id_str != 'null': # Allow override if param provided
          try:
              query = query.filter_by(center_id=int(center_id_str))
@@ -172,19 +173,87 @@ def get_appointments():
         query = query.filter(Appointment.date <= end_date)
 
     appointments = query.all()
+
+    # Pre-process for fuzzy matching: Get all "Paid" appointments in this set
+    # We use this local set for correlation.
+    paid_appointments = [a for a in appointments if a.payment_method_id is not None]
+    
+    # Helper for name normalization
+    def normalize_name(name):
+        return name.lower().replace(' ', '') if name else ''
+
+    current_dt = datetime.now()
+
     results = []
     for appt in appointments:
         data = appt.to_dict()
-        # Org restriction: If role is 'org' and not author -> hide details
-        # Superadmin AND Admin can see everything.
+        
+        # Org restriction check
         if current_user.role == 'org' and appt.author_id != current_user.id:
             data['patient_name'] = ""
             data['patient_phone'] = ""
             data['doctor'] = ""
             data['service'] = ""
             data['is_restricted'] = True
+            # Status for restricted? Maybe hide it or show generic. 
+            # Let's show real status but hidden details.
         else:
             data['is_restricted'] = False
+
+        # --- Status Calculation ---
+        status = 'pending' # Default
+        
+        # 1. Is it explicitly paid/registered?
+        if appt.payment_method_id is not None:
+            status = 'completed'
+        else:
+            # 2. Fuzzy Search in Paid Appointments (same date)
+            # Find if there is ANY paid appointment on the same date with similar name
+            is_found_in_journal = False
+            
+            # Optimization: Only check against paid appts of SAME DATE
+            # (Assuming `appointments` list might cover a week, we filter `paid_appointments` or just iterate)
+            # Since `paid_appointments` is from the same query, it respects date range.
+            
+            appt_norm_name = normalize_name(appt.patient_name)
+            
+            if appt_norm_name: # Only check if name exists
+                for paid_appt in paid_appointments:
+                    if paid_appt.date != appt.date: continue 
+                    # Don't match with self (though self is unpaid here, so it won't be in paid_list)
+                    
+                    paid_norm_name = normalize_name(paid_appt.patient_name)
+                    
+                    # Direct check or Fuzzy
+                    if appt_norm_name == paid_norm_name:
+                         is_found_in_journal = True
+                         break
+                    
+                    # Fuzzy
+                    ratio = difflib.SequenceMatcher(None, appt_norm_name, paid_norm_name).ratio()
+                    if ratio > 0.85: # Threshold for "Insigificant errors"
+                        is_found_in_journal = True
+                        break
+            
+            if is_found_in_journal:
+                status = 'completed'
+            else:
+                # 3. Time Check
+                # Construct appointment datetime
+                try:
+                    appt_dt_str = f"{appt.date.isoformat()} {appt.time}"
+                    appt_dt = datetime.strptime(appt_dt_str, "%Y-%m-%d %H:%M")
+                    
+                    # Add 25 minutes tolerance
+                    time_diff = current_dt - appt_dt
+                    minutes_passed = time_diff.total_seconds() / 60
+                    
+                    if minutes_passed > 25:
+                        status = 'late'
+                except ValueError:
+                    pass # Invalid time format, keep pending
+
+        data['status'] = status
         results.append(data)
 
     return jsonify(results)
@@ -422,6 +491,10 @@ def get_slots():
         hh = m // 60
         mm = m % 60
         time_str = f"{hh:02d}:{mm:02d}"
+        
+        # Exclude Lunch Break (13:00 - 14:00)
+        if hh == 13:
+            continue
         
         # Role restriction for 'org'
         if current_user.role == 'org':

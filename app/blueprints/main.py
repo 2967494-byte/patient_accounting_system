@@ -376,6 +376,13 @@ def dashboard():
     while current_time <= end_time:
         hour = current_time // 60
         minute = current_time % 60
+        
+        # Exclude Lunch Break (13:00 - 14:00)
+        # Skip 13:00, 13:15, 13:30, 13:45
+        if hour == 13:
+            current_time += interval
+            continue
+
         time_slots.append(f"{hour:02d}:{minute:02d}")
         current_time += interval
 
@@ -413,7 +420,16 @@ def dashboard():
     doctors = Doctor.query.all()
     services = Service.query.all()
 
-    return render_template('dashboard.html', dates=dates_data, time_slots=time_slots, centers=centers, current_center_id=current_center_id, prev_week=prev_week, next_week=next_week, doctors=doctors, services=services)
+    # Pass current actual date for highlighting
+    today_iso = datetime.now().strftime('%Y-%m-%d')
+    
+    # Calculate current time slot (nearest 15 minutes breakdown)
+    now = datetime.now()
+    # Round down to nearest 15
+    minute_floored = (now.minute // 15) * 15
+    current_time_slot = f"{now.hour:02d}:{minute_floored:02d}"
+
+    return render_template('dashboard.html', dates=dates_data, time_slots=time_slots, centers=centers, current_center_id=current_center_id, prev_week=prev_week, next_week=next_week, doctors=doctors, services=services, today_iso=today_iso, current_time_slot=current_time_slot)
 
 @main.route('/journal')
 @login_required

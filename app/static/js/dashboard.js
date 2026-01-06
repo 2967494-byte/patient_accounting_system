@@ -350,8 +350,15 @@ async function fetchAppointments() {
                     cell.classList.add('restricted');
                     cell.title = "Занято (информация скрыта)";
                 } else {
+                    let statusClass = '';
+                    if (appt.status === 'completed') statusClass = 'status-completed';
+                    else if (appt.status === 'late') statusClass = 'status-late';
+                    else if (appt.status === 'pending') statusClass = 'status-pending';
+
+                    if (statusClass) cell.classList.add(statusClass);
+
                     cell.innerHTML = `
-                        <div class="appt-content">
+                        <div class="appt-content ${statusClass}">
                             <div class="appt-name">${appt.patient_name}</div>
                             <div class="appt-service">${appt.service}</div>
                         </div>
@@ -363,6 +370,12 @@ async function fetchAppointments() {
                     cell.dataset.service = appt.service;
                     cell.dataset.author_name = appt.author_name;
                     cell.dataset.center_id = appt.center_id;
+
+                    // Add click handler to the content div to prevent bubbling issues if any
+                    // actually the cell click handler delegates to openEdit, which checks dataset.id.
+                    // Since we set dataset.id on the CELL (parent), the event listener on lines 32-46 works.
+                    // Line 38: const existingId = cell.dataset.id; -> this works.
+                    // The inner structure is just visual.
                 }
             }
         });
