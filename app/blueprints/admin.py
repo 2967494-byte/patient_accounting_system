@@ -361,12 +361,19 @@ def import_journal_data():
                  continue
 
             # COST CALCULATION
+            # Parse quantity first for cost calc
+            excel_qty = 1
+            raw_qty = get_val('quantity')
+            if raw_qty:
+                try: excel_qty = int(float(str(raw_qty).replace(',', '.')))
+                except: excel_qty = 1
+
             cost = 0.0
             if service_obj:
-                cost += service_obj.get_price(appt_date)
+                cost += service_obj.get_price(appt_date) # Main service always quantity 1
             
             for ads in add_service_objs:
-                cost += ads.get_price(appt_date)
+                cost += ads.get_price(appt_date) * excel_qty
 
             
             # --- END STRICT LOGIC ---
@@ -464,10 +471,10 @@ def import_journal_data():
                     try: discount = float(d_str)
                     except: discount = 0.0
                 
-            qty = 1
-            if data['quantity_raw']:
-                try: qty = int(float(str(data['quantity_raw']).replace(',', '.')))
-                except: qty = 1
+            # Quantity parsed above (excel_qty)
+            
+            # Legacy Quantity (Main Service) set to 1
+            main_qty = 1
 
             appt = Appointment(
                 center_id=current_center_id,
@@ -485,19 +492,19 @@ def import_journal_data():
                 payment_method_id=pm_id,
                 is_child=is_child,
                 contract_number=data['contract'],
-                quantity=qty,
+                quantity=main_qty, # Always 1 for main service
                 author_id=current_user_id,
                 comment=data['comment_raw']
             )
             
-            # Add service to M2M relationship
+            # Add service to M2M relationship (Force Quantity 1 for Main)
             if data['service_obj']:
-                appt.services.append(data['service_obj'])
+                appt.service_associations.append(AppointmentService(service=data['service_obj'], quantity=1))
             
-            # Add Additional Services to M2M
+            # Add Additional Services to M2M (Use Excel Quantity)
             if data['add_service_objs']:
                 for ads in data['add_service_objs']:
-                    appt.additional_services.append(ads)
+                    appt.additional_service_associations.append(AppointmentAdditionalService(additional_service=ads, quantity=excel_qty))
             
             # Legacy comment? Maybe keep strict? 
             # User said "map column... cost substituted". 

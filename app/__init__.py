@@ -77,7 +77,8 @@ def create_app(test_config=None):
     def on_exit():
         # Context might be needed depending on implementation, but requests usually creates one new.
         # However, at exit, app context might be gone. TelegramBot.send_message uses internal valid checks.
-        telegram_bot.send_shutdown_notification()
+        if app.config.get('TELEGRAM_BOT_TOKEN'):
+            telegram_bot.send_shutdown_notification()
     
     atexit.register(on_exit)
 

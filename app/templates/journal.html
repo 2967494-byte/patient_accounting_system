@@ -390,12 +390,14 @@
                             {% endfor %}
                             {% else %}
                             <!-- Fallback for legacy text service or if empty -->
+                            {% if appointment.service %}
                             <div style="display: flex; align-items: center; justify-content: space-between;">
                                 <span>{{ appointment.service }}</span>
                                 <span
                                     style="font-size: 0.9em; color: #374151; margin-left: 8px; background: #f3f4f6; padding: 1px 6px; border-radius: 4px;">x{{
                                     appointment.quantity or 1 }}</span>
                             </div>
+                            {% endif %}
                             {% endif %}
                         </div>
 
@@ -407,8 +409,8 @@
                             <div
                                 style="margin-bottom: 1px; display: flex; align-items: center; justify-content: space-between;">
                                 <span>+ {{ assoc.additional_service.name }}</span>
-                                <span style="font-size: 0.9em; color: #6b7280; margin-left: 8px;">x{{ assoc.quantity
-                                    }}</span>
+                                <span style="font-size: 0.9em; color: #6b7280; margin-left: 8px;">x{{ assoc.quantity or
+                                    1 }}</span>
                             </div>
                             {% endfor %}
                         </div>
@@ -621,8 +623,7 @@
                     <div style="flex: 2;">
                         <label
                             style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Исследование</label>
-                        <select name="service" class="journal-select service-select" onchange="calculateTotal()"
-                            required>
+                        <select name="service" class="journal-select service-select" onchange="calculateTotal()">
                             <option value="">-- Выберите --</option>
                             {% for s in services %}
                             <option value="{{ s.id }}" data-price="{{ s.price }}">{{ s.name }}</option>
@@ -1046,11 +1047,6 @@
             if (sel && sel.value) serviceIds.push(sel.value);
         });
 
-        if (serviceIds.length === 0) {
-            alert("Выберите хотя бы одно исследование");
-            return;
-        }
-
         // --- GATHER ADDITIONAL SERVICES ---
         const addSvcContainer = document.getElementById('additional-services-container');
         const addSvcRows = addSvcContainer.querySelectorAll('.additional-service-row');
@@ -1060,6 +1056,11 @@
             const sel = row.querySelector('.add-service-select');
             if (sel && sel.value) addSvcIds.push(sel.value);
         });
+
+        if (serviceIds.length === 0 && addSvcIds.length === 0) {
+            alert("Выберите хотя бы одно исследование или доп. услугу");
+            return;
+        }
 
         // --- CONSTRUCT PAYLOAD ---
         const payload = { ...commonData };
