@@ -370,7 +370,6 @@
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Сумма</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Комментарий</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Лаборант</th>
-                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Менеджер</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Действия</th>
                 </tr>
             </thead>
@@ -424,8 +423,6 @@
                         title="{{ appointment.comment or '' }}">{{ appointment.comment or '' }}</td>
                     <td style="padding: 0.75rem 0.5rem;">{{ appointment.lab_tech or (appointment.author.username if
                         appointment.author else '-') }}</td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.doctor_rel.manager if
-                        appointment.doctor_rel and appointment.doctor_rel.manager else '-' }}</td>
                     <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap;">
                         <button class="btn-icon" onclick="openEditJournalModal({{ appointment.id }})"
                             title="Редактировать">✎</button>
@@ -1231,7 +1228,6 @@
             <td style="padding: 0.75rem 0.5rem;"><input type="number" value="${cost}" class="journal-input-readonly" readonly></td>
             <td style="padding: 0.25rem 0.5rem;"><input type="text" value="${comment}" class="journal-input" disabled></td>
             <td style="padding: 0.75rem 0.5rem;">{{ current_user.username }}</td>
-            <td style="padding: 0.25rem 0.5rem; white-space: nowrap;"><input type="text" value="${manager}" class="journal-input-readonly" readonly></td>
             <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap;">
                  <button class="btn-icon" onclick="toggleEdit(this)" title="Редактировать">✎</button>
                  <button class="btn-icon" onclick="deleteEntry(this)" title="Удалить" style="color: #ef4444;">🗑️</button>
