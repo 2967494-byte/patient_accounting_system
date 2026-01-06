@@ -1,0 +1,286 @@
+{% extends "app_base.html" %}
+
+{% block content %}
+<div class="statistics-container" style="padding: 2rem;">
+    <div class="header"
+        style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <h1>Статистика {{ current_user.center.name if current_user.center else 'центра' }}</h1>
+
+        <!-- Filter Form -->
+        <form method="GET" action="{{ url_for('main.statistics') }}"
+            style="display: flex; gap: 1rem; align-items: center; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <!-- Preserve center_id if present -->
+            {% if current_center_id %}
+            <input type="hidden" name="center_id" value="{{ current_center_id }}">
+            {% endif %}
+
+            <div style="display: flex; flex-direction: column;">
+                <label for="year" style="font-size: 0.875rem; color: #4b5563; margin-bottom: 0.25rem;">Год</label>
+                <select name="year" id="year" class="stats-select">
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if y==selected_year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column;">
+                <label for="month" style="font-size: 0.875rem; color: #4b5563; margin-bottom: 0.25rem;">Месяц</label>
+                <select name="month" id="month" class="stats-select">
+                    <option value="">Весь год</option>
+                    {% set month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август',
+                    'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'] %}
+                    {% for m in months %}
+                    <option value="{{ m }}" {% if m==selected_month %}selected{% endif %}>{{ month_names[m-1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 1.25rem;">Показать</button>
+        </form>
+    </div>
+
+    {% if summary_stats %}
+    <div class="stats-content" style="display: flex; gap: 2rem; flex-wrap: wrap;">
+
+        <!-- Financial Table -->
+        <div
+            style="flex: 1; min-width: 400px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Финансы</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6; text-align: left;">
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Категория</th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Количество</th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Сумма
+                                (₽)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего посещений</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
+                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
+                                "%.2f"|format(summary_stats.total_sum) }}</td>
+                        </tr>
+                        {% for method_name, stats in summary_stats.methods.items() %}
+                        {% if stats.count > 0 or True %}
+                        <!-- Always show methods if desired, or duplicate journal logic -->
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ method_name }}</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ stats.count }}</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(stats.sum) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Demographics/Services Statistics Table -->
+        <div
+            style="flex: 1; min-width: 400px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Статистика услуг</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6; text-align: left;">
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Категория</th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
+                                Количество</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151;">Количество взрослых</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.adults_count }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151;">Количество детей</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.children_count }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество КТ, всего:
+                            </td>
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{
+                                summary_stats.kt_count }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых
+                            </td>
+                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_adults }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей
+                            </td>
+                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_children }}</td>
+                        </tr>
+
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество ОПТГ, всего:
+                            </td>
+                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{
+                                summary_stats.optg_count }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Взрослых
+                            </td>
+                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_adults }}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей
+                            </td>
+                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_children }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Breakdown Table -->
+    <div
+        style="margin-top: 2rem; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">
+            Детальный отчет {% if breakdown_by == 'day' %}(по дням){% else %}(по месяцам){% endif %}
+        </h3>
+        <div style="overflow-x: auto;">
+            <table class="detailed-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="text-align: left; padding-left: 1rem;">Дата</th>
+                        <th colspan="2">Всего</th>
+                        <th colspan="2">Наличные</th>
+                        <th colspan="2">Карта</th>
+                        <th colspan="2">Безнал</th>
+                        <th colspan="2">Б/П</th>
+                        <th colspan="2">Пациенты</th>
+                    </tr>
+                    <tr class="subheader">
+                        <th>Кол-во</th>
+                        <th>Сумма</th>
+                        <th>Кол-во</th>
+                        <th>Сумма</th>
+                        <th>Кол-во</th>
+                        <th>Сумма</th>
+                        <th>Кол-во</th>
+                        <th>Сумма</th>
+                        <th>Кол-во</th>
+                        <th>Сумма</th>
+                        <th>Взрослых</th>
+                        <th>Детей</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in summary_stats.breakdown %}
+                    <tr>
+                        <td style="text-align: left; padding-left: 1rem; font-weight: 500;">{{ row.label }}</td>
+                        <!-- Total -->
+                        <td>{{ row.total_count }}</td>
+                        <td class="money">{{ "%.2f"|format(row.total_sum) }}</td>
+                        <!-- Cash -->
+                        <td class="{{ 'muted' if row.cash_count == 0 }}">{{ row.cash_count }}</td>
+                        <td class="money {{ 'muted' if row.cash_sum == 0 }}">{{ "%.2f"|format(row.cash_sum) }}</td>
+                        <!-- Card -->
+                        <td class="{{ 'muted' if row.card_count == 0 }}">{{ row.card_count }}</td>
+                        <td class="money {{ 'muted' if row.card_sum == 0 }}">{{ "%.2f"|format(row.card_sum) }}</td>
+                        <!-- Cashless -->
+                        <td class="{{ 'muted' if row.cashless_count == 0 }}">{{ row.cashless_count }}</td>
+                        <td class="money {{ 'muted' if row.cashless_sum == 0 }}">{{ "%.2f"|format(row.cashless_sum) }}
+                        </td>
+                        <!-- Free -->
+                        <td class="{{ 'muted' if row.free_count == 0 }}">{{ row.free_count }}</td>
+                        <td class="money {{ 'muted' if row.free_sum == 0 }}">{{ "%.2f"|format(row.free_sum) }}</td>
+                        <!-- Demographics -->
+                        <td>{{ row.adults }}</td>
+                        <td>{{ row.children }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not summary_stats.breakdown %}
+                    <tr>
+                        <td colspan="13" style="padding: 1rem; text-align: center; color: #6b7280;">Нет данных за
+                            выбранный период</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+
+<style>
+    .stats-select {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        min-width: 150px;
+        font-family: inherit;
+        font-size: 0.95rem;
+    }
+
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .btn-primary:hover {
+        background-color: #2563eb;
+    }
+
+    /* Detailed Table Styles */
+    .detailed-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        min-width: 1000px;
+        /* Ensure scroll on small screens */
+    }
+
+    .detailed-table th {
+        background-color: #f3f4f6;
+        color: #374151;
+        padding: 0.5rem;
+        border: 1px solid #e5e7eb;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .detailed-table th[rowspan="2"] {
+        vertical-align: middle;
+    }
+
+    .detailed-table td {
+        padding: 0.5rem;
+        border: 1px solid #e5e7eb;
+        text-align: center;
+        color: #111827;
+    }
+
+    .detailed-table .money {
+        font-family: monospace;
+        text-align: right;
+        padding-right: 1rem;
+    }
+
+    .detailed-table .muted {
+        color: #9ca3af;
+    }
+
+    .detailed-table tr:hover {
+        background-color: #f9fafb;
+    }
+</style>
+{% endblock %}

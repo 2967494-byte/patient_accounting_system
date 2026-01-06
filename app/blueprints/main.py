@@ -1,11 +1,139 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
-from app.models import Location, Organization, Doctor, Service
+from app.models import Location, Organization, Doctor, Service, Appointment, AdditionalService, Clinic, PaymentMethod
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import extract
 
 main = Blueprint('main', __name__)
+
+def calculate_stats(appointments, breakdown_by=None):
+    # breakdown_by: 'day' (for month view) or 'month' (for year view)
+    payment_methods = PaymentMethod.query.order_by(PaymentMethod.name).all()
+    
+    summary_stats = {
+        'total_count': 0,
+        'total_sum': 0.0,
+        'methods': {},
+        'breakdown': []
+    }
+
+    # Initialize methods dict
+    for pm in payment_methods:
+        summary_stats['methods'][pm.name] = {'count': 0, 'sum': 0.0}
+    
+    FINANCIAL_METHODS = ['наличные', 'карта']
+    
+    summary_stats.update({
+        'adults_count': 0, 'children_count': 0,
+        'kt_count': 0, 'kt_adults': 0, 'kt_children': 0,
+        'optg_count': 0, 'optg_adults': 0, 'optg_children': 0
+    })
+
+    # Prepare breakdown aggregation
+    breakdown_map = {} # Key: date/month -> stats dict
+
+    for appt in appointments:
+        # --- Totals ---
+        summary_stats['total_count'] += 1
+        val = appt.cost or 0.0
+        
+        pm_name_lower = ''
+        pm_name = ''
+        if appt.payment_method:
+             pm_name_lower = appt.payment_method.name.lower().strip()
+             pm_name = appt.payment_method.name
+             
+             if pm_name_lower in FINANCIAL_METHODS:
+                 summary_stats['total_sum'] += val
+        
+             if pm_name not in summary_stats['methods']:
+                 summary_stats['methods'][pm_name] = {'count': 0, 'sum': 0.0}
+             
+             summary_stats['methods'][pm_name]['count'] += 1
+             
+             if pm_name_lower in FINANCIAL_METHODS:
+                 summary_stats['methods'][pm_name]['sum'] += val
+
+        if appt.is_child:
+            summary_stats['children_count'] += 1
+        else:
+            summary_stats['adults_count'] += 1
+            
+        qty = appt.quantity if appt.quantity else 1
+        
+        def categorize_service(name, is_child, stats_dict):
+             if not name: return
+             if 'КТ' in name or 'KT' in name:
+                 stats_dict['kt_count'] += qty
+                 if is_child: stats_dict['kt_children'] += qty
+                 else: stats_dict['kt_adults'] += qty
+             else:
+                 stats_dict['optg_count'] += qty
+                 if is_child: stats_dict['optg_children'] += qty
+                 else: stats_dict['optg_adults'] += qty
+
+        # Do main categorization for summary
+        if appt.services:
+            for s in appt.services: categorize_service(s.name, appt.is_child, summary_stats)
+        elif appt.service:
+             categorize_service(appt.service, appt.is_child, summary_stats)
+
+        # --- Breakdown Logic ---
+        if breakdown_by:
+            key = None
+            label = None
+            sort_key = None
+            
+            if breakdown_by == 'day':
+                # Group by Day: "DD.MM"
+                key = appt.date.strftime('%d.%m')
+                label = key
+                sort_key = appt.date
+            elif breakdown_by == 'month':
+                # Group by Month: "MonthName"
+                month_names = ['', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+                m = appt.date.month
+                key = m
+                label = month_names[m]
+                sort_key = m
+            
+            if key not in breakdown_map:
+                breakdown_map[key] = {
+                    'label': label,
+                    'sort_key': sort_key,
+                    'total_count': 0, 'total_sum': 0.0,
+                    'cash_count': 0, 'cash_sum': 0.0,
+                    'card_count': 0, 'card_sum': 0.0,
+                    'cashless_count': 0, 'cashless_sum': 0.0,
+                    'free_count': 0, 'free_sum': 0.0,
+                    'adults': 0, 'children': 0
+                }
+            
+            s = breakdown_map[key]
+            s['total_count'] += 1
+            if pm_name_lower in FINANCIAL_METHODS:
+                 s['total_sum'] += val
+            
+            # Payment Buckets
+            if pm_name_lower == 'наличные':
+                s['cash_count'] += 1; s['cash_sum'] += val
+            elif pm_name_lower == 'карта':
+                s['card_count'] += 1; s['card_sum'] += val
+            elif 'безнал' in pm_name_lower:
+                s['cashless_count'] += 1; s['cashless_sum'] += val
+            elif 'б/п' in pm_name_lower or 'бесплатно' in pm_name_lower:
+                s['free_count'] += 1; s['free_sum'] += val # Sum likely 0
+            
+            # Demographics
+            if appt.is_child: s['children'] += 1
+            else: s['adults'] += 1
+
+    if breakdown_by:
+        summary_stats['breakdown'] = sorted(breakdown_map.values(), key=lambda x: x['sort_key'])
+             
+    return summary_stats
 
 @main.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -115,6 +243,88 @@ def cabinet():
                 dicom_files.append(url)
     
     return render_template('cabinet.html', dicom_files=dicom_files)
+
+@main.route('/statistics')
+@login_required
+def statistics():
+    # Allow Superadmin and LabTech
+    if current_user.role not in ['superadmin', 'lab_tech']:
+        flash('Доступ запрещен', 'danger')
+        return redirect(url_for('main.dashboard'))
+    
+    # Context (Center logic)
+    current_center_id = None
+    if current_user.role == 'lab_tech':
+        if current_user.center:
+            current_center_id = current_user.center_id
+        else:
+             flash('Ваш аккаунт не привязан к центру.', 'error')
+    elif current_user.city_id:
+        pass # Admin/Superadmin context could be broader, but usually filtered by center selector if implemented. 
+             # For now, let's assume current_user's center or handle all?
+             # Requirement says "available to lab tech of this center and superadmin".
+             # If superadmin, maybe show selector? Or just all? 
+             # Let's stick to "Center" based statistics.
+             # If superadmin visits, we might need a center selector, but user just said "filters year/month".
+             # Getting data for *current_center* seems appropriate if passed, or all?
+             # "Statistics ... center" implies specific center.
+    
+    # To keep it simple and consistent with Dashboard/Journal:
+    # We check if there is a center_id arg, otherwise default.
+    
+    centers = []
+    if current_user.role == 'lab_tech':
+         if current_user.center: centers = [current_user.center]
+    elif current_user.city_id:
+         centers = Location.query.filter_by(parent_id=current_user.city_id, type='center').all()
+    
+    center_id_arg = request.args.get('center_id')
+    if center_id_arg:
+        try:
+            current_center_id = int(center_id_arg)
+        except ValueError:
+            current_center_id = None
+            
+    if not current_center_id and centers:
+        current_center_id = centers[0].id
+        
+    # Date Filtering
+    current_year = datetime.now().year
+    current_month = datetime.now().month
+    
+    selected_year = request.args.get('year', type=int, default=current_year)
+    selected_month = request.args.get('month', type=int, default=None) # None = All Year
+    
+    # Query
+    query = Appointment.query
+    
+    if current_center_id:
+        query = query.filter_by(center_id=current_center_id)
+        
+    # Filter by Year
+    query = query.filter(extract('year', Appointment.date) == selected_year)
+    
+    # Filter by Month if selected
+    if selected_month:
+        query = query.filter(extract('month', Appointment.date) == selected_month)
+        
+    appointments = query.all()
+    
+    breakdown_by = 'day' if selected_month else 'month'
+    summary_stats = calculate_stats(appointments, breakdown_by=breakdown_by)
+    
+    # Years for selector (2024 to current + 1)
+    years = range(2024, datetime.now().year + 2)
+    
+    return render_template('statistics.html', 
+                           summary_stats=summary_stats, 
+                           centers=centers, 
+                           current_center_id=current_center_id,
+                           selected_year=selected_year,
+                           selected_month=selected_month,
+                           years=years,
+                           months=range(1, 13),
+                           breakdown_by=breakdown_by)
 
 @main.route('/')
 @login_required
@@ -262,86 +472,7 @@ def journal():
     payment_methods = PaymentMethod.query.order_by(PaymentMethod.name).all()
     doctors = Doctor.query.order_by(Doctor.name).all()
 
-    # Calculate Summary Stats
-    summary_stats = {
-        'total_count': 0,
-        'total_sum': 0.0,
-        'methods': {}
-    }
-
-    # Initialize methods dict with all available payment methods
-    for pm in payment_methods:
-        summary_stats['methods'][pm.name] = {'count': 0, 'sum': 0.0}
-    
-    # Financial Sum only includes Cash and Card
-    FINANCIAL_METHODS = ['наличные', 'карта']
-
-    for appt in appointments:
-        summary_stats['total_count'] += 1
-        
-        val = appt.cost or 0.0
-        
-        # Check if this appointment counts towards Financial Total Sum
-        if appt.payment_method:
-             pm_name_lower = appt.payment_method.name.lower().strip()
-             if pm_name_lower in FINANCIAL_METHODS:
-                 summary_stats['total_sum'] += val
-        
-             # Breakdown Stats (All methods)
-             pm_name = appt.payment_method.name
-             if pm_name not in summary_stats['methods']:
-                 summary_stats['methods'][pm_name] = {'count': 0, 'sum': 0.0}
-             
-             summary_stats['methods'][pm_name]['count'] += 1
-             
-             # Only add to breakdown sum if it's a financial method (or not excluded)
-             # User requested "Безнал" row to always show 0.00
-             if pm_name_lower in FINANCIAL_METHODS:
-                 summary_stats['methods'][pm_name]['sum'] += val
-
-    # Statistics for Statistics Table (Adults/Children, KT/OPTG)
-    summary_stats['adults_count'] = 0
-    summary_stats['children_count'] = 0
-    summary_stats['kt_count'] = 0
-    summary_stats['kt_adults'] = 0
-    summary_stats['kt_children'] = 0
-    summary_stats['optg_count'] = 0
-    summary_stats['optg_adults'] = 0
-    summary_stats['optg_children'] = 0
-
-    for appt in appointments:
-        # Adults/Children
-        if appt.is_child:
-            summary_stats['children_count'] += 1
-        else:
-            summary_stats['adults_count'] += 1
-            
-        # Services (KT vs OPTG)
-        # "КТ" must be in name. Everything else is "ОПТГ".
-        # Check quantity
-        qty = appt.quantity if appt.quantity else 1
-        
-        # Helper to categorize service name
-        def categorize_service(name, is_child):
-            if not name: return
-            if 'КТ' in name or 'KT' in name: # Check Cyrillic and Latin just in case (though requirement said "КТ")
-                 summary_stats['kt_count'] += qty
-                 if is_child:
-                     summary_stats['kt_children'] += qty
-                 else:
-                     summary_stats['kt_adults'] += qty
-            else:
-                 summary_stats['optg_count'] += qty
-                 if is_child:
-                     summary_stats['optg_children'] += qty
-                 else:
-                     summary_stats['optg_adults'] += qty
-
-        if appt.services:
-            for s in appt.services:
-                categorize_service(s.name, appt.is_child)
-        elif appt.service:
-             categorize_service(appt.service, appt.is_child)
+    summary_stats = calculate_stats(appointments)
 
     # Filter for "Select Appointment" modal: Only show appointments that are NOT "registered" (no payment method)
     # This prevents creating duplicates if the user thinks of "Journal" as "Completed" 

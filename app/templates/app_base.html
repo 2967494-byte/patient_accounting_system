@@ -61,6 +61,18 @@
 
             <div class="user-controls header-actions">
                 {% if current_user.role in ['superadmin', 'admin', 'lab_tech'] %}
+                <!-- Statistics Icon -->
+                {% if current_user.role in ['superadmin', 'lab_tech'] %}
+                <a href="{{ url_for('main.statistics') }}" class="btn-icon" title="Статистика"
+                    style="margin-right: 1rem; color: #4b5563; text-decoration: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                </a>
+                {% endif %}
                 <!-- Messaging Icon -->
                 <a href="{{ url_for('main.chat_dashboard') }}" id="chat-notification" class="btn-icon"
                     style="margin-right: 1rem; position: relative; color: #4b5563; display: none; text-decoration: none;">
