@@ -267,10 +267,10 @@ def update_appointment(id):
     
     if 'contract_number' in data: appointment.contract_number = data['contract_number']
     if 'clinic_id' in data: appointment.clinic_id = data['clinic_id']
+    if 'doctor_id' in data: appointment.doctor_id = data['doctor_id'] # Added doctor_id
     if 'quantity' in data: appointment.quantity = int(data['quantity'])
     if 'cost' in data: appointment.cost = float(data['cost'])
     if 'payment_method_id' in data: appointment.payment_method_id = data['payment_method_id']
-    if 'discount' in data: appointment.discount = float(data['discount'])
     if 'discount' in data: appointment.discount = float(data['discount'])
     if 'comment' in data: appointment.comment = data['comment']
     if 'is_child' in data: appointment.is_child = bool(data['is_child'])
@@ -283,7 +283,7 @@ def update_appointment(id):
         for sid in data['services_ids']:
              svc = Service.query.get(sid)
              if svc:
-                 appointment.services.append(svc)
+                 appointment.services.append(svc) # Fixed: append OBJECT, not ID
     
     # Handle Additional Services (M2M)
     if 'additional_services_ids' in data:

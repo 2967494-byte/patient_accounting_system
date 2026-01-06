@@ -37,7 +37,7 @@ def calculate_stats(appointments, breakdown_by=None):
     for appt in appointments:
         # --- Totals ---
         summary_stats['total_count'] += 1
-        val = appt.cost or 0.0
+        val = (appt.cost or 0.0) - (appt.discount or 0.0)
         
         pm_name_lower = ''
         pm_name = ''

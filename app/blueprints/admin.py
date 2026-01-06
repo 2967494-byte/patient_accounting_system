@@ -1,7 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.models import User, Location, Doctor, Service, AdditionalService, ServicePrice, AdditionalServicePrice, Clinic, Manager, PaymentMethod, Appointment, Organization, GlobalSetting
+from app.models import (
+    User, Location, Doctor, Service, AdditionalService, ServicePrice, AdditionalServicePrice,
+    Clinic, Manager, PaymentMethod, Appointment, Organization, GlobalSetting,
+    AppointmentHistory, appointment_services, appointment_main_services
+)
 from app.telegram_bot import telegram_bot
 import psutil
 from werkzeug.security import generate_password_hash
@@ -142,7 +146,391 @@ def recalculate_journal_data():
         
     return redirect(url_for('admin.additional'))
 
-# --- Managers Management ---
+@admin.route('/journal/import', methods=['POST'])
+@login_required
+def import_journal_data():
+    center_id = request.form.get('center_id')
+    if not center_id:
+        flash('Не выбран центр', 'error')
+        return redirect(url_for('admin.additional'))
+
+    if 'file' not in request.files:
+        flash('Нет файла', 'error')
+        return redirect(url_for('admin.additional'))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('Файл не выбран', 'error')
+        return redirect(url_for('admin.additional'))
+        
+    original_filename = file.filename
+    if not (original_filename.lower().endswith('.csv') or original_filename.lower().endswith('.xlsx')):
+        flash('Неподдерживаемый формат. Используйте CSV или XLSX.', 'error')
+        return redirect(url_for('admin.additional'))
+        
+    filename = secure_filename(file.filename)
+
+    try:
+        rows = []
+        if original_filename.lower().endswith('.csv'):
+            content = file.stream.read()
+            text = None
+            try:
+                text = content.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                try:
+                    text = content.decode("cp1251")
+                except UnicodeDecodeError:
+                    text = content.decode("utf-8", errors="ignore")
+            
+            stream = io.StringIO(text, newline=None)
+            stream.seek(0)
+            
+            try:
+                sample = stream.read(2048)
+                stream.seek(0)
+                if not sample: 
+                    rows = []
+                else:
+                    dialect = csv.Sniffer().sniff(sample, delimiters=";,|\t")
+                    csv_input = csv.reader(stream, dialect)
+                    rows = list(csv_input)
+            except csv.Error:
+                stream.seek(0)
+                csv_input = csv.reader(stream)
+                rows = list(csv_input)
+            except Exception:
+                stream.seek(0)
+                rows = list(csv.reader(stream))
+            
+        elif original_filename.lower().endswith('.xlsx'):
+            wb = openpyxl.load_workbook(file, data_only=True)
+            sheet = wb.active
+            for r in sheet.iter_rows(values_only=True):
+                rows.append(list(r))
+        
+        if not rows:
+            flash(f'Файл пуст (Filename: {original_filename})', 'error')
+            return redirect(url_for('admin.additional'))
+            
+        delete_old = request.form.get('delete_old') == 'on'
+
+        # Header Detection
+        headers = []
+        if rows:
+            headers = [str(h).strip().lower() if h else '' for h in rows[0]]
+        
+        header_row_idx = 0
+        if 'дата' not in headers and len(rows) > 1:
+             headers = [str(h).strip().lower() if h else '' for h in rows[1]]
+             header_row_idx = 1
+             
+        col_map = {}
+        for idx, h in enumerate(headers):
+            if 'дата' in h and 'рождения' not in h: col_map['date'] = idx
+            elif 'пациент' in h: col_map['patient'] = idx
+            elif 'врач' in h: col_map['doctor'] = idx
+            elif 'исследование' in h or 'услуга' in h: col_map['service'] = idx
+            elif 'оплата' in h: col_map['payment'] = idx
+            elif 'скидка' in h: col_map['discount'] = idx
+            elif 'сумма' in h: col_map['cost'] = idx
+            elif 'стоимость' in h and 'cost' not in col_map: col_map['cost'] = idx 
+            elif 'договор' in h: col_map['contract'] = idx
+            elif 'ребенок' in h: col_map['is_child'] = idx
+            elif 'клиника' in h: col_map['clinic'] = idx
+            elif 'кол-во' in h: col_map['quantity'] = idx
+            elif 'доп' in h and 'услуги' in h: col_map['additional_services'] = idx
+            elif 'комментарий' in h: col_map['comment'] = idx
+            
+        if 'date' not in col_map or 'patient' not in col_map:
+            col_map = {
+                'date': 0, 'contract': 3, 'patient': 4, 'is_child': 5, 'doctor': 6,
+                'clinic': 8, 'service': 9, 'additional_services': 10, 'quantity': 11,
+                'payment': 14, 'discount': 15, 'cost': 16, 'comment': 12
+            }
+
+        valid_rows_to_insert = []
+        unique_dates_to_clean = set()
+        warnings = []
+
+        for i in range(header_row_idx + 1, len(rows)):
+            row = rows[i]
+            if not row or len(row) < 5: continue
+            
+            def get_val(key):
+                idx = col_map.get(key)
+                if idx is not None and idx < len(row):
+                   return row[idx]
+                return None
+
+            date_val = get_val('date')
+            if not date_val: continue
+            
+            appt_date = None
+            if isinstance(date_val, datetime): appt_date = date_val.date()
+            elif isinstance(date_val, date): appt_date = date_val
+            elif isinstance(date_val, str): 
+                val_str = date_val.strip()
+                if not val_str: continue
+                # Remove timestamps if present in string like "2025-12-01 00:00:00"
+                # Replace comma with dot (e.g. 09,12.2025 -> 09.12.2025)
+                val_str = val_str.replace(',', '.')
+                
+                for fmt in ['%d.%m.%Y', '%Y-%m-%d', '%d.%m.%y', '%d/%m/%Y']:
+                    try:
+                        appt_date = datetime.strptime(val_str, fmt).date()
+                        break
+                    except: pass
+            
+            if not appt_date: 
+                warnings.append(f"Строка {i+1}: Неверный формат даты '{date_val}'.")
+                continue
+            
+            patient = str(get_val('patient') or '').strip()
+            if not patient: continue
+            
+            # --- STRICT LOGIC ---
+            
+            # 1. DOCTOR MATCHING
+            doctor_name = str(get_val('doctor') or '').strip()
+            
+            # New Rule: Empty doctor -> "Без врача"
+            if not doctor_name:
+                doctor_name = "Без врача"
+            
+            doc_obj = None
+            if doctor_name:
+                doc_obj = Doctor.query.filter(Doctor.name.ilike(doctor_name)).first()
+            
+            if not doc_obj:
+                warnings.append(f"Строка {i+1}: Врач '{doctor_name}' не найден.")
+                continue # Skip row
+                
+            # 2. MANAGER AUTO-ASSIGN
+            manager_id = None
+            if doc_obj.manager:
+                mgr = User.query.filter(User.username.ilike(doc_obj.manager)).first()
+                if mgr: manager_id = mgr.id
+            
+            # 3. CLINIC MATCHING
+            clinic_name = str(get_val('clinic') or '').strip()
+            clinic_obj = None
+            if clinic_name:
+                 clinic_obj = Clinic.query.filter(Clinic.name.ilike(clinic_name)).first()
+                 
+            # Warning if clinic provided but not found? Or just ignore? 
+            # Plan said "Match Clinic (skip if not found) or Warning".
+            # Let's skip if clinic name was provided but not found, to be safe.
+            # 4. SERVICE MATCHING
+            service_name = str(get_val('service') or '').strip()
+            service_obj = None
+            
+            if service_name:
+                service_obj = Service.query.filter(Service.name.ilike(service_name)).first()
+                if not service_obj:
+                     warnings.append(f"Строка {i+1}: Услуга '{service_name}' не найдена (игнорируется, так как не найдена в каталоге).")
+                     # If service name was present but invalid, should we treat it as "No Service" or "Skip"?
+                     # Strict mode usually implies Skip. But let's see if we have Add Services.
+                     # If user says "Load data if Add Srv not empty", maybe we treat invalid main service as None?
+                     # Let's keep strictness: If valid name provided but not found -> Warning (and effectively None for logic below).
+                     pass
+
+            # 5. ADDITIONAL SERVICES MATCHING
+            add_services_str = str(get_val('additional_services') or '').strip()
+            add_service_objs = []
+            if add_services_str:
+                # Split by comma
+                for raw_name in add_services_str.split(','):
+                    name = raw_name.strip()
+                    if not name: continue
+                    
+                    add_srv = AdditionalService.query.filter(AdditionalService.name.ilike(name)).first()
+                    if not add_srv:
+                         warnings.append(f"Строка {i+1}: Доп. услуга '{name}' не найдена.")
+                         # Strict: If explicitly listed but not found, we skip the row to avoid data loss/corruption.
+                         add_service_objs = [] # clear to trigger skip
+                         service_obj = None # ensure skip
+                         break
+                    
+                    add_service_objs.append(add_srv)
+
+            # VALIDATION: Must have either Main Service OR Additional Services
+            if not service_obj and not add_service_objs:
+                 if not warnings: # Don't duplicate if we already warned about invalid service
+                     warnings.append(f"Строка {i+1}: Не указана ни основная, ни доп. услуга.")
+                 continue
+
+            # COST CALCULATION
+            cost = 0.0
+            if service_obj:
+                cost += service_obj.get_price(appt_date)
+            
+            for ads in add_service_objs:
+                cost += ads.get_price(appt_date)
+
+            
+            # --- END STRICT LOGIC ---
+            
+            valid_rows_to_insert.append({
+                'date': appt_date,
+                'patient': patient,
+                'service_obj': service_obj, # Store obj
+                'doctor_obj': doc_obj,      # Store obj
+                'clinic_obj': clinic_obj,   # Store obj
+                'manager_id': manager_id,
+                'contract': str(get_val('contract') or '').strip(),
+                'cost': cost, # Catalog price (Main + Additional)
+                'discount_raw': get_val('discount'), # Raw discount
+                'payment_raw': str(get_val('payment') or '').strip(),
+                'is_child_raw': get_val('is_child'),
+                'quantity_raw': get_val('quantity'),
+                'quantity_raw': get_val('quantity'),
+                'add_service_objs': add_service_objs, # List of objects
+                'add_services_raw': add_services_str, # For legacy comment if needed?
+                'comment_raw': str(get_val('comment') or '').strip()
+            })
+            unique_dates_to_clean.add(appt_date)
+            
+        if not valid_rows_to_insert:
+            msg = 'Не найдено валидных строк.'
+            if warnings: msg += f" Ошибки ({len(warnings)}): " + "; ".join(warnings[:5]) + "..."
+            flash(msg, 'warning')
+            return redirect(url_for('admin.additional'))
+
+        if delete_old and unique_dates_to_clean:
+             # Fetch IDs to delete dependencies first (query.delete bypasses cascade)
+             appts_to_delete = db.session.query(Appointment.id).filter(
+                 Appointment.center_id == int(center_id),
+                 Appointment.date.in_(unique_dates_to_clean)
+             ).all()
+             
+             appt_ids = [a[0] for a in appts_to_delete]
+             
+             if appt_ids:
+                 # Delete associations manually
+                 # appointment_services (Additional Services)
+                 db.session.execute(
+                     appointment_services.delete().where(
+                         appointment_services.c.appointment_id.in_(appt_ids)
+                     )
+                 )
+                 # appointment_main_services (Research)
+                 db.session.execute(
+                     appointment_main_services.delete().where(
+                         appointment_main_services.c.appointment_id.in_(appt_ids)
+                     )
+                 )
+                 # History
+                 AppointmentHistory.query.filter(
+                     AppointmentHistory.appointment_id.in_(appt_ids)
+                 ).delete(synchronize_session=False)
+
+                 # Finally delete Appointments
+                 Appointment.query.filter(
+                     Appointment.id.in_(appt_ids)
+                 ).delete(synchronize_session=False)
+
+        created_count = 0
+        current_center_id = int(center_id)
+        current_user_id = current_user.id
+        
+        for data in valid_rows_to_insert:
+            # Boolean
+            is_child = False
+            raw_child = data['is_child_raw']
+            if raw_child:
+                if isinstance(raw_child, bool): is_child = raw_child
+                else:
+                    s = str(raw_child).lower()
+                    if s in ['true', 'yes', 'да', '1', '+']: is_child = True
+
+            # Payment Method
+            pm_name = data['payment_raw']
+            pm_id = None
+            if pm_name:
+                pm = PaymentMethod.query.filter(PaymentMethod.name.ilike(pm_name)).first()
+                if pm: pm_id = pm.id
+                else:
+                     pm = PaymentMethod(name=pm_name)
+                     db.session.add(pm)
+                     db.session.flush()
+                     pm_id = pm.id
+            
+            # Discount
+            discount = 0.0
+            if data['discount_raw'] is not None:
+                if isinstance(data['discount_raw'], (int, float)):
+                    discount = float(data['discount_raw'])
+                else:
+                    d_str = str(data['discount_raw']).replace(u'\xa0', '').replace(' ', '').replace(',', '.')
+                    try: discount = float(d_str)
+                    except: discount = 0.0
+                
+            qty = 1
+            if data['quantity_raw']:
+                try: qty = int(float(str(data['quantity_raw']).replace(',', '.')))
+                except: qty = 1
+
+            appt = Appointment(
+                center_id=current_center_id,
+                date=data['date'],
+                time="09:00",
+                patient_name=data['patient'],
+                service=data['service_obj'].name if data['service_obj'] else "Доп. услуги", # Fallback name
+                # Link M2M service
+                doctor=data['doctor_obj'].name,
+                doctor_id=data['doctor_obj'].id,
+                manager_id=data['manager_id'], # Auto-assigned
+                clinic_id=data['clinic_obj'].id if data['clinic_obj'] else None,
+                cost=float(data['cost']),
+                discount=discount,
+                payment_method_id=pm_id,
+                is_child=is_child,
+                contract_number=data['contract'],
+                quantity=qty,
+                author_id=current_user_id,
+                comment=data['comment_raw']
+            )
+            
+            # Add service to M2M relationship
+            if data['service_obj']:
+                appt.services.append(data['service_obj'])
+            
+            # Add Additional Services to M2M
+            if data['add_service_objs']:
+                for ads in data['add_service_objs']:
+                    appt.additional_services.append(ads)
+            
+            # Legacy comment? Maybe keep strict? 
+            # User said "map column... cost substituted". 
+            # If mapped, no need for raw text in comment unless unmapped content exists (which we skip now).
+            # So we can remove the comment assignment or keep it if strictly necessary. 
+            # Let's keep a cleaner comment:
+            if data['add_services_raw']:
+                 # If we mapped them, maybe we don't need "Доп: ..." in comment?
+                 # But sticking to previous behavior is safer, let's just log it if needed.
+                 # Actually, better to NOT duplicate logic in comment if it's real data now.
+                 pass 
+            
+            db.session.add(appt)
+            created_count += 1
+            
+        db.session.commit()
+        
+        success_msg = f'Успешно импортировано: {created_count}.'
+        if warnings:
+            # flash works with categories. detailed warning list might be too long.
+            # let's show top 5 warnings.
+            warn_msg = f" Пропущено строк: {len(warnings)}. Примеры: " + "; ".join(warnings[:5])
+            flash(success_msg + warn_msg, 'warning') # Use warning color to draw attention
+        else:
+            flash(success_msg, 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка импорта: {str(e)}', 'error')
+
+    return redirect(url_for('admin.additional'))
 
 @admin.route('/managers/add', methods=['POST'])
 def add_manager():

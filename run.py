@@ -8,5 +8,7 @@ def make_shell_context():
     from app.models import User, Location, Appointment, Organization
     return {'db': db, 'User': User, 'Location': Location, 'Appointment': Appointment, 'Organization': Organization}
 
+
+# Triggering reload
 if __name__ == '__main__':
     app.run(debug=True)

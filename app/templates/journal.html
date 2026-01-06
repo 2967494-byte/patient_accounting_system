@@ -417,7 +417,8 @@
                     <td style="padding: 0.25rem 0.5rem;">{{ appointment.payment_method.name if
                         appointment.payment_method else '-' }}</td>
                     <td style="padding: 0.25rem 0.5rem;">{{ appointment.discount or 0 }}</td>
-                    <td style="padding: 0.75rem 0.5rem; font-weight: 500;">{{ "%.2f"|format(appointment.cost) }}
+                    <td style="padding: 0.75rem 0.5rem; font-weight: 500;">{{ "%.2f"|format(appointment.cost -
+                        (appointment.discount or 0)) }}
                     </td>
                     <td style="padding: 0.25rem 0.5rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"
                         title="{{ appointment.comment or '' }}">{{ appointment.comment or '' }}</td>
