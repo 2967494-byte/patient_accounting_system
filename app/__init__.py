@@ -69,7 +69,7 @@ def create_app(test_config=None):
 
     # Startup Notification (only if not in debug reload mode or use lock)
     # Simple check to avoid double send in dev reloader:
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    if (not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true') and app.config.get('TELEGRAM_BOT_TOKEN'):
          with app.app_context():
              telegram_bot.send_startup_notification()
 
