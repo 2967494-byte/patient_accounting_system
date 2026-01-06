@@ -45,7 +45,7 @@ def get_history():
         messages = Message.query.filter(
             ((Message.sender_id == current_user.id) & (Message.recipient_id == None)) |
             (Message.recipient_id == current_user.id)
-        ).order_by(Message.timestamp.asc()).all()
+        ).order_by(Message.timestamp.desc()).limit(100).from_self().order_by(Message.timestamp.asc()).all()
         
     else:
         # Support Staff
@@ -65,7 +65,7 @@ def get_history():
         messages = Message.query.filter(
             ((Message.sender_id == view_user_id) & (Message.recipient_id == None)) |
             (Message.recipient_id == view_user_id)
-        ).order_by(Message.timestamp.asc()).all()
+        ).order_by(Message.timestamp.desc()).limit(100).from_self().order_by(Message.timestamp.asc()).all()
 
     return jsonify([m.to_dict() for m in messages])
 
