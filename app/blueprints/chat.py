@@ -42,10 +42,14 @@ def get_history():
     if current_user.role == 'org':
         # Org sees only their conversation with Support
         # Messages where (sender=self AND recipient=None) OR (recipient=self)
-        messages = Message.query.filter(
+        # Get last 100 messages (descending)
+        messages_desc = Message.query.filter(
             ((Message.sender_id == current_user.id) & (Message.recipient_id == None)) |
             (Message.recipient_id == current_user.id)
-        ).order_by(Message.timestamp.desc()).limit(100).from_self().order_by(Message.timestamp.asc()).all()
+        ).order_by(Message.timestamp.desc()).limit(100).all()
+        
+        # Sort back to ascending for display
+        messages = sorted(messages_desc, key=lambda m: m.timestamp)
         
     else:
         # Support Staff
@@ -62,10 +66,14 @@ def get_history():
         # Actually any Support staff can reply. Sender will be `current_user.id`.
         # So thread is defined by the Org User's ID.
         
-        messages = Message.query.filter(
+        # Get last 100 messages (descending)
+        messages_desc = Message.query.filter(
             ((Message.sender_id == view_user_id) & (Message.recipient_id == None)) |
             (Message.recipient_id == view_user_id)
-        ).order_by(Message.timestamp.desc()).limit(100).from_self().order_by(Message.timestamp.asc()).all()
+        ).order_by(Message.timestamp.desc()).limit(100).all()
+        
+        # Sort back to ascending for display
+        messages = sorted(messages_desc, key=lambda m: m.timestamp)
 
     return jsonify([m.to_dict() for m in messages])
 
