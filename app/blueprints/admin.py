@@ -303,7 +303,22 @@ def import_journal_data():
                 doc_obj = Doctor.query.filter(Doctor.name.ilike(doctor_name)).first()
             
             if not doc_obj:
-                warnings.append(f"Строка {i+1}: Врач '{doctor_name}' не найден.")
+                # 1b. Fuzzy fallback: Clean spaces and try again
+                import re
+                
+                # Normalize spaces (e.g. "Name  Surname" -> "Name Surname")
+                clean_name = re.sub(r'\s+', ' ', doctor_name)
+                if clean_name != doctor_name:
+                    doc_obj = Doctor.query.filter(Doctor.name.ilike(clean_name)).first()
+                
+                # 1c. Super-fuzzy fallback: Replace spaces with wildcards
+                if not doc_obj:
+                    # "Ivanov Ivan" -> "Ivanov%Ivan"
+                    wildcard_name = clean_name.replace(' ', '%')
+                    doc_obj = Doctor.query.filter(Doctor.name.ilike(wildcard_name)).first()
+
+            if not doc_obj:
+                warnings.append(f"Строка {i+1}: Врач '{doctor_name}' не найден (даже с нечетким поиском).")
                 continue # Skip row
                 
             # 2. MANAGER AUTO-ASSIGN
