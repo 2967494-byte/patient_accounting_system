@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db, csrf
-from app.models import Appointment, Service, AdditionalService
+from app.models import Appointment, Service, AdditionalService, AppointmentService, AppointmentAdditionalService
 from datetime import datetime
 
 api = Blueprint('api', __name__)
@@ -11,45 +11,47 @@ api = Blueprint('api', __name__)
 def create_appointment():
     data = request.get_json()
     try:
-        # Default Quantity Logic (for simplicity, we assume 1 visit = 1 of each service unless specified otherwise)
         # If user sends `quantity`, it applies to the primary service or all? 
         # For now, let's assume quantity applies to the VISIT (so usually 1).
         quantity = int(data.get('quantity', 1))
 
         # Main Services handling
-        # Expecting 'services_ids' list. If not, fallback to 'service' (name) -> find ID? 
-        # Or 'service' (ID)?
-        # Ideally frontend now sends 'services_ids'.
-        services_to_add = []
+        service_associations_to_add = []
+        services_for_name_str = []
         primary_service_name = ""
         
-        # Check for 'services_ids' (List of IDs)
-        if 'services_ids' in data and isinstance(data['services_ids'], list):
+        # 1. New Format: services_data
+        if 'services_data' in data:
+            for item in data['services_data']:
+                svc = Service.query.get(item['id'])
+                if svc:
+                    qty = int(item.get('quantity', 1))
+                    service_associations_to_add.append(AppointmentService(service=svc, quantity=qty))
+                    services_for_name_str.append(svc)
+        
+        # 2. Legacy Format: services_ids (fallback if no services_data)
+        elif 'services_ids' in data and isinstance(data['services_ids'], list):
             for s_id in data['services_ids']:
                 svc = Service.query.get(s_id)
                 if svc:
-                    services_to_add.append(svc)
+                    qty = int(data.get('quantity', 1)) 
+                    service_associations_to_add.append(AppointmentService(service=svc, quantity=qty))
+                    services_for_name_str.append(svc)
         
-        # Fallback/Legacy: 'service' field (might be Name or ID)
-        # If services_ids is empty, try 'service'
-        if not services_to_add and 'service' in data:
-            # Try to find by ID first? Or Name? 
-            # Frontend sends NAME in `service` currently for legacy.
-            # But the new Modal sends IDs in `services_ids`.
-            # If we receive `service` (name), we try to look it up.
+        # 3. Last resort: 'service' field (might be Name)
+        elif 'service' in data:
             svc = Service.query.filter_by(name=data['service']).first()
             if svc:
-                services_to_add.append(svc)
+                qty = int(data.get('quantity', 1))
+                service_associations_to_add.append(AppointmentService(service=svc, quantity=qty))
+                services_for_name_str.append(svc)
             else:
-                # If just a string and no service found (e.g. freetext?), we still save the string but no relation?
-                # The model requires `service` string.
                 primary_service_name = data['service']
 
-        if services_to_add:
-            # Join names for legacy string
-            primary_service_name = "\n".join([s.name for s in services_to_add])
+        # Construct helper string for display
+        if services_for_name_str:
+             primary_service_name = "\n".join([s.name for s in services_for_name_str])
 
-        # Create Appointment
         # Create Appointment
         appointment = Appointment(
             center_id=data.get('center_id'),
@@ -69,39 +71,37 @@ def create_appointment():
             author_id=current_user.id
         )
 
-        # Add Main Services Relations
-        for svc in services_to_add:
-            appointment.services.append(svc)
+        # ASSIGN RELATIONS DIRECTLY (Fixes "Not Saving" issue)
+        appointment.service_associations = service_associations_to_add
 
-        # Handle Additional Services (List)
-        if 'additional_services_ids' in data and isinstance(data['additional_services_ids'], list):
+        # Handle Additional Services
+        additional_assoc_to_add = []
+        if 'additional_services_data' in data:
+             for item in data['additional_services_data']:
+                svc = AdditionalService.query.get(item['id'])
+                if svc:
+                    qty = int(item.get('quantity', 1))
+                    additional_assoc_to_add.append(AppointmentAdditionalService(additional_service=svc, quantity=qty))
+                    
+        elif 'additional_services_ids' in data and isinstance(data['additional_services_ids'], list):
             for as_id in data['additional_services_ids']:
                 add_svc = AdditionalService.query.get(as_id)
                 if add_svc:
-                    appointment.additional_services.append(add_svc)
+                     qty = int(data.get('additional_service_quantity', 1))
+                     additional_assoc_to_add.append(AppointmentAdditionalService(additional_service=add_svc, quantity=qty))
             
-            # Additional Service Quantity
-            if 'additional_service_quantity' in data:
-                 appointment.additional_service_quantity = int(data['additional_service_quantity'])
-                 
         elif 'additional_service' in data and data['additional_service']:
             # Legacy/Fallback
             add_svc = AdditionalService.query.get(data['additional_service'])
             if add_svc:
-                appointment.additional_services.append(add_svc)
-                if 'additional_service_quantity' in data:
-                    appointment.additional_service_quantity = int(data['additional_service_quantity'])
+                qty = int(data.get('additional_service_quantity', 1))
+                additional_assoc_to_add.append(AppointmentAdditionalService(additional_service=add_svc, quantity=qty))
 
-        # Calculate Cost
-        # Sum of Main Services + Sum of Additional Services - Discount
-        # Note: quantity applies to Main Services
-        total_service_cost = sum([s.price for s in appointment.services]) * quantity
+        appointment.additional_service_associations = additional_assoc_to_add
         
-        # Additional Services Cost
-        # Assuming additional_service_quantity applies to the batch of additional services? 
-        # Or usually it's 1.
-        add_qty = appointment.additional_service_quantity or 1
-        total_add_cost = sum([a.price for a in appointment.additional_services]) * add_qty
+        # Calculate Cost using associations
+        total_service_cost = sum([assoc.service.price * assoc.quantity for assoc in appointment.service_associations])
+        total_add_cost = sum([assoc.additional_service.price * assoc.quantity for assoc in appointment.additional_service_associations])
         
         raw_cost = total_service_cost + total_add_cost - appointment.discount
         if raw_cost < 0: raw_cost = 0
@@ -275,31 +275,42 @@ def update_appointment(id):
     if 'comment' in data: appointment.comment = data['comment']
     if 'is_child' in data: appointment.is_child = bool(data['is_child'])
 
-    # Handle Services (M2M)
-    if 'services_ids' in data:
-        # Clear existing? Or replace? 
-        # Usually replace entirely with new list.
-        appointment.services = []
+    # Handle Services (M2M) with Quantities
+    if 'services_ids' in data and 'services_data' not in data: # Legacy/Simple ID list fallback
+        appointment.service_associations = [] # Clear existing
         for sid in data['services_ids']:
              svc = Service.query.get(sid)
              if svc:
-                 appointment.services.append(svc) # Fixed: append OBJECT, not ID
-    
-    # Handle Additional Services (M2M)
-    if 'additional_services_ids' in data:
-        appointment.additional_services = []
-        for asid in data['additional_services_ids']:
-             asvc = AdditionalService.query.get(asid)
-             if asvc:
-                 appointment.additional_services.append(asvc)
+                 # Use global quantity if provided, else 1
+                 qty = int(data.get('quantity', 1)) 
+                 appointment.service_associations.append(AppointmentService(service=svc, quantity=qty))
+                 
+    # New format: List of objects {id: 1, quantity: 2}
+    if 'services_data' in data:
+        appointment.service_associations = []
+        for item in data['services_data']:
+            svc = Service.query.get(item['id'])
+            if svc:
+                qty = int(item.get('quantity', 1))
+                appointment.service_associations.append(AppointmentService(service=svc, quantity=qty))
 
-    # Legacy support / Fallback for single 'additional_service' field from old legacy calls
-    elif 'additional_service' in data: # Only if plural not provided
-        appointment.additional_services = [] 
-        if data['additional_service']:
-            add_svc = AdditionalService.query.get(data['additional_service'])
-            if add_svc:
-                appointment.additional_services.append(add_svc)
+    # Handle Additional Services with Quantities
+    if 'additional_services_ids' in data and 'additional_services_data' not in data: # Legacy
+        appointment.additional_service_associations = []
+        for sid in data['additional_services_ids']:
+            svc = AdditionalService.query.get(sid)
+            if svc:
+                # Use global additional quantity if provided, else 1
+                qty = int(data.get('additional_service_quantity', 1))
+                appointment.additional_service_associations.append(AppointmentAdditionalService(additional_service=svc, quantity=qty))
+
+    if 'additional_services_data' in data:
+        appointment.additional_service_associations = []
+        for item in data['additional_services_data']:
+            svc = AdditionalService.query.get(item['id'])
+            if svc:
+                qty = int(item.get('quantity', 1))
+                appointment.additional_service_associations.append(AppointmentAdditionalService(additional_service=svc, quantity=qty))
 
     # Log Update History
     from app.models import AppointmentHistory

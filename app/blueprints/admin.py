@@ -4,7 +4,7 @@ from app.extensions import db
 from app.models import (
     User, Location, Doctor, Service, AdditionalService, ServicePrice, AdditionalServicePrice,
     Clinic, Manager, PaymentMethod, Appointment, Organization, GlobalSetting,
-    AppointmentHistory, appointment_services, appointment_main_services
+    AppointmentHistory, AppointmentAdditionalService, AppointmentService
 )
 from app.telegram_bot import telegram_bot
 import psutil
@@ -407,19 +407,17 @@ def import_journal_data():
              appt_ids = [a[0] for a in appts_to_delete]
              
              if appt_ids:
-                 # Delete associations manually
-                 # appointment_services (Additional Services)
-                 db.session.execute(
-                     appointment_services.delete().where(
-                         appointment_services.c.appointment_id.in_(appt_ids)
-                     )
-                 )
-                 # appointment_main_services (Research)
-                 db.session.execute(
-                     appointment_main_services.delete().where(
-                         appointment_main_services.c.appointment_id.in_(appt_ids)
-                     )
-                 )
+                 # Delete associations manually (using models)
+                 # AppointmentAdditionalService (Additional Services)
+                 AppointmentAdditionalService.query.filter(
+                     AppointmentAdditionalService.appointment_id.in_(appt_ids)
+                 ).delete(synchronize_session=False)
+
+                 # AppointmentService (Main Services)
+                 AppointmentService.query.filter(
+                     AppointmentService.appointment_id.in_(appt_ids)
+                 ).delete(synchronize_session=False)
+
                  # History
                  AppointmentHistory.query.filter(
                      AppointmentHistory.appointment_id.in_(appt_ids)

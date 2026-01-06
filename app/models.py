@@ -69,21 +69,25 @@ class Location(db.Model):
         }
 
 
-appointment_services = db.Table('appointment_services',
-    db.Column('appointment_id', db.Integer, db.ForeignKey('appointments.id'), primary_key=True),
-    db.Column('additional_service_id', db.Integer, db.ForeignKey('additional_services.id'), primary_key=True)
-)
+# Association Object for Main Services
+class AppointmentService(db.Model):
+    __tablename__ = 'appointment_main_services'
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), primary_key=True)
+    service_id = db.Column(db.Integer, db.ForeignKey('services.id'), primary_key=True)
+    quantity = db.Column(db.Integer, default=1)
+    
+    service = db.relationship("Service")
+    appointment = db.relationship("Appointment", back_populates="service_associations")
 
-# Association table for Main Services (Research)
-appointment_main_services = db.Table('appointment_main_services',
-    db.Column('appointment_id', db.Integer, db.ForeignKey('appointments.id'), primary_key=True),
-    db.Column('service_id', db.Integer, db.ForeignKey('services.id'), primary_key=True)
-)
-
-# Existing association for Additional Services (renaming variable for clarity if needed, but keeping table name to avoid migration issues if possible, though table name 'appointment_services' is confusing. 
-# It maps to additional_services.id. 
-# I will NOT touch the existing 'appointment_services' table definition to avoid breaking existing data/schema unless necessary.
-# But I will verify what Appointment uses.
+# Association Object for Additional Services (keeping table name 'appointment_services' for legacy compat)
+class AppointmentAdditionalService(db.Model):
+    __tablename__ = 'appointment_services'
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), primary_key=True)
+    additional_service_id = db.Column(db.Integer, db.ForeignKey('additional_services.id'), primary_key=True)
+    quantity = db.Column(db.Integer, default=1)
+    
+    additional_service = db.relationship("AdditionalService")
+    appointment = db.relationship("Appointment", back_populates="additional_service_associations")
 
 class Appointment(db.Model):
     __tablename__ = 'appointments'
@@ -97,8 +101,19 @@ class Appointment(db.Model):
     # Legacy/Primary service string (for display/search if needed, or migration)
     service = db.Column(db.String(200), nullable=True) 
     
-    # New M2M relationship
-    services = db.relationship('Service', secondary=appointment_main_services, backref='appointments')
+    # New M2M relationship via Association Object
+    service_associations = db.relationship('AppointmentService', back_populates='appointment', cascade='all, delete-orphan')
+    
+    # Helper property to access services directly (Legacy Compat)
+    @property
+    def services(self):
+        return [assoc.service for assoc in self.service_associations]
+        
+    @services.setter
+    def services(self, value):
+        self.service_associations = []
+        for s in value:
+            self.service_associations.append(AppointmentService(service=s, quantity=1))
 
     date = db.Column(db.Date, nullable=False)
     time = db.Column(db.String(5), nullable=False)
@@ -107,11 +122,20 @@ class Appointment(db.Model):
     center_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
     
     contract_number = db.Column(db.String(50), nullable=True)
-    quantity = db.Column(db.Integer, default=1) # Total quantity of main services? Or just legacy?
+    quantity = db.Column(db.Integer, default=1) # Visit quantity (legacy)
     
-    # Existing Additional Services Relationship (using the 'appointment_services' table defined previously, or 'appointment_additional_services'?)
-    # Line 73 defined `appointment_services` table mapping to `additional_services.id`.
-    additional_services = db.relationship('AdditionalService', secondary='appointment_services', backref='appointments')
+    # New M2M relationship via Association Object for Additional Services
+    additional_service_associations = db.relationship('AppointmentAdditionalService', back_populates='appointment', cascade='all, delete-orphan')
+    
+    @property
+    def additional_services(self):
+        return [assoc.additional_service for assoc in self.additional_service_associations]
+
+    @additional_services.setter
+    def additional_services(self, value):
+        self.additional_service_associations = []
+        for s in value:
+            self.additional_service_associations.append(AppointmentAdditionalService(additional_service=s, quantity=1))
     
     additional_service_quantity = db.Column(db.Integer, default=1)
     cost = db.Column(db.Float, default=0.0)
@@ -132,7 +156,7 @@ class Appointment(db.Model):
     manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     payment_method_id = db.Column(db.Integer, db.ForeignKey('payment_methods.id'), nullable=True)
     is_child = db.Column(db.Boolean, default=False)
-    
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     author = db.relationship('User', foreign_keys=[author_id], backref=db.backref('appointments', lazy=True))
@@ -141,7 +165,6 @@ class Appointment(db.Model):
     center = db.relationship('Location', foreign_keys=[center_id])
     doctor_rel = db.relationship('Doctor', foreign_keys=[doctor_id])
     payment_method = db.relationship('PaymentMethod', foreign_keys=[payment_method_id])
-    additional_services = db.relationship('AdditionalService', secondary=appointment_services, lazy='subquery', backref=db.backref('appointments', lazy=True))
     
     history = db.relationship('AppointmentHistory', backref='appointment', lazy=True, cascade='all, delete-orphan')
 
@@ -156,8 +179,29 @@ class Appointment(db.Model):
             'doctor_id': self.doctor_id, # return ID for form pre-fill
             'doctor_name': self.doctor_rel.name if self.doctor_rel else (self.doctor or 'Unknown'),
             # Include the legacy 'service' string field for frontend display (Dashboard relies on it)
-            'service': self.service if self.service else ", ".join([s.name for s in self.services]),
-            'services': [{'id': s.id, 'name': s.name} for s in self.services],
+            'service': self.service if self.service else ", ".join([assoc.service.name for assoc in self.service_associations]),
+            'services': [{
+                'id': assoc.service.id, 
+                'name': assoc.service.name, 
+                'price': assoc.service.price,
+                'quantity': assoc.quantity
+            } for assoc in self.service_associations],
+            'additional_services': [{
+                'id': assoc.additional_service.id,
+                'name': assoc.additional_service.name,
+                'price': assoc.additional_service.price,
+                'quantity': assoc.quantity
+            } for assoc in self.additional_service_associations],
+            'quantity': self.quantity, # Visit quantity (legacy/global)
+            'cost': self.cost,
+            'discount': self.discount,
+            'amount_paid': self.amount_paid,
+            'comment': self.comment,
+            'payment_method_id': self.payment_method_id,
+            'contract_number': self.contract_number,
+            'is_child': self.is_child,
+            'lab_tech': self.lab_tech,
+            'manager': self.doctor_rel.manager if self.doctor_rel else None, # Legacy manager from Doctor
             'date': self.date.isoformat(),
             'time': self.time,
             'doctor': self.doctor, # Return raw doctor string too if needed
