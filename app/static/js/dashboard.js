@@ -27,6 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load existing appointments
     fetchAppointments();
 
+    // Initialize Select2 (Scoped to Appointment Modal)
+    $('#appointment-modal .select2-enable').select2({
+        dropdownParent: $('#appointment-modal'),
+        width: '100%'
+    });
+
     // Event Delegation for cells
     if (cells.length > 0) {
         cells.forEach(cell => {
@@ -57,7 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = {
                 patient_name: document.getElementById('patient-name').value,
                 patient_phone: document.getElementById('patient-phone').value,
-                doctor: document.getElementById('doctor').value,
+                doctor_id: document.getElementById('doctor').value, // Select2 values
+                clinic_id: document.getElementById('clinic').value,
                 service: document.getElementById('service').value,
                 date: document.getElementById('appt-date').value,
                 time: document.getElementById('appt-time').value,
@@ -178,6 +185,9 @@ async function openCreateModal(date, time) {
     const formattedDate = `${d}.${m}.${y.slice(2)}`;
     document.getElementById('modal-title').textContent = `Новая запись на ${formattedDate}, ${time}`;
     document.getElementById('appointment-form').reset();
+    $('#doctor').val(null).trigger('change');
+    $('#clinic').val(null).trigger('change');
+
     document.getElementById('appt-id').value = '';
     document.getElementById('appt-date').value = date;
 
@@ -210,7 +220,11 @@ async function openEditModal(id) {
 
         document.getElementById('patient-name').value = appt.patient_name;
         document.getElementById('patient-phone').value = appt.patient_phone || '';
-        document.getElementById('doctor').value = appt.doctor || '';
+
+        // Set Select2 values
+        $('#doctor').val(appt.doctor_id).trigger('change');
+        $('#clinic').val(appt.clinic_id).trigger('change');
+
         document.getElementById('service').value = appt.service || '';
 
         // Set Center

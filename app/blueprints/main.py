@@ -416,9 +416,10 @@ def dashboard():
     if not current_center_id and centers:
         current_center_id = centers[0].id
 
-    # Fetch for dropdowns
-    doctors = Doctor.query.all()
-    services = Service.query.all()
+    # Fetch for dropdowns - Sorted Alphabetically
+    doctors = Doctor.query.order_by(Doctor.name).all()
+    services = Service.query.order_by(Service.name).all()
+    clinics = Clinic.query.order_by(Clinic.name).all()
 
     # Pass current actual date for highlighting
     today_iso = datetime.now().strftime('%Y-%m-%d')
@@ -429,7 +430,7 @@ def dashboard():
     minute_floored = (now.minute // 15) * 15
     current_time_slot = f"{now.hour:02d}:{minute_floored:02d}"
 
-    return render_template('dashboard.html', dates=dates_data, time_slots=time_slots, centers=centers, current_center_id=current_center_id, prev_week=prev_week, next_week=next_week, doctors=doctors, services=services, today_iso=today_iso, current_time_slot=current_time_slot)
+    return render_template('dashboard.html', dates=dates_data, time_slots=time_slots, centers=centers, current_center_id=current_center_id, prev_week=prev_week, next_week=next_week, doctors=doctors, services=services, clinics=clinics, today_iso=today_iso, current_time_slot=current_time_slot)
 
 @main.route('/journal')
 @login_required

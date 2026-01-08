@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db, csrf
-from app.models import Appointment, Service, AdditionalService, AppointmentService, AppointmentAdditionalService
+from app.models import Appointment, Service, AdditionalService, AppointmentService, AppointmentAdditionalService, Doctor, Clinic
 from datetime import datetime
 
 api = Blueprint('api', __name__)
@@ -298,6 +298,19 @@ def update_appointment(id):
     
     if 'patient_name' in data: appointment.patient_name = data['patient_name']
     if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
+    
+    # Update doctor and clinic (IDs preferred)
+    if 'doctor_id' in data: 
+        appointment.doctor_id = data['doctor_id']
+        # Also update legacy string if needed, or leave it to be resolved via relation
+        # But if we want consistent string for legacy views:
+        doc = Doctor.query.get(data['doctor_id'])
+        if doc: appointment.doctor = doc.name
+        elif data.get('doctor'): appointment.doctor = data['doctor'] # fallback text
+    
+    if 'clinic_id' in data: appointment.clinic_id = data['clinic_id']
+
+    if 'date' in data: appointment.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
     if 'doctor' in data: appointment.doctor = data['doctor']
     if 'doctor' in data: appointment.doctor = data['doctor']
     

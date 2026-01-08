@@ -237,6 +237,12 @@
         // Also sync whenever the table changes (using potential new inputs or loaded data)
         const observer = new ResizeObserver(syncTopScrollWidth);
         if (table) observer.observe(table);
+
+        // Initialize Select2 in Journal Modal (Scoped)
+        $('#entryModal .select2-enable').select2({
+            dropdownParent: $('#entryModal'),
+            width: '100%'
+        });
     });
 </script>
 <div class="journal-container"
@@ -597,7 +603,7 @@
                 <div style="flex: 1;">
                     <label
                         style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Клиника</label>
-                    <select name="clinic_id" class="journal-select" required>
+                    <select name="clinic_id" class="journal-select select2-enable" required style="width: 100%;">
                         <option value="">-- Выберите --</option>
                         {% for clinic in clinics %}
                         <option value="{{ clinic.id }}">{{ clinic.name }}</option>
@@ -606,7 +612,8 @@
                 </div>
                 <div style="flex: 1;">
                     <label style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Врач</label>
-                    <select name="doctor_id" class="journal-select" onchange="updateManager(this)" required>
+                    <select name="doctor_id" class="journal-select select2-enable" onchange="updateManager(this)"
+                        required style="width: 100%;">
                         <option value="">-- Выберите --</option>
                         {% for doc in doctors %}
                         <option value="{{ doc.id }}" data-manager="{{ doc.manager or '' }}">{{ doc.name }}</option>
@@ -808,6 +815,8 @@
         document.getElementById('entryModal').style.display = 'block';
         // Clear form
         document.getElementById('entryForm').reset();
+        // Reset Select2
+        $('#entryForm select.select2-enable').val(null).trigger('change');
         document.getElementById('modal-total-display').textContent = '0.00';
     }
 
@@ -867,11 +876,13 @@
             form.querySelector('input[name="patient_name"]').value = appt.patient_name || '';
 
             const clinicSel = form.querySelector('select[name="clinic_id"]');
-            if (clinicSel) clinicSel.value = appt.clinic_id || '';
+            if (clinicSel) {
+                $(clinicSel).val(appt.clinic_id || '').trigger('change');
+            }
 
             const doctorSel = form.querySelector('select[name="doctor_id"]');
             if (doctorSel) {
-                doctorSel.value = appt.doctor_id || '';
+                $(doctorSel).val(appt.doctor_id || '').trigger('change');
                 // Update manager hidden field
                 updateManager(doctorSel);
             }
