@@ -3703,18 +3703,51 @@ def reports_lab_techs():
     if current_user.role != 'superadmin':
         return jsonify({'error': 'Unauthorized'}), 403
         
-    # Lab Techs are users with role 'lab_tech'
+    # Lab Techs are users with role 'lab_tech' OR 'superadmin' (except specific 'admin' user)
     # Workload: Patient Count, Revenue
     
-    stats = db.session.query(
+    year_str = request.args.get('year')
+    month_str = request.args.get('month')
+    day_str = request.args.get('day')
+    
+    # Default to current month if nothing provided
+    if not year_str and not month_str and not day_str:
+        today = datetime.now()
+        year_str = str(today.year)
+        month_str = str(today.month).zfill(2)
+        
+    query = db.session.query(
         User.username,
         db.func.count(Appointment.id).label('appt_count'),
         db.func.sum(Appointment.cost).label('total_revenue'),
         db.func.count(db.func.distinct(Appointment.patient_name)).label('unique_patients')
     ).join(Appointment, Appointment.author_id == User.id)\
      .filter(User.role.in_(['lab_tech', 'superadmin']))\
-     .group_by(User.id)\
-     .all()
+     .filter(User.username != 'admin')
+
+    # Date Filtering
+    try:
+        if year_str and month_str and day_str and day_str != '00':
+            # Specific Day
+            target_date = datetime.strptime(f"{year_str}-{month_str}-{day_str}", '%Y-%m-%d').date()
+            query = query.filter(db.func.date(Appointment.date) == target_date)
+        elif year_str and month_str:
+            # Whole Month
+            start_date = datetime.strptime(f"{year_str}-{month_str}", '%Y-%m').date()
+            if start_date.month == 12:
+                end_date = start_date.replace(year=start_date.year + 1, month=1, day=1)
+            else:
+                end_date = start_date.replace(month=start_date.month + 1, day=1)
+            query = query.filter(Appointment.date >= start_date, Appointment.date < end_date)
+        elif year_str:
+            # Whole Year
+            start_date = datetime(int(year_str), 1, 1).date()
+            end_date = datetime(int(year_str) + 1, 1, 1).date()
+            query = query.filter(Appointment.date >= start_date, Appointment.date < end_date)
+    except ValueError:
+        pass # Ignore invalid dates and define no filter (or return error?)
+
+    stats = query.group_by(User.id).all()
      
     data = [{
         'username': s.username, 
