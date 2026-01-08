@@ -3784,8 +3784,12 @@ def reports_bonuses():
          
         rows = []
         for r in results:
+            name = r.doctor_name
+            if not name or not name.strip():
+                name = 'Не указан'
+                
             rows.append({
-                'name': r.doctor_name,
+                'name': name,
                 'count': r.total_count,
                 'revenue': r.total_revenue or 0
             })
