@@ -3798,6 +3798,57 @@ def reports_bonuses():
         print(f"Error in reports_bonuses: {e}")
         return jsonify({'error': str(e)}), 500
 
+@admin.route('/reports/api/bonuses/details')
+@login_required
+def reports_bonuses_details():
+    if current_user.role != 'superadmin':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    month_str = request.args.get('month')
+    doctor_name = request.args.get('doctor_name')
+    
+    if not month_str or not doctor_name:
+        return jsonify({'error': 'Missing parameters'}), 400
+        
+    try:
+        start_date = datetime.strptime(month_str, '%Y-%m').date()
+        if start_date.month == 12:
+            end_date = start_date.replace(year=start_date.year + 1, month=1, day=1)
+        else:
+            end_date = start_date.replace(month=start_date.month + 1, day=1)
+    except ValueError:
+        return jsonify({'error': 'Invalid month format'}), 400
+        
+    doctor_name_expr = db.func.coalesce(Doctor.name, Appointment.doctor, 'Unknown')
+    
+    try:
+        # Query: Select Patient Name, Service Name
+        results = db.session.query(
+            Appointment.patient_name,
+            Appointment.date,
+            Service.name.label('service_name')
+        ).select_from(Appointment)\
+         .outerjoin(Doctor, Appointment.doctor_id == Doctor.id)\
+         .join(AppointmentService, Appointment.id == AppointmentService.appointment_id)\
+         .join(Service, AppointmentService.service_id == Service.id)\
+         .filter(Appointment.date >= start_date, Appointment.date < end_date)\
+         .filter(doctor_name_expr == doctor_name)\
+         .order_by(Appointment.date.desc())\
+         .all()
+         
+        details = []
+        for r in results:
+            details.append({
+                'patient_name': r.patient_name,
+                'date': r.date.strftime('%d.%m.%Y'),
+                'service_name': r.service_name
+            })
+            
+        return jsonify(details)
+    except Exception as e:
+        print(f"Error in reports_bonuses_details: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @admin.route('/reports/today')
 @admin.route('/reports')
 @login_required
