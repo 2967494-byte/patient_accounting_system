@@ -1,0 +1,54 @@
+{% extends "app_base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+
+
+        <!-- Navigation Tabs -->
+        <div style="background: white; padding: 4px; border-radius: 8px; border: 1px solid #e5e7eb; display:flex;">
+            <a href="{{ url_for('admin.reports_today') }}"
+                class="tab-link {% if request.endpoint == 'admin.reports_today' %}active{% endif %}"
+                style="padding: 0.5rem 1rem; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; color: #6b7280;">
+                Сегодня
+            </a>
+            <a href="{{ url_for('admin.reports_organizations_page') }}"
+                class="tab-link {% if request.endpoint == 'admin.reports_organizations_page' %}active{% endif %}"
+                style="padding: 0.5rem 1rem; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; color: #6b7280;">
+                Активность организаций
+            </a>
+            <a href="{{ url_for('admin.reports_lab_page') }}"
+                class="tab-link {% if request.endpoint == 'admin.reports_lab_page' %}active{% endif %}"
+                style="padding: 0.5rem 1rem; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; color: #6b7280;">
+                Загруженность лаборантов
+            </a>
+            <a href="{{ url_for('admin.reports_logs_page') }}"
+                class="tab-link {% if request.endpoint == 'admin.reports_logs_page' %}active{% endif %}"
+                style="padding: 0.5rem 1rem; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; color: #6b7280;">
+                Журнал действий
+            </a>
+            <a href="{{ url_for('admin.reports_bonuses_page') }}"
+                class="tab-link {% if request.endpoint == 'admin.reports_bonuses_page' %}active{% endif %}"
+                style="padding: 0.5rem 1rem; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; color: #6b7280;">
+                Бонусы
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Tab Styles -->
+    <style>
+        .tab-link.active {
+            background: #f3f4f6;
+            color: #1f2937 !important;
+        }
+
+        .tab-link:hover:not(.active) {
+            background: #f9fafb;
+            color: #374151 !important;
+        }
+    </style>
+
+    {% block report_content %}{% endblock %}
+
+</div>
+{% endblock %}

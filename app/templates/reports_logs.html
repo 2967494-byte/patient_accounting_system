@@ -1,0 +1,63 @@
+{% extends "reports_base.html" %}
+
+{% block report_content %}
+<div class="report-card"
+    style="background: white; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 600; color: #1f2937;">Журнал Действий (Последние 100)</h3>
+        <div
+            style="width: 30px; height: 30px; background: #fff7ed; color: #ea580c; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+        </div>
+    </div>
+    <div id="audit-report-loading" style="color:#6b7280; font-size:0.9rem;">Загрузка...</div>
+    <div style="max-height: 600px; overflow-y: auto;">
+        <table id="audit-report-table" style="width:100%; border-collapse: collapse; font-size: 0.9rem; display:none;">
+            <thead style="position: sticky; top: 0; background: white; z-index: 10;">
+                <tr style="border-bottom: 2px solid #f3f4f6; text-align: left;">
+                    <th style="padding: 0.5rem; color: #6b7280;">Время</th>
+                    <th style="padding: 0.5rem; color: #6b7280;">Пользователь</th>
+                    <th style="padding: 0.5rem; color: #6b7280;">Действие</th>
+                    <th style="padding: 0.5rem; color: #6b7280;">Детали</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        try {
+            const res = await fetch('/admin/reports/api/audit');
+            const data = await res.json();
+            const tbody = document.querySelector('#audit-report-table tbody');
+            document.getElementById('audit-report-loading').style.display = 'none';
+            document.getElementById('audit-report-table').style.display = 'table';
+
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding:1rem; text-align:center; color:#9ca3af;">Нет данных о действиях</td></tr>';
+            } else {
+                data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    // Simple formatting for timestamp
+                    const date = new Date(item.timestamp).toLocaleString('ru-RU');
+                    tr.innerHTML = `
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; color: #6b7280; font-size:0.85rem;">${date}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb;">${item.user}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb;">
+                        <span style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${item.action}</span>
+                    </td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; color: #4b5563;">${item.details}</td>
+                `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (e) { console.error('Audit fetch err', e); }
+    });
+</script>
+{% endblock %}

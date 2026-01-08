@@ -1,0 +1,60 @@
+{% extends "reports_base.html" %}
+
+{% block report_content %}
+<div class="report-card"
+    style="background: white; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 600; color: #1f2937;">Загруженность Лаборантов</h3>
+        <div
+            style="width: 30px; height: 30px; background: #dcfce7; color: #16a34a; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+            </svg>
+        </div>
+    </div>
+    <div id="lab-report-loading" style="color:#6b7280; font-size:0.9rem;">Загрузка...</div>
+    <div style="max-height: 600px; overflow-y: auto;">
+        <table id="lab-report-table" style="width:100%; border-collapse: collapse; font-size: 0.9rem; display:none;">
+            <thead>
+                <tr style="border-bottom: 2px solid #f3f4f6; text-align: left;">
+                    <th style="padding: 0.5rem; color: #6b7280;">Лаборант</th>
+                    <th style="padding: 0.5rem; color: #6b7280; text-align: right;">Пац.</th>
+                    <th style="padding: 0.5rem; color: #6b7280; text-align: right;">Выручка</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        try {
+            const res = await fetch('/admin/reports/api/lab_techs');
+            const data = await res.json();
+            const tbody = document.querySelector('#lab-report-table tbody');
+            document.getElementById('lab-report-loading').style.display = 'none';
+            document.getElementById('lab-report-table').style.display = 'table';
+
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="padding:1rem; text-align:center; color:#9ca3af;">Нет данных</td></tr>';
+            } else {
+                data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb;">${item.username || 'Unknown'}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; text-align: right;">${item.unique_patients}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; text-align: right; font-weight:600;">${item.total_revenue.toFixed(2)}</td>
+                `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (e) { console.error('Lab Tech fetch err', e); }
+    });
+</script>
+{% endblock %}

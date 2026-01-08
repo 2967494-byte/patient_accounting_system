@@ -1,0 +1,101 @@
+{% extends "reports_base.html" %}
+
+{% block report_content %}
+<div class="report-card"
+    style="background: white; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 600; color: #1f2937;">Активность Организаций</h3>
+        <div style="display: flex; gap: 0.5rem;">
+            <select id="org-month" onchange="fetchOrgReport()"
+                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
+                <option value="01">Январь</option>
+                <option value="02">Февраль</option>
+                <option value="03">Март</option>
+                <option value="04">Апрель</option>
+                <option value="05">Май</option>
+                <option value="06">Июнь</option>
+                <option value="07">Июль</option>
+                <option value="08">Август</option>
+                <option value="09">Сентябрь</option>
+                <option value="10">Октябрь</option>
+                <option value="11">Ноябрь</option>
+                <option value="12">Декабрь</option>
+            </select>
+            <select id="org-year" onchange="fetchOrgReport()"
+                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
+                <!-- Filled via JS -->
+            </select>
+        </div>
+    </div>
+    <div id="org-report-loading" style="color:#6b7280; font-size:0.9rem;">Загрузка...</div>
+    <div style="max-height: 600px; overflow-y: auto;">
+        <table id="org-report-table" style="width:100%; border-collapse: collapse; font-size: 0.9rem; display:none;">
+            <thead>
+                <tr style="border-bottom: 2px solid #f3f4f6; text-align: left;">
+                    <th style="padding: 0.5rem; color: #6b7280;">Пользователь</th>
+                    <th style="padding: 0.5rem; color: #6b7280; text-align: right;">Записей</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function fetchOrgReport() {
+        const month = document.getElementById('org-month').value;
+        const year = document.getElementById('org-year').value;
+        const loading = document.getElementById('org-report-loading');
+        const table = document.getElementById('org-report-table');
+        const tbody = table.querySelector('tbody');
+
+        if (!year) return;
+
+        loading.style.display = 'block';
+        table.style.display = 'none';
+
+        try {
+            const res = await fetch(`/admin/reports/api/organizations?month=${year}-${month}`);
+            const data = await res.json();
+
+            loading.style.display = 'none';
+            table.style.display = 'table';
+
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="padding:1rem; text-align:center; color:#9ca3af;">Нет данных за выбранный месяц</td></tr>';
+            } else {
+                data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb;">${item.username || 'Unknown'}</td>
+                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; text-align: right; font-weight:600;">${item.count}</td>
+                `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (e) { console.error('Org fetch err', e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+
+        // Populate Years (Current +/- 5)
+        const yearSelect = document.getElementById('org-year');
+        for (let y = currentYear - 5; y <= currentYear + 2; y++) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+
+        // Set Month
+        document.getElementById('org-month').value = currentMonth;
+
+        fetchOrgReport();
+    });
+</script>
+{% endblock %}
