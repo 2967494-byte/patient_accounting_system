@@ -3712,7 +3712,7 @@ def reports_lab_techs():
         db.func.sum(Appointment.cost).label('total_revenue'),
         db.func.count(db.func.distinct(Appointment.patient_name)).label('unique_patients')
     ).join(Appointment, Appointment.author_id == User.id)\
-     .filter(User.role == 'lab_tech')\
+     .filter(User.role.in_(['lab_tech', 'superadmin']))\
      .group_by(User.id)\
      .all()
      
