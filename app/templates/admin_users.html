@@ -114,6 +114,13 @@
                         </form>
                         {% endif %}
                         {% endif %}
+                        <form action="{{ url_for('admin.impersonate_user', user_id=user.id) }}" method="GET"
+                            style="margin:0;">
+                            <button type="submit" title="Войти под пользователем"
+                                style="background: none; border: none; cursor: pointer; color: #3b82f6; font-size: 1.2rem;">
+                                🎭
+                            </button>
+                        </form>
                     </div>
                 </td>
                 <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
