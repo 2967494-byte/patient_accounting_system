@@ -41,7 +41,7 @@
 <div id="addPeriodModal"
     style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
     <div style="background:white; padding:2rem; border-radius:0.5rem; width:400px; max-width:90%;">
-        <h3 style="margin-top:0;">Новый период</h3>
+        <h3 id="modalTitle" style="margin-top:0;">Новый период</h3>
 
         <div style="margin-bottom:1rem;">
             <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem;">Дата начала (Обязательно)</label>
@@ -59,7 +59,7 @@
         <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
             <button onclick="closeAddPeriodModal()"
                 style="background:none; border:1px solid #d1d5db; padding:0.5rem 1rem; border-radius:0.25rem; cursor:pointer;">Отмена</button>
-            <button onclick="confirmAddPeriod()"
+            <button id="submitPeriodBtn" onclick="confirmPeriod()"
                 style="background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:0.25rem; cursor:pointer;">Создать</button>
         </div>
     </div>
@@ -159,17 +159,40 @@
 
 
     // --- Modal Logic ---
+    let isEditing = false;
+    let editingPeriodId = null;
+
     function openAddPeriodModal() {
+        isEditing = false;
+        editingPeriodId = null;
+        document.getElementById('modalTitle').textContent = 'Новый период';
+        document.getElementById('submitPeriodBtn').textContent = 'Создать';
         document.getElementById('addPeriodModal').style.display = 'flex';
         document.getElementById('newPeriodStart').value = new Date().toISOString().split('T')[0];
         document.getElementById('newPeriodEnd').value = '';
     }
 
-    function closeAddPeriodModal() {
-        document.getElementById('addPeriodModal').style.display = 'none';
+    function openEditPeriodModal() {
+        if (!activePeriodId) return;
+        const period = pricingPeriods.find(p => p.id === activePeriodId);
+        if (!period) return;
+
+        isEditing = true;
+        editingPeriodId = period.id;
+        document.getElementById('modalTitle').textContent = 'Редактировать период';
+        document.getElementById('submitPeriodBtn').textContent = 'Сохранить';
+        document.getElementById('addPeriodModal').style.display = 'flex';
+        document.getElementById('newPeriodStart').value = period.startDate;
+        document.getElementById('newPeriodEnd').value = period.endDate || '';
     }
 
-    function confirmAddPeriod() {
+    function closeAddPeriodModal() {
+        document.getElementById('addPeriodModal').style.display = 'none';
+        isEditing = false;
+        editingPeriodId = null;
+    }
+
+    function confirmPeriod() {
         const start = document.getElementById('newPeriodStart').value;
         const end = document.getElementById('newPeriodEnd').value;
 
@@ -178,7 +201,12 @@
             return;
         }
 
-        addPeriod(start, end);
+        if (isEditing && editingPeriodId) {
+            updatePeriod(editingPeriodId, start, end);
+        } else {
+            addPeriod(start, end);
+        }
+
         closeAddPeriodModal();
     }
 
@@ -199,6 +227,21 @@
         pricingPeriods.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
         switchPeriod(newPeriod.id);
+    }
+
+    function updatePeriod(periodId, startDate, endDate) {
+        const period = pricingPeriods.find(p => p.id === periodId);
+        if (period) {
+            period.startDate = startDate;
+            period.endDate = endDate || null;
+
+            // Re-sort
+            pricingPeriods.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+            renderPeriodLinks();
+            renderActiveTable();
+            // Don't switch activeId, just re-render
+        }
     }
 
     function switchPeriod(periodId) {
@@ -288,9 +331,20 @@
         // --- Info & controls for Active Period ---
         const metaDiv = document.createElement('div');
         metaDiv.style.marginBottom = '1rem';
+        const endText = period.endDate ? `по ${period.endDate}` : '(бессрочно)';
 
         metaDiv.innerHTML = `
-            <div style="display:flex; justify-content:flex-end; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap: 0.5rem;">
+                    <span style="font-size: 1rem; color: #4b5563;">
+                        Действует: <strong>${period.startDate}</strong> - <strong>${endText}</strong>
+                    </span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="openEditPeriodModal()"
+                        style="padding: 0.1rem 0.5rem; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">
+                        ✎
+                    </button>
+                </div>
+
                 <button class="btn btn-sm" onclick="addColumnToActivePeriod()" 
                     style="background-color: white; border: 1px solid #d1d5db; color: #374151; padding: 0.25rem 0.75rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.9rem;">
                     + Столбец (Б-${period.columns + 1})
