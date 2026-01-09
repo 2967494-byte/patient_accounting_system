@@ -18,6 +18,7 @@
             <a href="{{ url_for('main.dashboard', start_date=next_week, center_id=current_center_id) }}"
                 class="nav-arrow">&rarr;</a>
         </div>
+        <div class="time-header-spacer"></div> <!-- Spacer for right time column -->
     </div>
 
     <div class="calendar-grid">
@@ -44,6 +45,15 @@
                 {% endfor %}
         </div>
         {% endfor %}
+
+        <!-- Time column (Right) -->
+        <div class="time-column" style="border-right: none; border-left: 1px solid var(--border-color);">
+            {% for time in time_slots %}
+            <div class="time-slot-label {{ 'time-current' if time == current_time_slot else '' }}">
+                {{ time }}
+            </div>
+            {% endfor %}
+        </div>
     </div>
 </main>
 

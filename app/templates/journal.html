@@ -1074,6 +1074,7 @@
 
         // --- CONSTRUCT PAYLOAD ---
         const payload = { ...commonData };
+        payload['ignore_overlap'] = true; // Bypass calendar conflict checks for manual journal entries
 
         // Build services_data (New format with quantity)
         const servicesData = [];
@@ -1574,6 +1575,8 @@
             });
 
             if (!valid) return;
+
+            data['ignore_overlap'] = true; // Bypass overlap check for journal edits
 
             try {
                 const response = await fetch(`/api/appointments/${id}`, {

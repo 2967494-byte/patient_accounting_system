@@ -97,17 +97,18 @@ def create_appointment():
 
         duration = 30 if data.get('is_double_time') else 15
         
-        # Validate Overlap
-        result = check_overlap(
-            datetime.strptime(data['date'], '%Y-%m-%d').date(),
-            data.get('time', '09:00'),
-            duration,
-            safe_int(data.get('center_id'))
-        )
-        if result:
-             # error message is in result if true (string is truthy)
-             msg = result if isinstance(result, str) else 'Выбранный интервал пересекается с существующей записью'
-             return jsonify({'error': msg}), 400
+        # Validate Overlap (unless handled elsewhere, e.g. journal)
+        if not data.get('ignore_overlap'):
+            result = check_overlap(
+                datetime.strptime(data['date'], '%Y-%m-%d').date(),
+                data.get('time', '09:00'),
+                duration,
+                safe_int(data.get('center_id'))
+            )
+            if result:
+                 # error message is in result if true (string is truthy)
+                 msg = result if isinstance(result, str) else 'Выбранный интервал пересекается с существующей записью'
+                 return jsonify({'error': msg}), 400
 
         appointment = Appointment(
             center_id=safe_int(data.get('center_id')),
@@ -416,12 +417,16 @@ def update_appointment(id):
                     return debug_msg 
             return False
 
-        result = check_overlap_upd(chk_date, chk_time, new_duration, chk_center_id, appointment.id)
-        if result:
-             # error message is in result if true (string is truthy)
-             msg = result if isinstance(result, str) else 'Выбранный интервал пересекается с существующей записью'
-             return jsonify({'error': msg}), 400
-
+        if not data.get('ignore_overlap'):
+            result = check_overlap_upd(chk_date, chk_time, new_duration, chk_center_id, appointment.id)
+            if result:
+                 # error message is in result if true (string is truthy)
+                 msg = result if isinstance(result, str) else 'Выбранный интервал пересекается с существующей записью'
+                 # return jsonify({'error': msg}), 400
+                 # EDIT: User requested Journal bypass. For calendar, it should still block. 
+                 # But if bypass flag is present (from Journal JS), we skip.
+                 return jsonify({'error': msg}), 400
+    
     if 'patient_name' in data: appointment.patient_name = data['patient_name']
     if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
     
