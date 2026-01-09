@@ -3984,6 +3984,15 @@ def reports_bonuses_page():
     
     return render_template('reports_bonuses.html')
 
+@admin.route('/reports/cashless')
+@login_required
+def reports_cashless_page():
+    if current_user.role != 'superadmin':
+        flash('Доступ запрещен', 'danger')
+        return redirect(url_for('main.dashboard'))
+    
+    return render_template('reports_cashless.html')
+
 @admin.route('/reports/bonuses/config')
 @login_required
 def reports_bonuses_config_page():
