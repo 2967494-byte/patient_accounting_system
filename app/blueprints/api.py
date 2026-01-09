@@ -114,7 +114,7 @@ def create_appointment():
             center_id=safe_int(data.get('center_id')),
             date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
             time=data.get('time', '09:00'),
-            patient_name=data['patient_name'],
+            patient_name=data['patient_name'].strip().title() if data['patient_name'] else '',
             patient_phone=data.get('patient_phone', ''),
             clinic_id=safe_int(data.get('clinic_id')),
             doctor_id=safe_int(data.get('doctor_id')),
@@ -427,7 +427,10 @@ def update_appointment(id):
                  # But if bypass flag is present (from Journal JS), we skip.
                  return jsonify({'error': msg}), 400
     
-    if 'patient_name' in data: appointment.patient_name = data['patient_name']
+                 return jsonify({'error': msg}), 400
+    
+    if 'patient_name' in data: appointment.patient_name = data['patient_name'].strip().title()
+    if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
     if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
     
     # Update doctor and clinic (IDs preferred)

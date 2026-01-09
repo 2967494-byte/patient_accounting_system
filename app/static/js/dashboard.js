@@ -516,3 +516,20 @@ async function fetchSlots(date, centerId, excludeId, selectedTime) {
         timeSelect.disabled = false;
     }
 }
+
+// Helper to Title Case a string
+function toTitleCase(str) {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, function (txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const nameInput = document.getElementById('patient-name');
+    if (nameInput) {
+        nameInput.addEventListener('blur', function () {
+            this.value = toTitleCase(this.value);
+        });
+    }
+});
