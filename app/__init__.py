@@ -22,7 +22,14 @@ def create_app(test_config=None):
     migrate.init_app(app, db) 
     login_manager.init_app(app)
     csrf.init_app(app)
+    from .extensions import mail
+    mail.init_app(app)
     telegram_bot.init_app(app)
+
+    # ProxyFix for production
+    if app.config.get('IS_PRODUCTION', False) or os.environ.get('FLASK_ENV') == 'production':
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     
     # Login manager settings

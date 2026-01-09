@@ -1437,42 +1437,94 @@ def add_user():
 
 
     new_user = User(
-
         username=username,
-
         email=email,
-
         role=role,
-
-        is_confirmed=True # Admin created users are auto-confirmed
-
+        is_confirmed=False  # Require email confirmation
     )
 
     new_user.password_hash = generate_password_hash(password)
-
     
-
     if organization_id:
-
         new_user.organization_id = int(organization_id)
-
     if city_id:
-
         new_user.city_id = int(city_id)
-
     if center_id:
-
         new_user.center_id = int(center_id)
 
-
-
     db.session.add(new_user)
-
     db.session.commit()
-
     
+    # Send Confirmation Email
+    try:
+        from app.extensions import mail
+        from flask_mail import Message
+        from itsdangerous import URLSafeTimedSerializer
+        from flask import current_app, url_for
 
-    flash(f'Пользователь {username} успешно создан', 'success')
+        ts = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+        token = ts.dumps(email, salt='email-confirm-key')
+        confirm_url = url_for('auth.confirm_email', token=token, _external=True)
+
+        msg = Message('Подтвердите ваш email', recipients=[email])
+        msg.body = f'Здравствуйте! Пожалуйста, перейдите по следующей ссылке для подтверждения вашего аккаунта: {confirm_url}'
+        
+        mail.send(msg)
+        flash(f'Пользователь {username} создан. Письмо с подтверждением отправлено на {email}', 'success')
+    except Exception as e:
+        flash(f'Пользователь создан, но не удалось отправить письмо подтверждения: {str(e)}', 'warning')
+
+    return redirect(url_for('admin.users'))
+
+@admin.route('/users/edit/<int:user_id>', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    if current_user.role not in ['superadmin', 'admin']:
+        flash('У вас нет прав для выполнения этого действия', 'error')
+        return redirect(url_for('admin.users'))
+        
+    user = User.query.get_or_404(user_id)
+    
+    # Optional: Prevent editing superadmins by non-superadmins, etc. 
+    # For now, simplistic check:
+    if user.role == 'superadmin' and current_user.role != 'superadmin':
+         flash('Вы не можете редактировать суперадминистратора', 'error')
+         return redirect(url_for('admin.users'))
+
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    role = request.form.get('role')
+    organization_id = request.form.get('organization_id')
+    city_id = request.form.get('city_id')
+    center_id = request.form.get('center_id')
+
+    # Update fields
+    if username: user.username = username
+    if email: user.email = email
+    if role: user.role = role
+    
+    # Password update only if provided
+    if password and password.strip():
+        user.password_hash = generate_password_hash(password)
+
+    # Relations
+    # Handle "None" or empty strings
+    if organization_id: user.organization_id = int(organization_id)
+    else: user.organization_id = None
+        
+    if city_id: user.city_id = int(city_id)
+    else: user.city_id = None
+        
+    if center_id: user.center_id = int(center_id)
+    else: user.center_id = None
+
+    try:
+        db.session.commit()
+        flash(f'Пользователь {user.username} успешно обновлен', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка обновления: {str(e)}', 'error')
 
     return redirect(url_for('admin.users'))
 

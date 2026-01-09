@@ -11,9 +11,11 @@ class Config:
     # Определяем среду по hostname (универсально)
     import socket
     hostname = socket.gethostname()
-    is_production = hostname == 'maryam'  # ваш продакшен сервер
+    import socket
+    hostname = socket.gethostname()
+    IS_PRODUCTION = hostname == 'maryam'  # ваш продакшен сервер
     
-    if is_production:
+    if IS_PRODUCTION:
         # Продакшен на сервере maryam
         database_url = os.environ.get('DATABASE_URL') or 'postgresql+psycopg://patient_user:strong_password_123@localhost:5432/patient_accounting'
         
@@ -42,6 +44,14 @@ class Config:
     # Telegram Bot
     TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
     TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+
+    # Email Config
+    MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'
+    MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
     
     # Создаем папку uploads если не существует
     if not os.path.exists(UPLOAD_FOLDER):

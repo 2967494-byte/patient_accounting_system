@@ -126,3 +126,30 @@ def captcha():
     buf.seek(0)
     
     return Response(buf, mimetype='image/png')
+
+@auth.route('/confirm/<token>')
+def confirm_email(token):
+    from itsdangerous import URLSafeTimedSerializer, SignatureExpired
+    from flask import current_app
+    
+    ts = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    
+    try:
+        email = ts.loads(token, salt='email-confirm-key', max_age=86400) # 24 hours link
+    except SignatureExpired:
+        flash('Ссылка для подтверждения истекла.', 'danger')
+        return redirect(url_for('auth.login'))
+    except Exception:
+        flash('Неверная ссылка для подтверждения.', 'danger')
+        return redirect(url_for('auth.login'))
+    
+    user = User.query.filter_by(email=email).first_or_404()
+    
+    if user.is_confirmed:
+        flash('Аккаунт уже подтвержден.', 'info')
+    else:
+        user.is_confirmed = True
+        db.session.commit()
+        flash('Спасибо! Ваш аккаунт подтвержден. Теперь вы можете войти.', 'success')
+        
+    return redirect(url_for('auth.login'))

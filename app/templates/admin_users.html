@@ -114,6 +114,19 @@
                         </form>
                         {% endif %}
                         {% endif %}
+
+                        <button type="button" title="Редактировать" onclick='openEditModal({
+                                "id": {{ user.id }},
+                                "username": "{{ user.username }}",
+                                "email": "{{ user.email }}",
+                                "role": "{{ user.role }}",
+                                "organization_id": "{{ user.organization_id or "" }}",
+                                "city_id": "{{ user.city_id or "" }}",
+                                "center_id": "{{ user.center_id or "" }}"
+                            })'
+                            style="background: none; border: none; cursor: pointer; color: #f59e0b; font-size: 1.2rem;">
+                            ✏️
+                        </button>
                         <form action="{{ url_for('admin.impersonate_user', user_id=user.id) }}" method="GET"
                             style="margin:0;">
                             <button type="submit" title="Войти под пользователем"
@@ -194,13 +207,101 @@
         </form>
     </div>
 </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="modal"
+    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content"
+        style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 50%; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>Редактировать пользователя</h2>
+            <span onclick="document.getElementById('editUserModal').style.display='none'"
+                style="cursor: pointer; font-size: 24px;">&times;</span>
+        </div>
+        <form id="editUserForm" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="margin-bottom: 15px;">
+                <label>Имя пользователя:</label>
+                <input type="text" name="username" id="edit_username" required
+                    style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Email:</label>
+                <input type="email" name="email" id="edit_email" required
+                    style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Новый пароль (оставьте пустым, если не меняете):</label>
+                <input type="password" name="password" style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Роль:</label>
+                <select name="role" id="edit_role" required style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="org">Организация</option>
+                    <option value="lab_tech">Лаборант</option>
+                    <option value="admin">Администратор</option>
+                    <option value="superadmin">Суперадмин</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Организация:</label>
+                <select name="organization_id" id="edit_organization_id"
+                    style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="">-- Нет --</option>
+                    {% for org in organizations %}
+                    <option value="{{ org.id }}">{{ org.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Город:</label>
+                <select name="city_id" id="edit_city_id" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="">-- Нет --</option>
+                    {% for city in cities %}
+                    <option value="{{ city.id }}">{{ city.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Центр:</label>
+                <select name="center_id" id="edit_center_id" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="">-- Нет --</option>
+                    {% for center in centers %}
+                    <option value="{{ center.id }}">{{ center.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Сохранить</button>
+        </form>
+    </div>
+</div>
 
 <script>
+    function openEditModal(userData) {
+        document.getElementById('editUserModal').style.display = 'block';
+
+        // Populate form
+        document.getElementById('edit_username').value = userData.username;
+        document.getElementById('edit_email').value = userData.email;
+        document.getElementById('edit_role').value = userData.role;
+        document.getElementById('edit_organization_id').value = userData.organization_id || '';
+        document.getElementById('edit_city_id').value = userData.city_id || '';
+        document.getElementById('edit_center_id').value = userData.center_id || '';
+
+        // Set Action URL
+        document.getElementById('editUserForm').action = '/admin/users/edit/' + userData.id;
+    }
+
     // Close modal when clicking outside
     window.onclick = function (event) {
-        var modal = document.getElementById('addUserModal');
-        if (event.target == modal) {
-            modal.style.display = "none";
+        var modalAdd = document.getElementById('addUserModal');
+        var modalEdit = document.getElementById('editUserModal');
+        if (event.target == modalAdd) {
+            modalAdd.style.display = "none";
+        }
+        if (event.target == modalEdit) {
+            modalEdit.style.display = "none";
         }
     }
 </script>
