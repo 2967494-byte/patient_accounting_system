@@ -55,7 +55,7 @@
             </div>
             <div class="form-group">
                 <label>Услуга</label>
-                <input type="text" id="service" list="services-list" required placeholder="Выберите услугу">
+                <input type="text" id="service" list="services-list" placeholder="Выберите услугу (необязательно)">
                 <datalist id="services-list">
                     {% for service in services %}
                     <option value="{{ service.name }}">

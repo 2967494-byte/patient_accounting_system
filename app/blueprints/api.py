@@ -302,22 +302,28 @@ def update_appointment(id):
     
     data = request.get_json()
     
+    # Helper to treat empty strings as None
+    def safe_int(val):
+        if val == '' or val is None:
+            return None
+        return int(val)
+
     if 'patient_name' in data: appointment.patient_name = data['patient_name']
     if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
     
     # Update doctor and clinic (IDs preferred)
     if 'doctor_id' in data: 
-        appointment.doctor_id = data['doctor_id']
+        appointment.doctor_id = safe_int(data['doctor_id'])
         # Also update legacy string if needed, or leave it to be resolved via relation
         # But if we want consistent string for legacy views:
-        doc = Doctor.query.get(data['doctor_id'])
+        doc = Doctor.query.get(appointment.doctor_id) if appointment.doctor_id else None
         if doc: appointment.doctor = doc.name
         elif data.get('doctor'): appointment.doctor = data['doctor'] # fallback text
     
-    if 'clinic_id' in data: appointment.clinic_id = data['clinic_id']
+    if 'clinic_id' in data: appointment.clinic_id = safe_int(data['clinic_id'])
 
     if 'date' in data: appointment.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
-    if 'doctor' in data: appointment.doctor = data['doctor']
+    # Duplicate 'doctor' assignment removed/cleaned up below
     if 'doctor' in data: appointment.doctor = data['doctor']
     
     # Update Service String AND Relationship if name provided but IDs not provided
@@ -325,16 +331,11 @@ def update_appointment(id):
         appointment.service = data['service']
         
         # If services_ids NOT provided, try to validly link this service by name
-        # This mirrors POST logic and ensures Dashboard edits (which only send name) 
-        # update the M2M relationship correctly.
         if 'services_ids' not in data:
              svc = Service.query.filter_by(name=data['service']).first()
              if svc:
                  appointment.services = [svc]
              else:
-                 # If name doesn't match a generic service, we might want to keep existing?
-                 # Or clear? For Dashboard, we assume single service replacement.
-                 # If we can't find it, we just clear the relation (it's a text-only service)
                  appointment.services = []
 
     if 'date' in data and data['date']:
@@ -348,17 +349,18 @@ def update_appointment(id):
 
     if 'center_id' in data:
          try:
-             cid = int(data['center_id'])
+             cid = safe_int(data['center_id'])
              appointment.center_id = cid
          except (ValueError, TypeError):
              pass # or return error
     
     if 'contract_number' in data: appointment.contract_number = data['contract_number']
-    if 'clinic_id' in data: appointment.clinic_id = data['clinic_id']
-    if 'doctor_id' in data: appointment.doctor_id = data['doctor_id'] # Added doctor_id
-    if 'quantity' in data: appointment.quantity = int(data['quantity'])
+    # clinic_id and doctor_id handled above, but ensure no double overwrite with unsafe values if repeated keys exist
+    # (The original code had duplicates, correcting here by relying on checks above or safe safe_int if repeated)
+    
+    if 'quantity' in data: appointment.quantity = int(data.get('quantity') or 1)
     if 'cost' in data: appointment.cost = float(data['cost'])
-    if 'payment_method_id' in data: appointment.payment_method_id = data['payment_method_id']
+    if 'payment_method_id' in data: appointment.payment_method_id = safe_int(data['payment_method_id'])
     if 'discount' in data: appointment.discount = float(data['discount'])
     if 'comment' in data: appointment.comment = data['comment']
     if 'is_child' in data: appointment.is_child = bool(data['is_child'])
