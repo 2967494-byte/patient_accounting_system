@@ -32,6 +32,11 @@
                 style="padding: 0.5rem 1rem; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; color: #6b7280;">
                 Бонусы
             </a>
+            <a href="{{ url_for('admin.reports_bonuses_config_page') }}"
+                class="tab-link {% if request.endpoint == 'admin.reports_bonuses_config_page' %}active{% endif %}"
+                style="padding: 0.5rem 1rem; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; color: #6b7280;">
+                Бонусы - Данные
+            </a>
         </div>
     </div>
 

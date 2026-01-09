@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 
 from flask_login import login_required, current_user, login_user
 
-from app.extensions import db
+from app.extensions import db, csrf
 
 from app.models import (
 
@@ -3981,4 +3981,72 @@ def reports_bonuses_page():
     if current_user.role != 'superadmin':
         flash('Доступ запрещен', 'danger')
         return redirect(url_for('main.dashboard'))
+    
     return render_template('reports_bonuses.html')
+
+@admin.route('/reports/bonuses/config')
+@login_required
+def reports_bonuses_config_page():
+    if current_user.role != 'superadmin':
+        flash('Доступ запрещен', 'danger')
+        return redirect(url_for('main.dashboard'))
+    
+    services = Service.query.order_by(Service.name).all()
+    services_data = [{'id': s.id, 'name': s.name} for s in services]
+    return render_template('reports_bonuses_config.html', services=services_data)
+
+@admin.route('/api/bonuses/config', methods=['GET', 'POST'])
+@login_required
+@csrf.exempt
+def api_bonuses_config():
+    from app.models import BonusPeriod, BonusValue # Import here to avoid circular
+    from datetime import datetime
+    
+    if current_user.role != 'superadmin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    if request.method == 'GET':
+        periods = BonusPeriod.query.order_by(BonusPeriod.start_date).all()
+        return jsonify([p.to_dict() for p in periods])
+
+    if request.method == 'POST':
+        data = request.json
+        try:
+            # Full sync: delete all and recreate
+            # Delete children first to avoid FK constraint violations
+            BonusValue.query.delete()
+            BonusPeriod.query.delete()
+            
+            for p_data in data:
+                period = BonusPeriod(
+                    start_date=datetime.strptime(p_data['startDate'], '%Y-%m-%d').date(),
+                    end_date=datetime.strptime(p_data['endDate'], '%Y-%m-%d').date() if p_data.get('endDate') else None,
+                    columns=int(p_data.get('columns', 1)) 
+                )
+                db.session.add(period)
+                db.session.flush() # Generate ID
+                
+                if 'values' in p_data:
+                    for v_data in p_data['values']:
+                        try:
+                            val = float(v_data.get('val', 0))
+                        except:
+                            val = 0
+                        
+                        if val != 0: 
+                            b_val = BonusValue(
+                                period_id=period.id,
+                                service_id=v_data['serviceId'],
+                                column_index=v_data['col'],
+                                value=val
+                            )
+                            db.session.add(b_val)
+            
+            db.session.commit()
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error saving bonuses config: {e}") # Log to console
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': str(e)}), 500

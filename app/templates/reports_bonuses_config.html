@@ -1,0 +1,379 @@
+{% extends "reports_base.html" %}
+
+{% block report_content %}
+<div class="report-card"
+    style="background: white; padding: 2rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+
+    <div style="margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <h4 style="font-size: 1.1rem; font-weight: 600; color: #374151; margin: 0;">Периоды действия бонусов
+                </h4>
+                <button class="btn btn-sm btn-primary" onclick="openAddPeriodModal()"
+                    style="background-color: #3b82f6; color: white; border: none; padding: 0.25rem 0.75rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.9rem;">
+                    + Период
+                </button>
+            </div>
+
+            <button class="btn btn-success" onclick="saveConfig()"
+                style="background-color: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; font-weight: 500;">
+                Сохранить изменения
+            </button>
+        </div>
+
+        <!-- Links Navigation -->
+        <div id="periods-nav" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <!-- Filled via JS -->
+            <div id="no-periods-msg" style="color: #9ca3af;">
+                Нет периодов. Нажмите "+ Период" чтобы создать.
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Period Content -->
+    <div id="active-period-view" style="min-height: 200px; border-top: 1px solid #e5e7eb; padding-top: 1.5rem;">
+        <!-- Filled via JS -->
+    </div>
+
+</div>
+
+<!-- Add Period Modal -->
+<div id="addPeriodModal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; padding:2rem; border-radius:0.5rem; width:400px; max-width:90%;">
+        <h3 style="margin-top:0;">Новый период</h3>
+
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem;">Дата начала (Обязательно)</label>
+            <input type="date" id="newPeriodStart"
+                style="width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:0.25rem;">
+        </div>
+
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem;">Дата окончания (Опционально)</label>
+            <input type="date" id="newPeriodEnd"
+                style="width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:0.25rem;">
+            <small style="color:#6b7280;">Оставьте пустым, если период действует бессрочно</small>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+            <button onclick="closeAddPeriodModal()"
+                style="background:none; border:1px solid #d1d5db; padding:0.5rem 1rem; border-radius:0.25rem; cursor:pointer;">Отмена</button>
+            <button onclick="confirmAddPeriod()"
+                style="background:#3b82f6; color:white; border:none; padding:0.5rem 1rem; border-radius:0.25rem; cursor:pointer;">Создать</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Data ---
+    const servicesList = {{ services| tojson | safe }};
+
+    // State for Pricing Periods
+    // { id: timestamp/dbId, startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD'|null, columns: 1, values: { "serviceId_colIndex": val } }
+    let pricingPeriods = [];
+    let activePeriodId = null;
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+        loadConfig();
+    });
+
+    async function loadConfig() {
+        try {
+            const res = await fetch('/admin/api/bonuses/config');
+            if (!res.ok) throw new Error('Network response was not ok');
+            const data = await res.json();
+
+            // Transform DB data to internal state
+            pricingPeriods = data.map(p => ({
+                id: p.id, // DB ID
+                startDate: p.startDate,
+                endDate: p.endDate,
+                columns: p.columns,
+                values: p.values.reduce((acc, v) => {
+                    acc[`${v.serviceId}_${v.col}`] = v.val;
+                    return acc;
+                }, {})
+            }));
+
+            if (pricingPeriods.length > 0) {
+                // Determine active? Maybe last created? Or first?
+                // Sort first
+                pricingPeriods.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                activePeriodId = pricingPeriods[pricingPeriods.length - 1].id; // Open latest by default
+                renderPeriodLinks();
+                renderActiveTable();
+            } else {
+                renderPeriodLinks();
+            }
+
+        } catch (err) {
+            console.error('Failed to load config:', err);
+            // Optionally show error to user
+        }
+    }
+
+    async function saveConfig() {
+        // First, capture current inputs to state
+        saveCurrentPeriodValues();
+
+        // Transform state to API Payload
+        const payload = pricingPeriods.map(p => {
+            const valuesArr = [];
+            for (const [key, val] of Object.entries(p.values || {})) {
+                const [svcId, colIdx] = key.split('_');
+                valuesArr.push({
+                    serviceId: parseInt(svcId),
+                    col: parseInt(colIdx),
+                    val: parseFloat(val)
+                });
+            }
+
+            return {
+                startDate: p.startDate,
+                endDate: p.endDate,
+                columns: p.columns,
+                values: valuesArr
+            };
+        });
+
+        try {
+            const res = await fetch('/admin/api/bonuses/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('Конфигурация успешно сохранена!');
+                loadConfig(); // Reload to get real IDs back
+            } else {
+                alert('Ошибка при сохранении');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Ошибка сети при сохранении');
+        }
+    }
+
+
+    // --- Modal Logic ---
+    function openAddPeriodModal() {
+        document.getElementById('addPeriodModal').style.display = 'flex';
+        document.getElementById('newPeriodStart').value = new Date().toISOString().split('T')[0];
+        document.getElementById('newPeriodEnd').value = '';
+    }
+
+    function closeAddPeriodModal() {
+        document.getElementById('addPeriodModal').style.display = 'none';
+    }
+
+    function confirmAddPeriod() {
+        const start = document.getElementById('newPeriodStart').value;
+        const end = document.getElementById('newPeriodEnd').value;
+
+        if (!start) {
+            alert('Дата начала обязательна');
+            return;
+        }
+
+        addPeriod(start, end);
+        closeAddPeriodModal();
+    }
+
+
+    // --- Period Logic ---
+
+    function addPeriod(startDate, endDate) {
+        saveCurrentPeriodValues(); // Save previous work
+
+        const newPeriod = {
+            id: Date.now(), // Temp ID
+            startDate: startDate,
+            endDate: endDate || null,
+            columns: 1,
+            values: {}
+        };
+        pricingPeriods.push(newPeriod);
+        pricingPeriods.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+        switchPeriod(newPeriod.id);
+    }
+
+    function switchPeriod(periodId) {
+        if (activePeriodId) {
+            saveCurrentPeriodValues();
+        }
+        activePeriodId = periodId;
+        renderPeriodLinks();
+        renderActiveTable();
+    }
+
+    function saveCurrentPeriodValues() {
+        if (!activePeriodId) return;
+        const period = pricingPeriods.find(p => p.id === activePeriodId);
+        if (!period) return;
+
+        // Find all inputs in the table
+        const inputs = document.querySelectorAll('#active-period-view input[data-svc-id]');
+        if (!period.values) period.values = {};
+
+        inputs.forEach(inp => {
+            const svcId = inp.dataset.svcId;
+            const colIdx = inp.dataset.colIdx;
+            const val = inp.value;
+
+            if (val) {
+                period.values[`${svcId}_${colIdx}`] = val;
+            } else {
+                // If empty, delete or set 0? Let's just update key
+                delete period.values[`${svcId}_${colIdx}`];
+            }
+        });
+    }
+
+    function addColumnToActivePeriod() {
+        saveCurrentPeriodValues(); // Important to save before re-render!
+
+        if (!activePeriodId) return;
+        const period = pricingPeriods.find(p => p.id === activePeriodId);
+        if (period) {
+            period.columns += 1;
+            renderActiveTable();
+        }
+    }
+
+    // --- Render Logic ---
+
+    function renderPeriodLinks() {
+        const nav = document.getElementById('periods-nav');
+        if (pricingPeriods.length === 0) {
+            nav.innerHTML = '<div style="color: #9ca3af; padding: 0.5rem 0;">Нет периодов. Нажмите "+ Период" чтобы создать.</div>';
+            return;
+        }
+        nav.innerHTML = '';
+
+        pricingPeriods.forEach(period => {
+            const link = document.createElement('a');
+            const isActive = period.id === activePeriodId;
+            const endText = period.endDate ? period.endDate : '...';
+
+            link.href = "javascript:void(0)";
+            link.textContent = `${period.startDate} - ${endText}`;
+            link.onclick = () => switchPeriod(period.id);
+
+            // Styles
+            link.style.textDecoration = isActive ? 'underline' : 'none';
+            link.style.fontWeight = isActive ? '600' : '400';
+            link.style.color = isActive ? '#2563eb' : '#4b5563';
+            link.style.cursor = 'pointer';
+            link.style.fontSize = '0.95rem';
+            if (isActive) {
+                link.style.borderBottom = '2px solid #2563eb';
+            }
+
+            nav.appendChild(link);
+        });
+    }
+
+    function renderActiveTable() {
+        const container = document.getElementById('active-period-view');
+        container.innerHTML = '';
+
+        if (!activePeriodId) return;
+        const period = pricingPeriods.find(p => p.id === activePeriodId);
+        if (!period) return;
+
+        // --- Info & controls for Active Period ---
+        const metaDiv = document.createElement('div');
+        metaDiv.style.marginBottom = '1rem';
+
+        metaDiv.innerHTML = `
+            <div style="display:flex; justify-content:flex-end; align-items:center;">
+                <button class="btn btn-sm" onclick="addColumnToActivePeriod()" 
+                    style="background-color: white; border: 1px solid #d1d5db; color: #374151; padding: 0.25rem 0.75rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.9rem;">
+                    + Столбец (Б-${period.columns + 1})
+                </button>
+            </div>
+        `;
+        container.appendChild(metaDiv);
+
+
+        // --- Render Table ---
+        const tableWrap = document.createElement('div');
+        tableWrap.style.overflowX = 'auto';
+
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.fontSize = '0.9rem';
+
+        // Header
+        const thead = document.createElement('thead');
+        const trHead = document.createElement('tr');
+        trHead.style.backgroundColor = '#f9fafb';
+
+        const thSvc = document.createElement('th');
+        thSvc.textContent = 'Исследование';
+        thSvc.style.textAlign = 'left';
+        thSvc.style.padding = '0.75rem';
+        thSvc.style.borderBottom = '2px solid #e5e7eb';
+        trHead.appendChild(thSvc);
+
+        for (let i = 1; i <= period.columns; i++) {
+            const th = document.createElement('th');
+            th.textContent = `Б-${i}`;
+            th.style.textAlign = 'center';
+            th.style.padding = '0.75rem';
+            th.style.width = '80px';
+            th.style.borderBottom = '2px solid #e5e7eb';
+            trHead.appendChild(th);
+        }
+        thead.appendChild(trHead);
+        table.appendChild(thead);
+
+        // Body
+        const tbody = document.createElement('tbody');
+        servicesList.forEach(svc => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #f3f4f6';
+
+            const tdSvc = document.createElement('td');
+            tdSvc.textContent = svc.name;
+            tdSvc.style.padding = '0.75rem';
+            tr.appendChild(tdSvc);
+
+            for (let i = 1; i <= period.columns; i++) {
+                const td = document.createElement('td');
+                td.style.padding = '0.75rem';
+                td.style.textAlign = 'center';
+
+                // Get value if exists
+                const key = `${svc.id}_${i}`;
+                const val = (period.values && period.values[key]) || '';
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = val;
+                input.dataset.svcId = svc.id;
+                input.dataset.colIdx = i;
+
+                input.style.width = '80px';
+                input.style.padding = '0.25rem';
+                input.style.border = '1px solid #d1d5db';
+                input.style.borderRadius = '0.25rem';
+                input.placeholder = '';
+                td.appendChild(input);
+
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        tableWrap.appendChild(table);
+        container.appendChild(tableWrap);
+    }
+</script>
+{% endblock %}

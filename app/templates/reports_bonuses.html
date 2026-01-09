@@ -1,84 +1,85 @@
 {% extends "reports_base.html" %}
 
 {% block report_content %}
-<div class="report-card"
-    style="background: white; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h3 style="font-size: 1.1rem; font-weight: 600; color: #1f2937;">Сводная таблица по врачам</h3>
-        <div style="display: flex; gap: 0.5rem;">
-            <select id="bonuses-month" onchange="fetchBonuses()"
-                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
-                <option value="01">Январь</option>
-                <option value="02">Февраль</option>
-                <option value="03">Март</option>
-                <option value="04">Апрель</option>
-                <option value="05">Май</option>
-                <option value="06">Июнь</option>
-                <option value="07">Июль</option>
-                <option value="08">Август</option>
-                <option value="09">Сентябрь</option>
-                <option value="10">Октябрь</option>
-                <option value="11">Ноябрь</option>
-                <option value="12">Декабрь</option>
-            </select>
-            <select id="bonuses-year" onchange="fetchBonuses()"
-                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
-                <!-- Filled via JS -->
-            </select>
+<div style="width: 100%;">
+    <div class="report-card"
+        style="background: white; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 600; color: #1f2937;">Сводная таблица по врачам</h3>
+            <div style="display: flex; gap: 0.5rem;">
+                <select id="bonuses-month" onchange="fetchBonuses()"
+                    style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
+                    <option value="01">Январь</option>
+                    <option value="02">Февраль</option>
+                    <option value="03">Март</option>
+                    <option value="04">Апрель</option>
+                    <option value="05">Май</option>
+                    <option value="06">Июнь</option>
+                    <option value="07">Июль</option>
+                    <option value="08">Август</option>
+                    <option value="09">Сентябрь</option>
+                    <option value="10">Октябрь</option>
+                    <option value="11">Ноябрь</option>
+                    <option value="12">Декабрь</option>
+                </select>
+                <select id="bonuses-year" onchange="fetchBonuses()"
+                    style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
+                    <!-- Filled via JS -->
+                </select>
+            </div>
         </div>
-    </div>
 
-    <!-- Bonus Per Study Input -->
-    <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
-        <label style="font-weight: 500; color: #374151;">Премия за 1 исследование (руб):</label>
-        <input type="number" id="bonus-per-study" oninput="recalcBonuses()" placeholder="0"
-            style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; width: 120px;">
-    </div>
+        <!-- Bonus Per Study Input -->
+        <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+            <label style="font-weight: 500; color: #374151;">Премия за 1 исследование (руб):</label>
+            <input type="number" id="bonus-per-study" oninput="recalcBonuses()" placeholder="0"
+                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; width: 120px;">
+        </div>
 
-    <div id="bonuses-loading" style="color:#6b7280; font-size:0.9rem;">Загрузка...</div>
+        <div id="bonuses-loading" style="color:#6b7280; font-size:0.9rem;">Загрузка...</div>
 
-    <div style="overflow-x: auto; width: 100%; position: relative;">
-        <table id="bonuses-table"
-            style="width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.9rem; white-space: nowrap; display:none;">
-            <thead>
-                <!-- Dynamic Headers -->
-            </thead>
-            <tbody>
-                <!-- Dynamic Rows -->
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Details Modal -->
-    <div id="details-modal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
-        <div
-            style="background:white; padding:1.5rem; border-radius:0.5rem; width:90%; max-width:600px; max-height:80vh; overflow-y:auto; position:relative;">
-            <button onclick="closeDetailsModal()"
-                style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            <h3 id="modal-doctor-name" style="margin-top:0; margin-bottom:1rem; font-size:1.2rem; font-weight:600;">
-                Детализация</h3>
-
-            <div id="modal-loading" style="display:none; color:#6b7280;">Загрузка...</div>
-
-            <table id="modal-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+        <div style="overflow-x: auto; width: 100%; position: relative;">
+            <table id="bonuses-table"
+                style="width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.9rem; white-space: nowrap; display:none;">
                 <thead>
-                    <tr style="border-bottom:2px solid #e5e7eb; background:#f9fafb;">
-                        <th style="padding:0.5rem; text-align:left;">Пациент</th>
-                        <th style="padding:0.5rem; text-align:left;">Исследование</th>
-                        <th style="padding:0.5rem; text-align:right;">Бонус</th>
-                    </tr>
+                    <!-- Dynamic Headers -->
                 </thead>
                 <tbody>
-                    <!-- Filled via JS -->
+                    <!-- Dynamic Rows -->
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
+<!-- Details Modal (Global for page) -->
+<div id="details-modal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
+    <div
+        style="background:white; padding:1.5rem; border-radius:0.5rem; width:90%; max-width:600px; max-height:80vh; overflow-y:auto; position:relative;">
+        <button onclick="closeDetailsModal()"
+            style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+        <h3 id="modal-doctor-name" style="margin-top:0; margin-bottom:1rem; font-size:1.2rem; font-weight:600;">
+            Детализация</h3>
+
+        <div id="modal-loading" style="display:none; color:#6b7280;">Загрузка...</div>
+
+        <table id="modal-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead>
+                <tr style="border-bottom:2px solid #e5e7eb; background:#f9fafb;">
+                    <th style="padding:0.5rem; text-align:left;">Пациент</th>
+                    <th style="padding:0.5rem; text-align:left;">Исследование</th>
+                    <th style="padding:0.5rem; text-align:right;">Бонус</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Filled via JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <script>
-    // Define global fetch function for onchange event
     async function fetchBonuses() {
         const month = document.getElementById('bonuses-month').value;
         const year = document.getElementById('bonuses-year').value;
@@ -101,7 +102,6 @@
             const data = await res.json();
 
             // 1. Build Header
-            // Doctor Name | Count | Sum (Calculated) | Info
             thead.innerHTML = `
                 <tr style="border-bottom: 2px solid #e5e7eb; background-color: #f9fafb;">
                     <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #374151;">Врач</th>
@@ -130,9 +130,7 @@
                             0
                         </td>
                         <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6; text-align: center;">
-                            <button onclick="openDetails('${// Helper to escape quotes? Simple for now
-                        row.name.replace(/'/g, "\\'")
-                        }')" title="Детализация"
+                            <button onclick="openDetails('${row.name.replace(/'/g, "\\'")}')" title="Детализация"
                                 style="background:none; border:none; cursor:pointer; color:#4f46e5; display:flex; align-items:center; justify-content:center;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -145,7 +143,6 @@
                     tbody.appendChild(tr);
                 });
 
-                // Trigger calculation if rate exists
                 recalcBonuses();
             }
 
@@ -169,7 +166,6 @@
         });
     }
 
-    // Modal Logic
     async function openDetails(doctorName) {
         const modal = document.getElementById('details-modal');
         const modalTitle = document.getElementById('modal-doctor-name');
@@ -215,7 +211,6 @@
         document.getElementById('details-modal').style.display = 'none';
     }
 
-    // Close on outside click
     window.onclick = function (event) {
         const modal = document.getElementById('details-modal');
         if (event.target == modal) {
@@ -228,7 +223,6 @@
         const currentYear = today.getFullYear();
         const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
 
-        // Populate Years (Current +/- 5)
         const yearSelect = document.getElementById('bonuses-year');
         for (let y = currentYear - 5; y <= currentYear + 2; y++) {
             const opt = document.createElement('option');
@@ -238,11 +232,10 @@
             yearSelect.appendChild(opt);
         }
 
-        // Set Month
         document.getElementById('bonuses-month').value = currentMonth;
 
-        // Initial Fetch
         fetchBonuses();
     });
+
 </script>
 {% endblock %}

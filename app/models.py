@@ -407,3 +407,39 @@ class Message(db.Model):
             'timestamp': self.timestamp.isoformat(),
             'is_read': self.is_read
         }
+
+class BonusPeriod(db.Model):
+    __tablename__ = 'bonus_periods'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)
+    columns = db.Column(db.Integer, default=1)
+    
+    # Relationship to values
+    values = db.relationship('BonusValue', backref='period', lazy=True, cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'startDate': self.start_date.isoformat(),
+            'endDate': self.end_date.isoformat() if self.end_date else None,
+            'columns': self.columns,
+            'values': [v.to_dict() for v in self.values]
+        }
+
+class BonusValue(db.Model):
+    __tablename__ = 'bonus_values'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    period_id = db.Column(db.Integer, db.ForeignKey('bonus_periods.id'), nullable=False)
+    service_id = db.Column(db.Integer, db.ForeignKey('services.id'), nullable=False)
+    column_index = db.Column(db.Integer, nullable=False) 
+    value = db.Column(db.Float, default=0.0)
+
+    def to_dict(self):
+        return {
+            'serviceId': self.service_id,
+            'col': self.column_index,
+            'val': self.value
+        }
