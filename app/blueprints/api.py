@@ -53,19 +53,25 @@ def create_appointment():
              primary_service_name = "\n".join([s.name for s in services_for_name_str])
 
         # Create Appointment
+        # Helper to treat empty strings as None
+        def safe_int(val):
+            if val == '' or val is None:
+                return None
+            return int(val)
+
         appointment = Appointment(
-            center_id=data.get('center_id'),
+            center_id=safe_int(data.get('center_id')),
             date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
             time=data.get('time', '09:00'),
             patient_name=data['patient_name'],
             patient_phone=data.get('patient_phone', ''),
-            clinic_id=data.get('clinic_id'),
-            doctor_id=data.get('doctor_id'),
+            clinic_id=safe_int(data.get('clinic_id')),
+            doctor_id=safe_int(data.get('doctor_id')),
             service=primary_service_name, # joined names
             quantity=quantity,
             contract_number=data.get('contract_number'),
-            payment_method_id=data.get('payment_method_id'),
-            discount=float(data.get('discount', 0)),
+            payment_method_id=safe_int(data.get('payment_method_id')),
+            discount=float(data.get('discount', 0) or 0),
             comment=data.get('comment'),
             is_child=data.get('is_child', False),
             author_id=current_user.id
