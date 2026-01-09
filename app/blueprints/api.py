@@ -58,6 +58,56 @@ def create_appointment():
             if val == '' or val is None:
                 return None
             return int(val)
+        
+        # New: Overlap Check
+        def check_overlap(date_obj, time_str, duration_mins, center_id_chk, exclude_id=None):
+            if not center_id_chk: return None
+            
+            # Helper to minutes
+            def t_to_m(t):
+                try:
+                    parts = t.split(':')
+                    return int(parts[0]) * 60 + int(parts[1])
+                except:
+                    return 0
+
+            start_m = t_to_m(time_str)
+            end_m = start_m + duration_mins
+            
+            print(f"DEBUG: Create Check. Date={date_obj}, Center={center_id_chk}, Start={start_m}, Dur={duration_mins}")
+
+            existing_appts = Appointment.query.filter_by(
+                date=date_obj,
+                center_id=center_id_chk
+            ).all()
+            
+            for ex in existing_appts:
+                if exclude_id and str(ex.id) == str(exclude_id): continue
+                
+                ex_start = t_to_m(ex.time)
+                ex_dur = (ex.duration or 15)
+                ex_end = ex_start + ex_dur
+                
+                if (ex_end > start_m) and (ex_start < end_m):
+                    clinic_name = ex.clinic.name if ex.clinic else "Unknown Clinic"
+                    debug_msg = f"Conflict: Requested {time_str} overlaps with Accession #{ex.contract_number or ex.id} at {ex.time} ({clinic_name})"
+                    print(debug_msg)
+                    return debug_msg 
+            return False
+
+        duration = 30 if data.get('is_double_time') else 15
+        
+        # Validate Overlap
+        result = check_overlap(
+            datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            data.get('time', '09:00'),
+            duration,
+            safe_int(data.get('center_id'))
+        )
+        if result:
+             # error message is in result if true (string is truthy)
+             msg = result if isinstance(result, str) else 'Выбранный интервал пересекается с существующей записью'
+             return jsonify({'error': msg}), 400
 
         appointment = Appointment(
             center_id=safe_int(data.get('center_id')),
@@ -74,6 +124,7 @@ def create_appointment():
             discount=float(data.get('discount', 0) or 0),
             comment=data.get('comment'),
             is_child=data.get('is_child', False),
+            duration=duration,
             author_id=current_user.id
         )
 
@@ -154,7 +205,10 @@ def get_appointments():
 
     if clinic_id_str:
          try:
-             query = query.filter_by(clinic_id=int(clinic_id_str))
+             cid = int(clinic_id_str)
+             query = query.filter(
+                 (Appointment.clinic_id == cid) | (Appointment.clinic_id == None)
+             )
          except ValueError:
              pass
     
@@ -307,6 +361,66 @@ def update_appointment(id):
         if val == '' or val is None:
             return None
         return int(val)
+
+    if 'is_double_time' in data or 'time' in data or 'date' in data or 'center_id' in data:
+        new_duration = 30 if data.get('is_double_time') else 15
+        appointment.duration = new_duration
+        
+        chk_date = datetime.strptime(data['date'], '%Y-%m-%d').date() if 'date' in data else appointment.date
+        chk_center_id = safe_int(data['center_id']) if 'center_id' in data else appointment.center_id
+        chk_time = data['time'] if 'time' in data else appointment.time
+        
+        # Optimization: Only check if parameters actually changed vs current stored state
+        # Note: appointment.time might be "09:00" vs data "9:00", we should normalize or just check logic.
+        # We assume checking is cheap enough, but effectively we want to avoid False Positives on "Self".
+        
+        # Logic:
+        # If I am at 09:00 (15m). I save 09:00 (15m).
+        # Overlap check loop excludes MY ID.
+        # It should return False.
+        # If it returns True, it implies it found SOMETHING ELSE.
+        
+        # But to be safe and avoid issues, we can skip if identical.
+        # But comparing times strings is risky if formats differ.
+        # Let's trust the exclusion logic BUT print debug info if collision occurs.
+
+        def check_overlap_upd(date_obj, time_str, duration_mins, center_id_chk, exclude_id):
+            if not center_id_chk: return None
+            def t_to_m(t):
+                try:
+                    # Handle HH:MM:SS by taking first 2 parts
+                    parts = t.split(':')
+                    return int(parts[0]) * 60 + int(parts[1])
+                except:
+                    return 0
+
+            start_m = t_to_m(time_str)
+            end_m = start_m + duration_mins
+            
+            print(f"DEBUG: Check Overlap. Date={date_obj}, Center={center_id_chk}, Start={start_m}, Dur={duration_mins}, ExcludeID={exclude_id}")
+
+            existing_appts = Appointment.query.filter_by(date=date_obj, center_id=center_id_chk).all()
+            for ex in existing_appts:
+                if str(ex.id) == str(exclude_id): 
+                    # print(f"DEBUG: Skipping self {ex.id}")
+                    continue
+                
+                ex_start = t_to_m(ex.time)
+                ex_dur = (ex.duration or 15)
+                ex_end = ex_start + ex_dur
+                
+                if (ex_end > start_m) and (ex_start < end_m):
+                    clinic_name = ex.clinic.name if ex.clinic else "Unknown Clinic"
+                    debug_msg = f"Conflict: Custom ID {exclude_id} ({time_str} - {duration_mins}) overlaps with Existing ID {ex.id} ({ex.time}) at {clinic_name}"
+                    print(debug_msg)
+                    return debug_msg 
+            return False
+
+        result = check_overlap_upd(chk_date, chk_time, new_duration, chk_center_id, appointment.id)
+        if result:
+             # error message is in result if true (string is truthy)
+             msg = result if isinstance(result, str) else 'Выбранный интервал пересекается с существующей записью'
+             return jsonify({'error': msg}), 400
 
     if 'patient_name' in data: appointment.patient_name = data['patient_name']
     if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
@@ -532,12 +646,37 @@ def get_slots():
     
     existing = query.all()
     occupied = set()
+    
+    # Helper to calculate end minutes
+    def time_to_min(t):
+        h, m = map(int, t.split(':'))
+        return h * 60 + m
+
     for appt in existing:
         if exclude_appt_id and str(appt.id) == str(exclude_appt_id):
             continue
         occupied.add(appt.time)
+        
+        # If appointment has duration > 15 (e.g. 30), block subsequent slots
+        if (getattr(appt, 'duration', 15) or 15) > 15:
+             start_m = time_to_min(appt.time)
+             # slots are 15 min steps.
+             # If 30 min, it occupies Start and Start+15.
+             # We need to block Start+15.
+             extra_slots = (appt.duration // 15) - 1
+             for i in range(extra_slots):
+                 next_m = start_m + (15 * (i + 1))
+                 hh = next_m // 60
+                 mm = next_m % 60
+                 next_time_str = f"{hh:02d}:{mm:02d}"
+                 occupied.add(next_time_str)
 
     # Filter available
+    # ALSO: If a user asks what slots are available, we must ensure if they pick a slot,
+    # and they intend to use 30 mins, that slot AND the next one must be free?
+    # Usually UI handles "if I pick 30m, do I fit?".
+    # But `get_slots` usually just returns start times.
+    # However, standard logic: list all start times that are not occupied.
     available = [s for s in slots if s not in occupied]
     
     return jsonify(available)

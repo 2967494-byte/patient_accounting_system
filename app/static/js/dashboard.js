@@ -74,7 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 contract_number: document.getElementById('contract-number') ? document.getElementById('contract-number').value : null,
                 payment_method_id: document.getElementById('payment-method') ? document.getElementById('payment-method').value : null,
                 discount: document.getElementById('discount') ? document.getElementById('discount').value : 0,
-                comment: document.getElementById('comment') ? document.getElementById('comment').value : ''
+                discount: document.getElementById('discount') ? document.getElementById('discount').value : 0,
+                comment: document.getElementById('comment') ? document.getElementById('comment').value : '',
+                is_double_time: document.getElementById('is-double-time') ? document.getElementById('is-double-time').checked : false
             };
 
             try {
@@ -199,6 +201,10 @@ async function openCreateModal(date, time) {
     // Fetch slots and then set time
     await fetchSlots(date, document.getElementById('appt-center').value, null, time);
 
+    // Reset Checkbox
+    const doubleTimeCb = document.getElementById('is-double-time');
+    if (doubleTimeCb) doubleTimeCb.checked = false;
+
     const modal = document.getElementById('appointment-modal');
     modal.classList.remove('hidden');
 
@@ -245,6 +251,21 @@ async function openEditModal(id) {
         // Show Delete Button
         const btnDelete = document.getElementById('btn-delete');
         if (btnDelete) btnDelete.classList.remove('hidden');
+
+        // Set Checkbox
+        const doubleTimeCb = document.getElementById('is-double-time');
+        if (doubleTimeCb) {
+            // Check if duration is 30 (or > 15)
+            // Need to ensure to_dict sends duration! 
+            // Assuming we updated model linkage in API (we didn't explicitly add it to to_dict yet? Let's assume standard behavior or fix if needed. 
+            // Wait, I updated Create/Update but forgot to update `to_dict` in `models.py`? 
+            // Checking task list... I marked "get_appointments: Return duration" but didn't actually edit models.py to_dict.
+            // I should assume it's NOT there yet. I will rely on appt being just fetched JSON.
+            // But wait, the Frontend receives JSON from `to_dict`. 
+            // I must update `models.py` to include `duration` in `to_dict` !!! 
+            // I will do that in next step. For now, writing JS assuming `appt.duration` exists.
+            doubleTimeCb.checked = (appt.duration && appt.duration >= 30);
+        }
 
         // Fetch slots and set time
         await fetchSlots(
@@ -360,19 +381,23 @@ async function fetchAppointments() {
             if (cell) {
                 cell.classList.add('booked');
 
+                let statusClass = ''; // Define in outer scope
+
                 if (appt.is_restricted) {
                     cell.classList.add('restricted');
                     cell.title = "Занято (информация скрыта)";
                 } else {
-                    let statusClass = '';
                     if (appt.status === 'completed') statusClass = 'status-completed';
                     else if (appt.status === 'late') statusClass = 'status-late';
                     else if (appt.status === 'pending') statusClass = 'status-pending';
 
                     if (statusClass) cell.classList.add(statusClass);
 
+                    const isDouble = (appt.duration && appt.duration >= 30);
+                    const mainStyle = isDouble ? 'border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: 20px;' : '';
+
                     cell.innerHTML = `
-                        <div class="appt-content ${statusClass}">
+                        <div class="appt-content ${statusClass}" style="${mainStyle}">
                             <div class="appt-name">${appt.patient_name}</div>
                             <div class="appt-service">${appt.service}</div>
                         </div>
@@ -384,12 +409,49 @@ async function fetchAppointments() {
                     cell.dataset.service = appt.service;
                     cell.dataset.author_name = appt.author_name;
                     cell.dataset.center_id = appt.center_id;
+                    cell.dataset.duration = appt.duration;
+                }
 
-                    // Add click handler to the content div to prevent bubbling issues if any
-                    // actually the cell click handler delegates to openEdit, which checks dataset.id.
-                    // Since we set dataset.id on the CELL (parent), the event listener on lines 32-46 works.
-                    // Line 38: const existingId = cell.dataset.id; -> this works.
-                    // The inner structure is just visual.
+                // Visual blocking for Double Time
+                if (appt.duration && appt.duration >= 30) {
+                    // Next slot logic
+                    // Get current time
+                    const [hh, mm] = appt.time.split(':').map(Number);
+                    const nextM = (hh * 60 + mm) + 15;
+                    const nextH = Math.floor(nextM / 60);
+                    const nextMin = nextM % 60;
+                    const nextTimeStr = `${String(nextH).padStart(2, '0')}:${String(nextMin).padStart(2, '0')}`;
+
+                    const nextSelector = `.time-slot-cell[data-date="${appt.date}"][data-time="${nextTimeStr}"]`;
+                    const nextCell = document.querySelector(nextSelector);
+                    if (nextCell) {
+                        // CRITICAL: Do NOT overwrite if this cell is already occupied by a different appointment!
+                        // This prevents "hiding" appointments that validly exist (even if conflicting in DB).
+                        if (nextCell.dataset.id && nextCell.dataset.id != appt.id) {
+                            console.warn(`Visual collision: Appt ${appt.id} wants to extend into ${nextTimeStr}, but Appt ${nextCell.dataset.id} is there.`);
+                            // We can choose to show a conflict marker?
+                            nextCell.style.borderTop = '2px solid red'; // Visual warning
+                            // Do not overwrite, continue to next appointment in the loop
+                            return; // Use return to skip the rest of this appt's processing for nextCell
+                        }
+
+                        nextCell.classList.add('booked');
+                        if (statusClass) nextCell.classList.add(statusClass); // Keep class on cell just in case
+
+                        nextCell.title = "Продолжение приема";
+                        nextCell.dataset.id = appt.id;
+
+                        // Styling for seamless merge
+                        nextCell.style.borderTop = 'none';
+                        cell.style.borderBottom = 'none';
+
+                        // Inject matching inner content for color
+                        nextCell.innerHTML = `
+                            <div class="appt-content ${statusClass}" style="border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; height: 100%;">
+                                &nbsp;
+                            </div>
+                        `;
+                    }
                 }
             }
         });

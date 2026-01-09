@@ -138,6 +138,7 @@ class Appointment(db.Model):
             self.additional_service_associations.append(AppointmentAdditionalService(additional_service=s, quantity=1))
     
     additional_service_quantity = db.Column(db.Integer, default=1)
+    duration = db.Column(db.Integer, default=15) # Duration in minutes (15 or 30)
     cost = db.Column(db.Float, default=0.0)
     amount_paid = db.Column(db.Float, default=0.0)
     discount = db.Column(db.Float, default=0.0)
@@ -176,6 +177,7 @@ class Appointment(db.Model):
             'id': self.id,
             'patient_name': self.patient_name,
             'patient_phone': self.patient_phone,
+            'duration': self.duration,
             'doctor_id': self.doctor_id, # return ID for form pre-fill
             'doctor_name': self.doctor_rel.name if self.doctor_rel else (self.doctor or 'Unknown'),
             # Include the legacy 'service' string field for frontend display (Dashboard relies on it)
