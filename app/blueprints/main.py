@@ -292,7 +292,8 @@ def statistics():
                            selected_month=selected_month,
                            years=years,
                            months=range(1, 13),
-                           breakdown_by=breakdown_by)
+                           breakdown_by=breakdown_by,
+                           appointments=appointments)
 
 @main.route('/')
 @login_required
