@@ -245,6 +245,7 @@
         });
     });
 </script>
+
 <div class="journal-container"
     style="padding: 1rem; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; flex: 1; overflow: hidden; height: 100%;">
     <!-- Filters -->
@@ -557,6 +558,56 @@
                             </td>
                             <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_children }}</td>
                         </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Cashless Table -->
+        <div style="flex: 0 0 auto;">
+            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Безналичные</h3>
+            <div style="overflow-x: auto;">
+                <table
+                    style="width: auto; min-width: 400px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6; text-align: left;">
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">п.п.
+                            </th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Клиника
+                            </th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Фио
+                                пациента</th>
+                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">сумма
+                                (Р)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set ns = namespace(count=0, total=0) %}
+                        {% for appt in appointments %}
+                        {% if appt.payment_method and ('карта' in appt.payment_method.name.lower() or 'безнал' in
+                        appt.payment_method.name.lower()) %}
+                        {% set ns.count = ns.count + 1 %}
+                        {% set ns.total = ns.total + (appt.cost or 0) %}
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ ns.count }}</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ appt.clinic.name }}</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ appt.patient_name }}</td>
+                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(appt.cost or 0) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                        {% if ns.count == 0 %}
+                        <tr>
+                            <td colspan="4" style="padding: 0.75rem 1rem; color: #9ca3af; text-align: center;">Нет
+                                данных</td>
+                        </tr>
+                        {% else %}
+                        <tr style="border-top: 2px solid #e5e7eb; font-weight: 600;">
+                            <td colspan="3" style="padding: 0.75rem 1rem; text-align: right; color: #111827;">Итого:
+                            </td>
+                            <td style="padding: 0.75rem 1rem; color: #10b981;">{{ "%.2f"|format(ns.total) }}</td>
+                        </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
