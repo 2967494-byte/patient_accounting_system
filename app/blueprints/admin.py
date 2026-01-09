@@ -3024,7 +3024,9 @@ def add_clinic():
 
         city_id=int(city_id),
 
-        phone=phone
+        phone=phone,
+
+        is_cashless=(request.form.get('is_cashless') == 'on')
 
     )
 
@@ -3051,6 +3053,8 @@ def update_clinic(id):
     clinic.city_id = request.form.get('city_id')
 
     clinic.phone = request.form.get('phone')
+
+    clinic.is_cashless = (request.form.get('is_cashless') == 'on')
 
     
 

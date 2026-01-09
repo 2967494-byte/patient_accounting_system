@@ -30,6 +30,7 @@
                 <th>Наименование</th>
                 <th>Город</th>
                 <th>Телефон</th>
+                <th>Безнал</th>
                 <th>Действия</th>
             </tr>
         </thead>
@@ -41,8 +42,15 @@
                 <td>{{ clinic.city.name if clinic.city else '-' }}</td>
                 <td>{{ clinic.phone or '-' }}</td>
                 <td>
+                    {% if clinic.is_cashless %}
+                    <span style="color: green;">✔</span>
+                    {% else %}
+                    <span style="color: #ccc;">-</span>
+                    {% endif %}
+                </td>
+                <td>
                     <button
-                        onclick="editClinic('{{ clinic.id }}', '{{ clinic.name }}', '{{ clinic.city_id }}', '{{ clinic.phone or '' }}')"
+                        onclick="editClinic('{{ clinic.id }}', '{{ clinic.name }}', '{{ clinic.city_id }}', '{{ clinic.phone or '' }}', '{{ clinic.is_cashless }}')"
                         class="btn" style="background: transparent; color: #4b5563; padding: 0.25rem;">
                         ✎
                     </button>
@@ -90,6 +98,13 @@
                 <input type="text" name="phone" id="clinic-phone" style="width: 100%; padding: 0.5rem;">
             </div>
 
+            <div class="mb-4">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="is_cashless" id="clinic-is-cashless">
+                    <span>Безналичный расчет</span>
+                </label>
+            </div>
+
             <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button type="button" onclick="closeModal()" class="btn" style="background: #e5e7eb;">Отмена</button>
                 <button type="submit" class="btn btn-primary">Сохранить</button>
@@ -116,15 +131,17 @@
         document.getElementById('modal-title').textContent = 'Добавить клинику';
         form.action = "{{ url_for('admin.add_clinic') }}";
         form.reset();
+        document.getElementById('clinic-is-cashless').checked = false;
         modal.classList.remove('hidden');
     }
 
-    function editClinic(id, name, cityId, phone) {
+    function editClinic(id, name, cityId, phone, isCashless) {
         document.getElementById('modal-title').textContent = 'Редактировать клинику';
         form.action = `/admin/clinics/${id}/update`;
         document.getElementById('clinic-name').value = name;
         document.getElementById('clinic-city').value = cityId;
         document.getElementById('clinic-phone').value = phone;
+        document.getElementById('clinic-is-cashless').checked = (isCashless === 'True' || isCashless === 'true');
         // Manager removed
         modal.classList.remove('hidden');
     }

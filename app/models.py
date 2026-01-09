@@ -213,7 +213,7 @@ class Appointment(db.Model):
             'history': [{
                 'user': h.user.username if h.user else 'Unknown',
                 'action': h.action,
-                'timestamp': h.timestamp.isoformat()
+                'timestamp': h.timestamp.isoformat() + 'Z'
             } for h in self.history]
         }
 
@@ -341,6 +341,7 @@ class Clinic(db.Model):
     name = db.Column(db.String(150), nullable=False)
     city_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=False)
     phone = db.Column(db.String(50), nullable=True)
+    is_cashless = db.Column(db.Boolean, default=False)
     
     city = db.relationship('Location', backref='clinics')
 
