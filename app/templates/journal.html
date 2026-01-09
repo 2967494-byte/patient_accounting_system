@@ -584,8 +584,7 @@
                     <tbody>
                         {% set ns = namespace(count=0, total=0) %}
                         {% for appt in appointments %}
-                        {% if appt.payment_method and ('карта' in appt.payment_method.name.lower() or 'безнал' in
-                        appt.payment_method.name.lower()) %}
+                        {% if appt.payment_method and ('безнал' in appt.payment_method.name.lower()) %}
                         {% set ns.count = ns.count + 1 %}
                         {% set ns.total = ns.total + (appt.cost or 0) %}
                         <tr style="border-bottom: 1px solid #e5e7eb;">
