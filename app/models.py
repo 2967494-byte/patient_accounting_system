@@ -236,6 +236,7 @@ class Doctor(db.Model):
     specialization = db.Column(db.String(100), nullable=True)
     manager = db.Column(db.String(100), nullable=True)
     clinic_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
+    bonus_type = db.Column(db.Integer, nullable=True)
 
     clinic = db.relationship('Location', foreign_keys=[clinic_id])
 
@@ -245,7 +246,8 @@ class Doctor(db.Model):
             'name': self.name,
             'specialization': self.specialization,
             'manager': self.manager,
-            'clinic_name': self.clinic.name if self.clinic else None
+            'clinic_name': self.clinic.name if self.clinic else None,
+            'bonus_type': self.bonus_type
         }
 
 class Service(db.Model):

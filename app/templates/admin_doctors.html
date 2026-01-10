@@ -30,6 +30,7 @@
                 <th>ФИО</th>
                 <th>Специализация</th>
                 <th>Менеджер</th>
+                <th>Бонусы</th>
                 <th>Действия</th>
             </tr>
         </thead>
@@ -40,9 +41,10 @@
                 <td>{{ doctor.name }}</td>
                 <td>{{ doctor.specialization or '-' }}</td>
                 <td>{{ doctor.manager or '-' }}</td>
+                <td>{{ 'Б-' ~ doctor.bonus_type if doctor.bonus_type else '-' }}</td>
                 <td>
                     <button
-                        onclick="editDoctor('{{ doctor.id }}', '{{ doctor.name }}', '{{ doctor.specialization or '' }}', '{{ doctor.manager or '' }}')"
+                        onclick="editDoctor('{{ doctor.id }}', '{{ doctor.name }}', '{{ doctor.specialization or '' }}', '{{ doctor.manager or '' }}', '{{ doctor.bonus_type or '' }}')"
                         class="btn" style="background: transparent; color: #4b5563; padding: 0.25rem;">
                         ✎
                     </button>
@@ -83,6 +85,20 @@
                     {% endfor %}
                 </select>
             </div>
+
+            <div class="mb-4">
+                <label style="display: block; margin-bottom: 0.5rem;">Бонусы</label>
+                <select name="bonus_type" style="width: 100%; padding: 0.5rem;">
+                    <option value="">-- Нет --</option>
+                    {% if bonus_cols %}
+                    {% for i in range(1, bonus_cols + 1) %}
+                    <option value="{{ i }}">Б-{{ i }}</option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+                <small style="color: #6b7280;">Доступно вариантов: {{ bonus_cols }} (из активного периода)</small>
+            </div>
+
             <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button type="button" onclick="closeModal()" class="btn" style="background: #e5e7eb;">Отмена</button>
                 <button type="submit" class="btn btn-primary">Сохранить</button>
@@ -99,7 +115,7 @@
         document.getElementById('doctor-form').action = "{{ url_for('admin.add_doctor') }}";
     }
 
-    function editDoctor(id, name, specialization, manager) {
+    function editDoctor(id, name, specialization, manager, bonusType) {
         document.getElementById('add-doctor-modal').style.display = 'block';
         document.getElementById('modal-title').innerText = 'Редактировать врача';
         const form = document.getElementById('doctor-form');
@@ -107,6 +123,11 @@
         form.querySelector('[name="name"]').value = name;
         form.querySelector('[name="specialization"]').value = specialization;
         form.querySelector('[name="manager"]').value = manager;
+        // Set bonus type if exists
+        const bonusSelect = form.querySelector('[name="bonus_type"]');
+        if (bonusSelect) {
+            bonusSelect.value = bonusType || "";
+        }
     }
 
     function deleteDoctor(id) {

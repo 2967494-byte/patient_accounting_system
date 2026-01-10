@@ -8,7 +8,7 @@ from app.models import (
 
     User, Location, Doctor, Service, AdditionalService, ServicePrice, AdditionalServicePrice,
 
-    Clinic, Manager, PaymentMethod, Appointment, Organization, GlobalSetting,
+    Clinic, Manager, PaymentMethod, Appointment, Organization, GlobalSetting, BonusPeriod,
 
     AppointmentHistory, AppointmentAdditionalService, AppointmentService
 
@@ -1789,63 +1789,58 @@ def delete_location(id):
 
 
 @admin.route('/doctors')
-
 def doctors():
-
-    doctors = Doctor.query.all()
-
+    doctors = Doctor.query.order_by(Doctor.name).all()
     managers = Manager.query.all()
-
-    return render_template('admin_doctors.html', doctors=doctors, managers=managers)
+    
+    # Get active bonus period for columns count
+    today = date.today()
+    period = BonusPeriod.query.filter(
+        BonusPeriod.start_date <= today
+    ).filter(
+        (BonusPeriod.end_date >= today) | (BonusPeriod.end_date == None)
+    ).order_by(BonusPeriod.start_date.desc()).first()
+    
+    bonus_cols = period.columns if period else 0
+    
+    return render_template('admin_doctors.html', doctors=doctors, managers=managers, bonus_cols=bonus_cols)
 
 
 
 @admin.route('/doctors/add', methods=['POST'])
-
 def add_doctor():
-
     name = request.form.get('name')
-
     specialization = request.form.get('specialization')
-
     manager = request.form.get('manager')
-
+    bonus_type = request.form.get('bonus_type')
     
-
     if not name:
-
         flash('Имя врача обязательно', 'error')
-
         return redirect(url_for('admin.doctors'))
-
         
-
     doctor = Doctor(name=name, specialization=specialization, manager=manager)
-
+    if bonus_type:
+        doctor.bonus_type = int(bonus_type)
+        
     db.session.add(doctor)
-
     db.session.commit()
-
     flash(f'Врач {name} добавлен', 'success')
-
     return redirect(url_for('admin.doctors'))
 
-
-
 @admin.route('/doctors/<int:id>/update', methods=['POST'])
-
 def update_doctor(id):
-
     doctor = Doctor.query.get_or_404(id)
-
     doctor.name = request.form.get('name')
-
     doctor.specialization = request.form.get('specialization')
-
     doctor.manager = request.form.get('manager')
+    
+    bonus_type = request.form.get('bonus_type')
+    if bonus_type:
+        doctor.bonus_type = int(bonus_type)
+    else:
+        doctor.bonus_type = None
 
     db.session.commit()
-
     flash(f'Данные врача {doctor.name} обновлены', 'success')
 
     return redirect(url_for('admin.doctors'))
