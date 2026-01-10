@@ -26,6 +26,12 @@
                     style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
                     <!-- Filled via JS -->
                 </select>
+                <select id="bonuses-filter" onchange="fetchBonuses()"
+                    style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
+                    <option value="all">Все врачи</option>
+                    <option value="with">С бонусной программой</option>
+                    <option value="without">Без бонусной программы</option>
+                </select>
             </div>
         </div>
 
@@ -84,6 +90,7 @@
     async function fetchBonuses() {
         const month = document.getElementById('bonuses-month').value;
         const year = document.getElementById('bonuses-year').value;
+        const filter = document.getElementById('bonuses-filter').value;
         const loading = document.getElementById('bonuses-loading');
         const table = document.getElementById('bonuses-table');
         const thead = table.querySelector('thead');
@@ -95,7 +102,7 @@
         table.style.display = 'none';
 
         try {
-            const res = await fetch(`/admin/reports/api/bonuses?month=${year}-${month}`);
+            const res = await fetch(`/admin/reports/api/bonuses?month=${year}-${month}&filter_type=${filter}`);
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
                 throw new Error(errData.error || `Status: ${res.status}`);

@@ -3845,6 +3845,8 @@ def reports_bonuses():
         return jsonify({'error': 'Unauthorized'}), 403
         
     month_str = request.args.get('month')
+    filter_type = request.args.get('filter_type', 'all') # all, with, without
+    
     if not month_str:
         today = datetime.now()
         month_str = today.strftime('%Y-%m')
@@ -3874,11 +3876,7 @@ def reports_bonuses():
     
     try:
         # 2. Fetch all services performed in range
-        # We need to count appointments AND sum bonuses
-        # Using Python aggregation for flexibility
-        
-        # Query: ApptID, DoctorName, DocBonusType, ServiceID, Quantity
-        results = db.session.query(
+        query = db.session.query(
             Appointment.id,
             doctor_name_expr.label('doctor_name'),
             Doctor.bonus_type,
@@ -3888,8 +3886,15 @@ def reports_bonuses():
          .outerjoin(Doctor, Appointment.doctor_id == Doctor.id)\
          .outerjoin(AppointmentService, Appointment.id == AppointmentService.appointment_id)\
          .outerjoin(Service, AppointmentService.service_id == Service.id)\
-         .filter(Appointment.date >= start_date, Appointment.date < end_date)\
-         .all()
+         .filter(Appointment.date >= start_date, Appointment.date < end_date)
+         
+        # Apply Filter
+        if filter_type == 'with':
+            query = query.filter(Doctor.bonus_type != None)
+        elif filter_type == 'without':
+            query = query.filter(Doctor.bonus_type == None)
+            
+        results = query.all()
          
         # Aggregation
         stats = {} # name -> { appt_ids: set(), total_bonus: 0.0 }
