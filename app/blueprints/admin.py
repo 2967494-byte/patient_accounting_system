@@ -10,7 +10,7 @@ from app.models import (
 
     Clinic, Manager, PaymentMethod, Appointment, Organization, GlobalSetting, BonusPeriod,
 
-    AppointmentHistory, AppointmentAdditionalService, AppointmentService
+    AppointmentHistory, AppointmentAdditionalService, AppointmentService, BonusValue
 
 )
 
@@ -3851,8 +3851,6 @@ def reports_bonuses():
         
     try:
         start_date = datetime.strptime(month_str, '%Y-%m').date()
-        # End date is start of next month - 1 day, or just filter by year/month
-        # Easier to filter by range
         if start_date.month == 12:
             end_date = start_date.replace(year=start_date.year + 1, month=1, day=1)
         else:
@@ -3860,35 +3858,70 @@ def reports_bonuses():
     except ValueError:
         return jsonify({'error': 'Invalid month format'}), 400
         
-    doctor_name_expr = db.func.coalesce(Doctor.name, Appointment.doctor, 'Unknown').label('doctor_name')
+    # 1. Get Bonus Config
+    period = BonusPeriod.query.filter(
+        BonusPeriod.start_date <= start_date
+    ).filter(
+        (BonusPeriod.end_date >= end_date) | (BonusPeriod.end_date == None)
+    ).order_by(BonusPeriod.start_date.desc()).first()
+    
+    bonus_map = {}
+    if period:
+        for bv in period.values:
+            bonus_map[f"{bv.service_id}_{bv.column_index}"] = bv.value
+
+    doctor_name_expr = db.func.coalesce(Doctor.name, Appointment.doctor, 'Unknown')
     
     try:
-        # Simplified query: Doctor -> Total Count, Total Revenue
+        # 2. Fetch all services performed in range
+        # We need to count appointments AND sum bonuses
+        # Using Python aggregation for flexibility
+        
+        # Query: ApptID, DoctorName, DocBonusType, ServiceID, Quantity
         results = db.session.query(
-            doctor_name_expr,
-            db.func.count(Appointment.id).label('total_count'),
-            db.func.sum(Appointment.cost).label('total_revenue')
+            Appointment.id,
+            doctor_name_expr.label('doctor_name'),
+            Doctor.bonus_type,
+            Service.id.label('service_id'),
+            AppointmentService.quantity
         ).select_from(Appointment)\
          .outerjoin(Doctor, Appointment.doctor_id == Doctor.id)\
+         .outerjoin(AppointmentService, Appointment.id == AppointmentService.appointment_id)\
+         .outerjoin(Service, AppointmentService.service_id == Service.id)\
          .filter(Appointment.date >= start_date, Appointment.date < end_date)\
-         .group_by(doctor_name_expr)\
-         .order_by(db.func.count(Appointment.id).desc())\
          .all()
          
-        rows = []
+        # Aggregation
+        stats = {} # name -> { appt_ids: set(), total_bonus: 0.0 }
+        
         for r in results:
             name = r.doctor_name
-            if not name or not name.strip():
-                name = 'Не указан'
+            if not name or not name.strip(): name = 'Не указан'
+            
+            if name not in stats:
+                stats[name] = {'appt_ids': set(), 'total_bonus': 0.0}
+            
+            stats[name]['appt_ids'].add(r.id)
+            
+            # Calc Bonus
+            if r.bonus_type and period and r.service_id:
+                key = f"{r.service_id}_{r.bonus_type}"
+                val = bonus_map.get(key, 0.0)
+                stats[name]['total_bonus'] += (val * (r.quantity or 1))
                 
-            rows.append({
+        items = []
+        for name, data in stats.items():
+            items.append({
                 'name': name,
-                'count': r.total_count,
-                'revenue': r.total_revenue or 0
+                'count': len(data['appt_ids']),
+                'revenue': data['total_bonus'] # Using 'revenue' field for Total Bonus to minimize frontend change if logical
             })
             
+        # Sort by count desc
+        items.sort(key=lambda x: x['count'], reverse=True)
+            
         return jsonify({
-            'rows': rows,
+            'rows': items,
             'month': month_str
         })
     except Exception as e:
@@ -3919,15 +3952,30 @@ def reports_bonuses_details():
     doctor_name_expr = db.func.coalesce(Doctor.name, Appointment.doctor, 'Unknown')
     
     try:
-        # Query: Select Patient Name, Service Name
+        # Fetch relevant Period for this month (using start_date)
+        period = BonusPeriod.query.filter(
+            BonusPeriod.start_date <= start_date
+        ).filter(
+            (BonusPeriod.end_date >= end_date) | (BonusPeriod.end_date == None)
+        ).order_by(BonusPeriod.start_date.desc()).first()
+        
+        # Pre-fetch bonus values map: { service_id_col_index: value }
+        bonus_map = {}
+        if period:
+            for bv in period.values:
+                bonus_map[f"{bv.service_id}_{bv.column_index}"] = bv.value
+
+        # Query: Select Patient Name, Service Name, Service ID, Doctor Bonus Type
         results = db.session.query(
             Appointment.patient_name,
             Appointment.date,
-            Service.name.label('service_name')
+            Service.name.label('service_name'),
+            Service.id.label('service_id'),
+            Doctor.bonus_type
         ).select_from(Appointment)\
          .outerjoin(Doctor, Appointment.doctor_id == Doctor.id)\
-         .join(AppointmentService, Appointment.id == AppointmentService.appointment_id)\
-         .join(Service, AppointmentService.service_id == Service.id)\
+         .outerjoin(AppointmentService, Appointment.id == AppointmentService.appointment_id)\
+         .outerjoin(Service, AppointmentService.service_id == Service.id)\
          .filter(Appointment.date >= start_date, Appointment.date < end_date)\
          .filter(doctor_name_expr == doctor_name)\
          .order_by(Appointment.date.desc())\
@@ -3935,10 +3983,16 @@ def reports_bonuses_details():
          
         details = []
         for r in results:
+            bonus_amount = 0.0
+            if r.bonus_type and period and r.service_id:
+                key = f"{r.service_id}_{r.bonus_type}"
+                bonus_amount = bonus_map.get(key, 0.0)
+                
             details.append({
                 'patient_name': r.patient_name,
                 'date': r.date.strftime('%d.%m.%Y'),
-                'service_name': r.service_name
+                'service_name': r.service_name or '-',
+                'bonus': bonus_amount
             })
             
         return jsonify(details)
