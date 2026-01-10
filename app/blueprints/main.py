@@ -386,8 +386,10 @@ def dashboard():
         current_center_id = centers[0].id
 
     # Fetch for dropdowns - Sorted Alphabetically
+    # Fetch for dropdowns - Sorted Alphabetically
     doctors = Doctor.query.order_by(Doctor.name).all()
-    services = Service.query.order_by(Service.name).all()
+    # Filter hidden services for new appointments
+    services = Service.query.filter(Service.is_hidden != True).order_by(Service.name).all()
     clinics = Clinic.query.order_by(Clinic.name).all()
 
     # Pass current actual date for highlighting
@@ -452,7 +454,8 @@ def journal():
         
     appointments = query.order_by(Appointment.time.asc()).all()
     
-    services = Service.query.order_by(Service.name).all()
+    # Filter hidden services for editor dropdowns
+    services = Service.query.filter(Service.is_hidden != True).order_by(Service.name).all()
     additional_services = AdditionalService.query.order_by(AdditionalService.name).all()
     clinics = Clinic.query.order_by(Clinic.name).all()
     payment_methods = PaymentMethod.query.order_by(PaymentMethod.name).all()

@@ -254,6 +254,7 @@ class Service(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     price = db.Column(db.Float, nullable=False)
+    is_hidden = db.Column(db.Boolean, default=False)
     prices = db.relationship('ServicePrice', backref='service', lazy=True, cascade="all, delete-orphan")
 
     def get_price(self, date_obj=None):

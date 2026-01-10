@@ -35,11 +35,26 @@
         </thead>
         <tbody>
             {% for service in services %}
-            <tr>
+            <tr style="{{ 'opacity: 0.6; background-color: #f3f4f6;' if service.is_hidden else '' }}">
                 <td>{{ service.id }}</td>
-                <td>{{ service.name }}</td>
+                <td>
+                    {{ service.name }}
+                    {% if service.is_hidden %}
+                    <span
+                        style="font-size: 0.8rem; background: #9ca3af; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Скрыта</span>
+                    {% endif %}
+                </td>
                 <td>{{ service.get_price() }} ₽</td>
                 <td>
+                    <form action="{{ url_for('admin.toggle_service_visibility', id=service.id) }}" method="POST"
+                        style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn"
+                            style="background: transparent; color: {{ '#6b7280' if service.is_hidden else '#10b981' }}; padding: 0.25rem;"
+                            title="{{ 'Показать' if service.is_hidden else 'Скрыть' }}">
+                            {{ '👁️‍🗨️' if service.is_hidden else '👁️' }}
+                        </button>
+                    </form>
                     <a href="{{ url_for('admin.service_prices', id=service.id) }}" class="btn"
                         style="background: transparent; color: #10b981; padding: 0.25rem; font-size: 1.2rem; text-decoration: none;"
                         title="Цены по периодам">

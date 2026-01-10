@@ -2077,15 +2077,24 @@ def update_service(id):
 def delete_service(id):
 
     service = Service.query.get_or_404(id)
-
     db.session.delete(service)
-
     db.session.commit()
-
     flash('Услуга удалена', 'success')
-
     return redirect(url_for('admin.services'))
 
+@admin.route('/services/<int:id>/toggle_visibility', methods=['POST'])
+@login_required
+def toggle_service_visibility(id):
+    if current_user.role != 'superadmin':
+        abort(403)
+        
+    service = Service.query.get_or_404(id)
+    service.is_hidden = not service.is_hidden
+    db.session.commit()
+    
+    status = "скрыта" if service.is_hidden else "видима"
+    flash(f'Услуга "{service.name}" теперь {status}', 'success')
+    return redirect(url_for('admin.services'))
 
 
 @admin.route('/services/import', methods=['POST'])
