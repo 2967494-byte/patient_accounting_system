@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from app.models import Location, Organization, Doctor, Service, Appointment, AdditionalService, Clinic, PaymentMethod
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -257,8 +257,8 @@ def statistics():
         current_center_id = centers[0].id
         
     # Date Filtering
-    current_year = datetime.now().year
-    current_month = datetime.now().month
+    current_year = (datetime.utcnow() + timedelta(hours=3)).year
+    current_month = (datetime.utcnow() + timedelta(hours=3)).month
     
     selected_year = request.args.get('year', type=int, default=current_year)
     selected_month = request.args.get('month', type=int, default=None) # None = All Year
@@ -282,7 +282,7 @@ def statistics():
     summary_stats = calculate_stats(appointments, breakdown_by=breakdown_by)
     
     # Years for selector (2024 to current + 1)
-    years = range(2024, datetime.now().year + 2)
+    years = range(2024, (datetime.utcnow() + timedelta(hours=3)).year + 2)
     
     return render_template('statistics.html', 
                            summary_stats=summary_stats, 
@@ -309,9 +309,9 @@ def dashboard():
         try:
             today = datetime.strptime(start_date_str, '%Y-%m-%d')
         except ValueError:
-            today = datetime.now()
+            today = (datetime.utcnow() + timedelta(hours=3))
     else:
-        today = datetime.now()
+        today = (datetime.utcnow() + timedelta(hours=3))
     
     start_of_week = today - timedelta(days=today.weekday())
     
@@ -391,10 +391,10 @@ def dashboard():
     clinics = Clinic.query.order_by(Clinic.name).all()
 
     # Pass current actual date for highlighting
-    today_iso = datetime.now().strftime('%Y-%m-%d')
+    today_iso = (datetime.utcnow() + timedelta(hours=3)).strftime('%Y-%m-%d')
     
     # Calculate current time slot (nearest 15 minutes breakdown)
-    now = datetime.now()
+    now = (datetime.utcnow() + timedelta(hours=3))
     # Round down to nearest 15
     minute_floored = (now.minute // 15) * 15
     current_time_slot = f"{now.hour:02d}:{minute_floored:02d}"
@@ -441,9 +441,9 @@ def journal():
         try:
             current_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
-            current_date = datetime.now().date()
+            current_date = (datetime.utcnow() + timedelta(hours=3)).date()
     else:
-        current_date = datetime.now().date()
+        current_date = (datetime.utcnow() + timedelta(hours=3)).date()
     
     query = Appointment.query.filter_by(date=current_date)
     

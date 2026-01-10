@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db, csrf
 from app.models import Appointment, Service, AdditionalService, AppointmentService, AppointmentAdditionalService, Doctor, Clinic
-from datetime import datetime
+from datetime import datetime, timedelta
 
 api = Blueprint('api', __name__)
 
@@ -181,7 +181,7 @@ def create_appointment():
             appointment_id=appointment.id,
             user_id=current_user.id,
             action='Создание',
-            timestamp=datetime.utcnow()
+            timestamp=(datetime.utcnow() + timedelta(hours=3))
         )
         db.session.add(history)
 
@@ -243,7 +243,7 @@ def get_appointments():
     def normalize_name(name):
         return name.lower().replace(' ', '') if name else ''
 
-    current_dt = datetime.now()
+    current_dt = (datetime.utcnow() + timedelta(hours=3))
 
     results = []
     for appt in appointments:
@@ -530,7 +530,7 @@ def update_appointment(id):
         appointment_id=appointment.id,
         user_id=current_user.id,
         action='Изменение',
-        timestamp=datetime.utcnow()
+        timestamp=(datetime.utcnow() + timedelta(hours=3))
     )
     db.session.add(history)
 
