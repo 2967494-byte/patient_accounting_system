@@ -350,9 +350,21 @@ async function deleteAppointment() {
 
 async function fetchAppointments() {
     try {
-        let url = '/api/appointments';
+        let url = '/api/appointments?';
+
+        // Add Center
         if (typeof currentCenterId !== 'undefined' && currentCenterId !== null) {
-            url += `?center_id=${currentCenterId}`;
+            url += `center_id=${currentCenterId}&`;
+        }
+
+        // Add Date Range from DOM
+        const container = document.querySelector('.calendar-container');
+        if (container) {
+            const start = container.dataset.startDate;
+            const end = container.dataset.endDate;
+            if (start && end) {
+                url += `start_date=${start}&end_date=${end}&`;
+            }
         }
         const response = await fetch(url);
         if (!response.ok) return;
