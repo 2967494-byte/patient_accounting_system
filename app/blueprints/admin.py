@@ -18,7 +18,7 @@ from app.telegram_bot import telegram_bot
 
 import psutil
 
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 
@@ -98,7 +98,7 @@ def clear_journal_data():
 
         
 
-    if password != 'NikolEnikeeva':
+    if not password or not check_password_hash(current_user.password_hash, password):
 
         flash('Неверный пароль', 'error')
 
