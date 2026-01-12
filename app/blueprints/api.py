@@ -9,8 +9,11 @@ api = Blueprint('api', __name__)
 @api.route('/appointments', methods=['POST'])
 @login_required # Ensure user is logged in
 def create_appointment():
-    data = request.get_json()
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No input data provided'}), 400
+            
         # If user sends `quantity`, it applies to the primary service or all? 
         # For now, let's assume quantity applies to the VISIT (so usually 1).
         quantity = int(data.get('quantity', 1))
@@ -192,6 +195,34 @@ def create_appointment():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+
+@api.errorhandler(400)
+def handle_400_error(e):
+    return jsonify({'error': 'Bad Request', 'message': str(e)}), 400
+
+@api.errorhandler(401)
+def handle_401_error(e):
+    # If session expired, return JSON so JS can redirect or show clear error
+    return jsonify({'error': 'Unauthorized', 'message': 'Session expired or login required'}), 401
+
+@api.errorhandler(403)
+def handle_403_error(e):
+    return jsonify({'error': 'Forbidden', 'message': str(e)}), 403
+
+@api.errorhandler(404)
+def handle_404_error(e):
+    return jsonify({'error': 'Not Found', 'message': str(e)}), 404
+
+@api.errorhandler(500)
+def handle_500_error(e):
+    # This might capture Blueprint local errors
+    return jsonify({'error': 'Internal Server Error', 'message': 'An unexpected error occurred'}), 500
+
+from flask_wtf.csrf import CSRFError
+@api.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    return jsonify({'error': 'CSRF Error', 'message': e.description}), 400
 
 @api.route('/appointments', methods=['GET'])
 @login_required

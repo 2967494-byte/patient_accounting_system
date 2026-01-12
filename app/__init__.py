@@ -72,6 +72,12 @@ def create_app(test_config=None):
     @app.errorhandler(500)
     def internal_error(error):
         telegram_bot.send_error_notification(error)
+        
+        # Check if request is API
+        from flask import request, jsonify
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Internal Server Error', 'message': 'An unexpected error occurred'}), 500
+
         return render_template('500.html'), 500 # Assuming 500.html exists or use generic error
 
     # Startup Notification (only if not in debug reload mode or use lock)
