@@ -104,21 +104,27 @@ def logout():
 
 @auth.route('/captcha')
 def captcha():
-    # Simple captcha generation
-    image = Image.new('RGB', (120, 40), color=(255, 255, 255))
-    font = ImageFont.load_default()
+    # Simple captcha generation - increased size by 50%
+    image = Image.new('RGB', (180, 60), color=(255, 255, 255))
     draw = ImageDraw.Draw(image)
     
     # Generate random text
     text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     session['captcha'] = text
     
-    draw.text((10, 10), text, fill=(0, 0, 0), font=None) # Default font is very small, might need custom font
+    # Try to use a larger font, fallback to default
+    try:
+        font = ImageFont.truetype("arial.ttf", 36)
+    except:
+        # Default font - draw each character manually for larger size
+        font = ImageFont.load_default()
+    
+    draw.text((15, 10), text, fill=(0, 0, 0), font=font)
     
     # Add some noise
-    for _ in range(100):
-        x = random.randint(0, 120)
-        y = random.randint(0, 40)
+    for _ in range(150):
+        x = random.randint(0, 180)
+        y = random.randint(0, 60)
         draw.point((x, y), fill=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
         
     buf = io.BytesIO()

@@ -13,6 +13,9 @@ body {
     width: 100%;
     max-width: 400px;
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* Login Card */
@@ -78,23 +81,23 @@ body {
 
 .btn-primary {
     color: #fff;
-    background-color: #007bff;
-    border-color: #007bff;
+    background-color: #9333ea;
+    border-color: #9333ea;
 }
 
 .btn-primary:hover {
-    background-color: #0069d9;
-    border-color: #0062cc;
+    background-color: #7c3aed;
+    border-color: #7c3aed;
 }
 
 .btn-success {
     color: #fff;
-    background-color: #28a745;
-    border-color: #28a745;
+    background-color: #9333ea;
+    border-color: #9333ea;
 }
 
 .btn-success:hover {
-    background-color: #218838;
+    background-color: #7c3aed;
 }
 
 .login-footer {
