@@ -65,9 +65,13 @@ async function loadMessages() {
             blinkTitle(true);
             const btn = document.getElementById('org-chat-btn');
             if (btn) btn.classList.add('blink-animation');
+            const circle = document.getElementById('chat-btn-circle');
+            if (circle) circle.classList.add('chat-btn-pulse');
         } else {
             const btn = document.getElementById('org-chat-btn');
             if (btn) btn.classList.remove('blink-animation');
+            const circle = document.getElementById('chat-btn-circle');
+            if (circle) circle.classList.remove('chat-btn-pulse');
         }
 
         renderMessages(messages, 'org');

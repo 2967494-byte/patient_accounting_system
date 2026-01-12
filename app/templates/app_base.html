@@ -31,6 +31,28 @@
         .blink-animation {
             animation: blink 1s infinite;
         }
+
+        @keyframes pulse-border {
+            0% {
+                box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(147, 51, 234, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(147, 51, 234, 0);
+            }
+        }
+
+        .chat-btn-pulse {
+            animation: pulse-border 1.5s infinite;
+        }
+
+        .chat-btn-border {
+            border: 3px solid #9333ea;
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -58,10 +80,16 @@
                 <a href="{{ url_for('main.journal') }}"
                     class="nav-tab {% if request.endpoint == 'main.journal' %}active{% endif %}">Журнал</a>
                 {% endif %}
-                </nav>
-                <div class="contact-phone"
-                    style="font-weight: 700; font-size: 1.1rem; margin-left: 2rem; background: linear-gradient(135deg, #2563eb, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                    +7 (843) 528−20−28
+                <div
+                    style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; margin-left: 2rem;">
+                    <div class="contact-phone"
+                        style="font-weight: 700; font-size: 1.1rem; background: linear-gradient(135deg, #2563eb, #9333ea); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                        +7 (843) 528−20−28
+                    </div>
+                    <a href="mailto:orbital.3d.lab@gmail.com"
+                        style="font-size: 0.85rem; color: #6b7280; text-decoration: none; margin-top: 5px; transition: color 0.2s;">
+                        orbital.3d.lab@gmail.com
+                    </a>
                 </div>
             </div>
 
@@ -169,11 +197,11 @@
     <div id="org-chat-btn" onclick="openChatModal()"
         style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; cursor: pointer; transition: transform 0.2s;">
         {% if chat_image %}
-        <img src="{{ url_for('static', filename=chat_image) }}" alt="Support"
-            style="width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.2); object-fit: cover; border: 2px solid white;">
+        <img id="chat-btn-circle" src="{{ url_for('static', filename=chat_image) }}" alt="Support"
+            style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid #9333ea; animation: pulse-border 1.5s infinite;">
         {% else %}
-        <div
-            style="width: 60px; height: 60px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); color: white;">
+        <div id="chat-btn-circle"
+            style="width: 60px; height: 60px; border-radius: 50%; background: #9333ea; display: flex; align-items: center; justify-content: center; color: white; border: 3px solid #9333ea; animation: pulse-border 1.5s infinite;">
             <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -188,7 +216,7 @@
             style="width: 400px; height: 600px; padding: 0; display: flex; flex-direction: column; position: fixed; bottom: 90px; right: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
             <!-- Header -->
             <div
-                style="background: #075e54; color: white; padding: 10px 15px; display: flex; align-items: center; gap: 10px;">
+                style="background: linear-gradient(135deg, #9333ea, #7c3aed); color: white; padding: 10px 15px; display: flex; align-items: center; gap: 10px;">
                 {% if chat_image %}
                 <img src="{{ url_for('static', filename=chat_image) }}"
                     style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
@@ -205,7 +233,7 @@
 
             <!-- Messages Area -->
             <div id="chat-messages"
-                style="flex: 1; background: #e5ddd5; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                style="flex: 1; background: #f3e8ff; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
                 <!-- Messages injected by JS -->
             </div>
 
@@ -214,7 +242,7 @@
                 <input type="text" id="chat-input" placeholder="Введите сообщение"
                     style="flex: 1; padding: 10px; border-radius: 20px; border: none; outline: none;">
                 <button onclick="sendMessage()"
-                    style="background: #075e54; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    style="background: #9333ea; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     ➤
                 </button>
             </div>
