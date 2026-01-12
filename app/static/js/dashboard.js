@@ -411,7 +411,6 @@ async function fetchAppointments() {
                     cell.innerHTML = `
                         <div class="appt-content ${statusClass}" style="${mainStyle}">
                             <div class="appt-name">${appt.patient_name}</div>
-                            <div class="appt-service">${appt.service}</div>
                         </div>
                     `;
                     cell.dataset.id = appt.id;
