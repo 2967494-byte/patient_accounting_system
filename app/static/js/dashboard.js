@@ -372,9 +372,16 @@ async function fetchAppointments() {
         // Clear existing
         document.querySelectorAll('.time-slot-cell').forEach(cell => {
             cell.classList.remove('booked');
-            cell.classList.remove('restricted'); // Clear restricted class too
-            cell.title = ""; // Clear title
+            cell.classList.remove('restricted');
+            cell.classList.remove('status-completed');
+            cell.classList.remove('status-late');
+            cell.classList.remove('status-pending');
+            cell.title = "";
             cell.innerHTML = '';
+            // Reset inline styles applied for merging/warnings
+            cell.style.borderTop = '';
+            cell.style.borderBottom = '';
+            cell.style.paddingBottom = '';
             delete cell.dataset.id;
             // Remove other data attributes
             cell.removeAttribute('data-patient_name');
@@ -383,6 +390,7 @@ async function fetchAppointments() {
             cell.removeAttribute('data-service');
             cell.removeAttribute('data-author_name');
             cell.removeAttribute('data-center_id');
+            cell.removeAttribute('data-duration');
         });
 
         appointments.forEach(appt => {
