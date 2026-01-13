@@ -63,8 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = {
                 patient_name: document.getElementById('patient-name').value,
                 patient_phone: document.getElementById('patient-phone').value,
-                doctor_id: document.getElementById('doctor').value, // Select2 values
-                clinic_id: document.getElementById('clinic').value,
+                doctor_id: document.getElementById('doctor') ? document.getElementById('doctor').value : null,
+                clinic_id: document.getElementById('clinic') ? document.getElementById('clinic').value : null,
                 service: document.getElementById('service').value,
                 date: document.getElementById('appt-date').value,
                 time: document.getElementById('appt-time').value,
@@ -73,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 is_child: document.getElementById('is-child') ? document.getElementById('is-child').checked : false,
                 contract_number: document.getElementById('contract-number') ? document.getElementById('contract-number').value : null,
                 payment_method_id: document.getElementById('payment-method') ? document.getElementById('payment-method').value : null,
-                discount: document.getElementById('discount') ? document.getElementById('discount').value : 0,
                 discount: document.getElementById('discount') ? document.getElementById('discount').value : 0,
                 comment: document.getElementById('comment') ? document.getElementById('comment').value : '',
                 is_double_time: document.getElementById('is-double-time') ? document.getElementById('is-double-time').checked : false
