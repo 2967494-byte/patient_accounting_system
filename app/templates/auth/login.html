@@ -73,13 +73,13 @@
 
                 <div class="form-group">
                     {{ registration_form.username.label }}
-                    {{ registration_form.username(class="form-control", placeholder="ИвановИИ") }}
+                    {{ registration_form.username(class="form-control", placeholder="ИвановИИ", id="reg_username") }}
                     <div class="invalid-feedback"></div>
                 </div>
 
                 <div class="form-group">
                     {{ registration_form.email.label }}
-                    {{ registration_form.email(class="form-control", placeholder="Введите ваш email") }}
+                    {{ registration_form.email(class="form-control", placeholder="Введите ваш email", id="reg_email") }}
                     <div class="invalid-feedback"></div>
                 </div>
 
@@ -101,19 +101,21 @@
 
                 <div class="form-group">
                     {{ registration_form.organization_name.label }}
-                    {{ registration_form.organization_name(class="form-control", placeholder="Название организации") }}
+                    {{ registration_form.organization_name(class="form-control", placeholder="Название организации",
+                    id="reg_organization_name") }}
                     <div class="invalid-feedback"></div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group col-half">
                         {{ registration_form.password.label }}
-                        {{ registration_form.password(class="form-control", placeholder="Пароль") }}
+                        {{ registration_form.password(class="form-control", placeholder="Пароль", id="reg_password") }}
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group col-half">
                         {{ registration_form.confirm_password.label }}
-                        {{ registration_form.confirm_password(class="form-control", placeholder="Повторите пароль") }}
+                        {{ registration_form.confirm_password(class="form-control", placeholder="Повторите пароль",
+                        id="reg_confirm_password") }}
                         <div class="invalid-feedback"></div>
                     </div>
                 </div>
@@ -124,13 +126,14 @@
                         <img src="{{ url_for('auth.captcha') }}" alt="Captcha" class="captcha-image">
                         <button type="button" class="btn-refresh"
                             onclick="document.querySelector('.captcha-image').src='{{ url_for('auth.captcha') }}?' + new Date().getTime(); return false;">&#x21bb;</button>
-                        {{ registration_form.captcha(class="form-control captcha-input", placeholder="Введите код") }}
+                        {{ registration_form.captcha(class="form-control captcha-input", placeholder="Введите код",
+                        id="reg_captcha") }}
                         <div class="invalid-feedback"></div>
                     </div>
                 </div>
 
                 <div class="form-actions">
-                    {{ registration_form.submit(class="btn btn-success btn-block") }}
+                    {{ registration_form.submit(class="btn btn-success btn-block", id="reg_submit") }}
                 </div>
             </form>
         </div>

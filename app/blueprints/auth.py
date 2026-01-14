@@ -147,11 +147,16 @@ def captcha():
         y = (height - th) // 2 - 5
         draw.text((x, y), text, fill=(0, 0, 0), font=font)
     else:
-        # Last resort fallback: default font
-        # Default font is tiny, so we draw it and shift slightly for "bold" effect
-        font = ImageFont.load_default()
-        draw.text((15, 15), text, fill=(0, 0, 0), font=font)
-        draw.text((16, 15), text, fill=(0, 0, 0), font=font) # shadow for bold
+        # Last resort fallback: default font is tiny (6x10), so we scale it manually
+        # Draw text to a small internal mask
+        temp_font = ImageFont.load_default()
+        temp_img = Image.new('L', (width // 3, height // 3), 0)
+        temp_draw = ImageDraw.Draw(temp_img)
+        temp_draw.text((5, 2), text, fill=255, font=temp_font)
+        
+        # Scale up (3x) to fill the main container
+        temp_img = temp_img.resize((width, height), resample=Image.NEAREST)
+        image.paste((0, 0, 0), mask=temp_img)
     
     # Add some noise (lines and points)
     for _ in range(8):
