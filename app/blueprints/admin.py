@@ -3848,17 +3848,29 @@ def reports_comparative():
             else:
                 start = datetime(int(year), 1, 1).date()
                 end = datetime(int(year) + 1, 1, 1).date()
-        except ValueError:
-            return None, None
+        except Exception as e:
+            print(f"Error in get_period_stats: {e}")
+            return None
 
         # Query stats per center
         stats = db.session.query(
             Location.id.label('center_id'),
             Location.name.label('center_name'),
-            db.func.count(db.func.distinct(Appointment.patient_name)).label('patient_count'),
-            db.func.sum(Appointment.cost).label('total_sum')
+            db.func.count(db.func.distinct(
+                db.case(
+                    (Appointment.payment_method_id != None, Appointment.patient_name),
+                    else_=None
+                )
+            )).label('patient_count'),
+            db.func.sum(
+                db.case(
+                    (db.func.lower(PaymentMethod.name).in_(['наличные', 'карта']), Appointment.cost),
+                    else_=0
+                )
+            ).label('total_sum')
         ).select_from(Location)\
          .outerjoin(Appointment, (Appointment.center_id == Location.id) & (Appointment.date >= start) & (Appointment.date < end))\
+         .outerjoin(PaymentMethod, Appointment.payment_method_id == PaymentMethod.id)\
          .filter(Location.type == 'center')\
          .group_by(Location.id, Location.name).all()
 
@@ -3870,6 +3882,7 @@ def reports_comparative():
                 Appointment.center_id,
                 Appointment.lab_tech
             ).filter(Appointment.date == start)\
+             .filter(Appointment.payment_method_id != None)\
              .filter(Appointment.lab_tech != None)\
              .filter(Appointment.lab_tech != '').distinct().all()
             
@@ -3879,6 +3892,7 @@ def reports_comparative():
                 User.username
             ).join(User, Appointment.author_id == User.id)\
              .filter(Appointment.date == start)\
+             .filter(Appointment.payment_method_id != None)\
              .filter(User.role == 'lab_tech').distinct().all()
 
             for cid, val in lab_field_query:
@@ -3905,7 +3919,10 @@ def reports_comparative():
     last_year_data = get_period_stats(str(int(year_str) - 1), month_str, day_str)
 
     if current_data is None:
-        return jsonify({'error': 'Invalid date'}), 400
+        return jsonify({'error': 'Invalid current date parameters'}), 400
+    
+    if last_year_data is None:
+        last_year_data = {}
 
     # Combine
     centers_result = []
@@ -3914,24 +3931,30 @@ def reports_comparative():
     total_patients_prev = 0
     total_sum_prev = 0
 
-    for cid in current_data:
-        curr = current_data[cid]
-        prev = last_year_data.get(cid, {'patient_count': 0, 'total_sum': 0})
-        
-        centers_result.append({
-            'id': cid,
-            'name': curr['name'],
-            'labs': curr['labs'],
-            'current_patients': curr['patient_count'],
-            'current_sum': curr['total_sum'],
-            'prev_patients': prev['patient_count'],
-            'prev_sum': prev['total_sum']
-        })
+    try:
+        for cid in current_data:
+            curr = current_data[cid]
+            prev = last_year_data.get(cid, {'patient_count': 0, 'total_sum': 0, 'labs': []})
+            
+            centers_result.append({
+                'id': cid,
+                'name': curr['name'],
+                'labs': curr['labs'],
+                'current_patients': curr['patient_count'],
+                'current_sum': curr['total_sum'],
+                'prev_patients': prev.get('patient_count', 0),
+                'prev_sum': prev.get('total_sum', 0)
+            })
 
-        total_patients_curr += curr['patient_count']
-        total_sum_curr += curr['total_sum']
-        total_patients_prev += prev['patient_count']
-        total_sum_prev += prev['total_sum']
+            total_patients_curr += (curr['patient_count'] or 0)
+            total_sum_curr += (curr['total_sum'] or 0)
+            total_patients_prev += (prev.get('patient_count', 0) or 0)
+            total_sum_prev += (prev.get('total_sum', 0) or 0)
+    except Exception as e:
+        print(f"Error combining comparative data: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
     return jsonify({
         'centers': centers_result,
