@@ -24,7 +24,7 @@ import os
 
 
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import csv
 
@@ -3924,8 +3924,6 @@ def reports_comparative():
         'centers': centers_result,
         'totals': {
             'current_patients': total_patients_curr,
-            'current_sum': total_patients_curr, # User asked for total sum by patients? Wait, user said "общую сумму по пациентам и деньгам"
-            # That likely means total patients count and total money sum.
             'current_money': total_sum_curr,
             'prev_patients': total_patients_prev,
             'prev_money': total_sum_prev
