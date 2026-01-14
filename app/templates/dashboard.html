@@ -23,6 +23,8 @@
         <div class="time-header-spacer"></div> <!-- Spacer for right time column -->
     </div>
 
+
+
     <div class="calendar-grid">
         <!-- Time column -->
         <div class="time-column">
@@ -39,10 +41,13 @@
             {% for time in time_slots %}
             {% set is_special = (current_user.role in ['admin', 'lab_tech']) and (time.endswith(':15') or
             time.endswith(':45')) %}
-            {% set is_weekend_restricted = (date.obj.weekday() >= 5) and (time < "09:00" or time> "17:30") %}
+            {% set is_weekend_restricted_base = (date.obj.weekday() >= 5) %}
+            {% set is_org = current_user.role == 'org' %}
+            {% set is_weekend_restricted = is_weekend_restricted_base and (
+            (is_org and time < "09:15" ) or (not is_org and time < "09:00" ) or time> "17:30"
+                ) %}
                 <div class="time-slot-cell {{ 'special-slot' if is_special else '' }} {{ 'weekend-restricted' if is_weekend_restricted else '' }} {{ 'time-current' if time == current_time_slot else '' }}"
                     data-date="{{ date.iso_date }}" data-time="{{ time }}">
-                    <!-- Booking content will go here -->
                 </div>
                 {% endfor %}
         </div>
@@ -56,16 +61,56 @@
             </div>
             {% endfor %}
         </div>
+
+    </div>
+
+    <!-- Static Legend Trigger -->
+    <div class="legend-popover-wrapper grid-legend">
+        <div class="legend-trigger-btn" title="Легенда статусов">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+        </div>
+        <div class="legend-popover">
+            <div class="legend-popover-title">Статусы записей</div>
+            {% if current_user.role == 'org' %}
+            <!-- Legend for org users -->
+            <div class="legend-popover-item"><span class="legend-dot status-org"></span> Записан
+            </div>
+            <div class="legend-popover-item"><span class="legend-dot status-completed"></span> Выполнено
+            </div>
+            <div class="legend-popover-item"><span class="legend-dot status-late"></span> Опаздывает/не пришел
+            </div>
+            <div class="legend-popover-item"><span class="legend-dot status-restricted"></span> Занято</div>
+            {% else %}
+            <!-- Legend for regular users -->
+            <div class="legend-popover-item"><span class="legend-dot status-pending"></span> Записан
+            </div>
+            <div class="legend-popover-item"><span class="legend-dot status-org"></span> Стоматология
+            </div>
+            <div class="legend-popover-item"><span class="legend-dot status-completed"></span> Выполнено
+            </div>
+            <div class="legend-popover-item"><span class="legend-dot status-late"></span> Опаздывает/не пришел
+            </div>
+            {% endif %}
+        </div>
     </div>
 </main>
+
+
 
 <!-- Appointment Modal -->
 {% include 'partials/appointment_modal.html' %}
 {% endblock %}
 
 <script>
-    window.initialAppointments = {{ initial_appointments | safe }};
-    window.currentCenterId = {{ current_center_id or 'null' }};
+    const initialAppointments = {{ initial_appointments | safe }};
+    const currentCenterId = {{ current_center_id | tojson }};
+    window.initialAppointments = initialAppointments;
+    window.currentCenterId = currentCenterId;
 </script>
 
 {% block scripts %}

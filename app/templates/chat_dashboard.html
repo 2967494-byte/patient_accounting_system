@@ -209,6 +209,13 @@
 </div>
 
 <script>
+    // Utility function to convert UTC timestamp to Moscow time (UTC+3)
+    function toMoscowTime(utcTimestamp) {
+        const date = new Date(utcTimestamp);
+        date.setHours(date.getHours() + 3);
+        return date;
+    }
+
     // Dashboard specific logic to run alongside chat.js
     let searchTimeout = null;
 
@@ -257,7 +264,7 @@
                     <div style="display:flex; justify-content:space-between;">
                         <span class="thread-name">${t.display_name}</span>
                         <div class="thread-meta">
-                            <span>${t.last_timestamp ? new Date(t.last_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                            <span>${t.last_timestamp ? toMoscowTime(t.last_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                         </div>
                     </div>
                     <div style="display:flex; justify-content:space-between;">

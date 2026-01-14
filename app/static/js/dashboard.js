@@ -1,3 +1,11 @@
+// Utility function to convert UTC timestamp to Moscow time (UTC+3)
+function toMoscowTime(utcTimestamp) {
+    const date = new Date(utcTimestamp);
+    // Add 3 hours for Moscow timezone
+    date.setHours(date.getHours() + 3);
+    return date;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('appointment-modal');
     const form = document.getElementById('appointment-form');
@@ -287,7 +295,7 @@ async function openEditModal(id) {
         if (appt.history && appt.history.length > 0) {
             historyContainer.classList.remove('hidden');
             historyList.innerHTML = appt.history.map(h => {
-                const date = new Date(h.timestamp);
+                const date = toMoscowTime(h.timestamp);
                 const dateStr = date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                 return `<div>${dateStr} - ${h.action} (<strong>${h.user}</strong>)</div>`;
             }).join('');

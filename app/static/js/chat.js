@@ -1,5 +1,13 @@
 // chat.js
 
+// Utility function to convert UTC timestamp to Moscow time (UTC+3)
+function toMoscowTime(utcTimestamp) {
+    const date = new Date(utcTimestamp);
+    // Add 3 hours for Moscow timezone
+    date.setHours(date.getHours() + 3);
+    return date;
+}
+
 // Global State
 let chatPollingInterval = null;
 let currentChatUserId = null; // For Support Dashboard
@@ -191,7 +199,7 @@ function renderMessages(messages, role) {
         div.innerHTML = `
             <div>${msg.body}</div>
             <div style="font-size: 10px; color: #999; text-align: right; margin-top: 4px;">
-                ${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                ${toMoscowTime(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
         `;
 
