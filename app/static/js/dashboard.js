@@ -24,8 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (centerInput) centerInput.addEventListener('change', triggerSlotUpdate);
 
-    // Load existing appointments
-    fetchAppointments();
+    // Load existing appointments - check for pre-rendered data first
+    if (window.initialAppointments && window.initialAppointments.length > 0) {
+        renderAppointments(window.initialAppointments);
+    } else {
+        fetchAppointments();
+    }
 
     // Initialize Select2 (Scoped to Appointment Modal)
     $('#appointment-modal .select2-enable').select2({
@@ -369,119 +373,122 @@ async function fetchAppointments() {
         if (!response.ok) return;
         const appointments = await response.json();
 
-        // Clear existing
-        document.querySelectorAll('.time-slot-cell').forEach(cell => {
-            cell.classList.remove('booked');
-            cell.classList.remove('restricted');
-            cell.classList.remove('status-completed');
-            cell.classList.remove('status-late');
-            cell.classList.remove('status-pending');
-            cell.classList.remove('status-org');
-            cell.title = "";
-            cell.innerHTML = '';
-            // Reset inline styles applied for merging/warnings
-            cell.style.borderTop = '';
-            cell.style.borderBottom = '';
-            cell.style.paddingBottom = '';
-            delete cell.dataset.id;
-            // Remove other data attributes
-            cell.removeAttribute('data-patient_name');
-            cell.removeAttribute('data-patient_phone');
-            cell.removeAttribute('data-doctor');
-            cell.removeAttribute('data-service');
-            cell.removeAttribute('data-author_name');
-            cell.removeAttribute('data-center_id');
-            cell.removeAttribute('data-duration');
-        });
-
-        appointments.forEach(appt => {
-            // Find cell
-            const selector = `.time-slot-cell[data-date="${appt.date}"][data-time="${appt.time}"]`;
-            const cell = document.querySelector(selector);
-            if (cell) {
-                cell.classList.add('booked');
-
-                let statusClass = ''; // Define in outer scope
-
-                if (appt.is_restricted) {
-                    cell.classList.add('restricted');
-                    cell.title = "Занято (информация скрыта)";
-                } else {
-                    if (appt.status === 'completed') statusClass = 'status-completed';
-                    else if (appt.status === 'late') statusClass = 'status-late';
-                    else if (appt.status === 'pending') {
-                        // Highlight Organization-created entries that are still pending
-                        if (appt.author_role === 'org') statusClass = 'status-org';
-                        else statusClass = 'status-pending';
-                    }
-
-                    if (statusClass) cell.classList.add(statusClass);
-
-                    const isDouble = (appt.duration && appt.duration >= 30);
-                    const mainStyle = isDouble ? 'border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: 20px;' : '';
-
-                    cell.innerHTML = `
-                        <div class="appt-content ${statusClass}" style="${mainStyle}">
-                            <div class="appt-name">${appt.patient_name}</div>
-                        </div>
-                    `;
-                    cell.dataset.id = appt.id;
-                    cell.dataset.patient_name = appt.patient_name;
-                    cell.dataset.patient_phone = appt.patient_phone;
-                    cell.dataset.doctor = appt.doctor;
-                    cell.dataset.service = appt.service;
-                    cell.dataset.author_name = appt.author_name;
-                    cell.dataset.center_id = appt.center_id;
-                    cell.dataset.duration = appt.duration;
-                }
-
-                // Visual blocking for Double Time
-                if (appt.duration && appt.duration >= 30) {
-                    // Next slot logic
-                    // Get current time
-                    const [hh, mm] = appt.time.split(':').map(Number);
-                    const nextM = (hh * 60 + mm) + 15;
-                    const nextH = Math.floor(nextM / 60);
-                    const nextMin = nextM % 60;
-                    const nextTimeStr = `${String(nextH).padStart(2, '0')}:${String(nextMin).padStart(2, '0')}`;
-
-                    const nextSelector = `.time-slot-cell[data-date="${appt.date}"][data-time="${nextTimeStr}"]`;
-                    const nextCell = document.querySelector(nextSelector);
-                    if (nextCell) {
-                        // CRITICAL: Do NOT overwrite if this cell is already occupied by a different appointment!
-                        // This prevents "hiding" appointments that validly exist (even if conflicting in DB).
-                        if (nextCell.dataset.id && nextCell.dataset.id != appt.id) {
-                            console.warn(`Visual collision: Appt ${appt.id} wants to extend into ${nextTimeStr}, but Appt ${nextCell.dataset.id} is there.`);
-                            // We can choose to show a conflict marker?
-                            nextCell.style.borderTop = '2px solid red'; // Visual warning
-                            // Do not overwrite, continue to next appointment in the loop
-                            return; // Use return to skip the rest of this appt's processing for nextCell
-                        }
-
-                        nextCell.classList.add('booked');
-                        if (statusClass) nextCell.classList.add(statusClass); // Keep class on cell just in case
-
-                        nextCell.title = "Продолжение приема";
-                        nextCell.dataset.id = appt.id;
-
-                        // Styling for seamless merge
-                        nextCell.style.borderTop = 'none';
-                        cell.style.borderBottom = 'none';
-
-                        // Inject matching inner content for color
-                        nextCell.innerHTML = `
-                            <div class="appt-content ${statusClass}" style="border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; height: 100%;">
-                                &nbsp;
-                            </div>
-                        `;
-                    }
-                }
-            }
-        });
+        renderAppointments(appointments);
 
     } catch (error) {
         console.error('Failed to fetch appointments', error);
     }
+}
+
+function renderAppointments(appointments) {
+    // Clear existing
+    document.querySelectorAll('.time-slot-cell').forEach(cell => {
+        cell.classList.remove('booked');
+        cell.classList.remove('restricted');
+        cell.classList.remove('status-completed');
+        cell.classList.remove('status-late');
+        cell.classList.remove('status-pending');
+        cell.classList.remove('status-org');
+        cell.title = "";
+        cell.innerHTML = '';
+        // Reset inline styles applied for merging/warnings
+        cell.style.borderTop = '';
+        cell.style.borderBottom = '';
+        cell.style.paddingBottom = '';
+        delete cell.dataset.id;
+        // Remove other data attributes
+        cell.removeAttribute('data-patient_name');
+        cell.removeAttribute('data-patient_phone');
+        cell.removeAttribute('data-doctor');
+        cell.removeAttribute('data-service');
+        cell.removeAttribute('data-author_name');
+        cell.removeAttribute('data-center_id');
+        cell.removeAttribute('data-duration');
+    });
+
+    appointments.forEach(appt => {
+        // Find cell
+        const selector = `.time-slot-cell[data-date="${appt.date}"][data-time="${appt.time}"]`;
+        const cell = document.querySelector(selector);
+        if (cell) {
+            cell.classList.add('booked');
+
+            let statusClass = ''; // Define in outer scope
+
+            if (appt.is_restricted) {
+                cell.classList.add('restricted');
+                cell.title = "Занято (информация скрыта)";
+            } else {
+                if (appt.status === 'completed') statusClass = 'status-completed';
+                else if (appt.status === 'late') statusClass = 'status-late';
+                else if (appt.status === 'pending') {
+                    // Highlight Organization-created entries that are still pending
+                    if (appt.author_role === 'org') statusClass = 'status-org';
+                    else statusClass = 'status-pending';
+                }
+
+                if (statusClass) cell.classList.add(statusClass);
+
+                const isDouble = (appt.duration && appt.duration >= 30);
+                const mainStyle = isDouble ? 'border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: 20px;' : '';
+
+                cell.innerHTML = `
+                    <div class="appt-content ${statusClass}" style="${mainStyle}">
+                        <div class="appt-name">${appt.patient_name}</div>
+                    </div>
+                `;
+                cell.dataset.id = appt.id;
+                cell.dataset.patient_name = appt.patient_name;
+                cell.dataset.patient_phone = appt.patient_phone;
+                cell.dataset.doctor = appt.doctor;
+                cell.dataset.service = appt.service;
+                cell.dataset.author_name = appt.author_name;
+                cell.dataset.center_id = appt.center_id;
+                cell.dataset.duration = appt.duration;
+            }
+
+            // Visual blocking for Double Time
+            if (appt.duration && appt.duration >= 30) {
+                // Next slot logic
+                // Get current time
+                const [hh, mm] = appt.time.split(':').map(Number);
+                const nextM = (hh * 60 + mm) + 15;
+                const nextH = Math.floor(nextM / 60);
+                const nextMin = nextM % 60;
+                const nextTimeStr = `${String(nextH).padStart(2, '0')}:${String(nextMin).padStart(2, '0')}`;
+
+                const nextSelector = `.time-slot-cell[data-date="${appt.date}"][data-time="${nextTimeStr}"]`;
+                const nextCell = document.querySelector(nextSelector);
+                if (nextCell) {
+                    // CRITICAL: Do NOT overwrite if this cell is already occupied by a different appointment!
+                    // This prevents "hiding" appointments that validly exist (even if conflicting in DB).
+                    if (nextCell.dataset.id && nextCell.dataset.id != appt.id) {
+                        console.warn(`Visual collision: Appt ${appt.id} wants to extend into ${nextTimeStr}, but Appt ${nextCell.dataset.id} is there.`);
+                        // We can choose to show a conflict marker?
+                        nextCell.style.borderTop = '2px solid red'; // Visual warning
+                        return; // Use return to skip the rest exploring this appt's processing for nextCell
+                    }
+
+                    nextCell.classList.add('booked');
+                    if (statusClass) nextCell.classList.add(statusClass); // Keep class on cell just in case
+
+                    nextCell.title = "Продолжение приема";
+                    nextCell.dataset.id = appt.id;
+
+                    // Styling for seamless merge
+                    nextCell.style.borderTop = 'none';
+                    cell.style.borderBottom = 'none';
+
+                    // Inject matching inner content for color
+                    nextCell.innerHTML = `
+                        <div class="appt-content ${statusClass}" style="border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; height: 100%;">
+                            &nbsp;
+                        </div>
+                    `;
+                }
+            }
+        }
+    });
 }
 
 async function fetchSlots(date, centerId, excludeId, selectedTime) {

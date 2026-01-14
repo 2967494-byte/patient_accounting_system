@@ -63,6 +63,11 @@
 {% include 'partials/appointment_modal.html' %}
 {% endblock %}
 
+<script>
+    window.initialAppointments = {{ initial_appointments | safe }};
+    window.currentCenterId = {{ current_center_id or 'null' }};
+</script>
+
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {

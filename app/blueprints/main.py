@@ -402,7 +402,33 @@ def dashboard():
     minute_floored = (now.minute // 15) * 15
     current_time_slot = f"{now.hour:02d}:{minute_floored:02d}"
 
-    return render_template('dashboard.html', dates=dates_data, time_slots=time_slots, centers=centers, current_center_id=current_center_id, prev_week=prev_week, next_week=next_week, doctors=doctors, services=services, clinics=clinics, today_iso=today_iso, current_time_slot=current_time_slot)
+    # Pre-render initial appointments for instant loading
+    initial_appts = []
+    if current_center_id:
+        end_of_week = start_of_week + timedelta(days=7)
+        query = Appointment.query.filter_by(center_id=current_center_id)\
+                .filter(Appointment.date >= start_of_week.date(), Appointment.date < end_of_week.date())
+        
+        raw_appts = query.all()
+        from app.utils.appointment_logic import get_appointments_with_status_logic
+        initial_appts = get_appointments_with_status_logic(raw_appts, current_user.role, current_user.id)
+
+    import json
+    initial_appointments_json = json.dumps(initial_appts)
+
+    return render_template('dashboard.html', 
+                          dates=dates_data, 
+                          time_slots=time_slots, 
+                          centers=centers, 
+                          current_center_id=current_center_id, 
+                          prev_week=prev_week, 
+                          next_week=next_week, 
+                          doctors=doctors, 
+                          services=services, 
+                          clinics=clinics, 
+                          today_iso=today_iso, 
+                          current_time_slot=current_time_slot,
+                          initial_appointments=initial_appointments_json)
 
 @main.route('/journal')
 @login_required
