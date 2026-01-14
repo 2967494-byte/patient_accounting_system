@@ -40,6 +40,11 @@
                 <td>{{ service.name }}</td>
                 <td>{{ service.get_price() }} ₽</td>
                 <td>
+                    <button onclick="editAddService('{{ service.id }}', '{{ service.name }}')" class="btn"
+                        style="background: transparent; color: #3b82f6; padding: 0.25rem; font-size: 1.2rem;"
+                        title="Редактировать название">
+                        ✎
+                    </button>
                     <a href="{{ url_for('admin.additional_service_prices', id=service.id) }}" class="btn"
                         style="background: transparent; color: #10b981; padding: 0.25rem; font-size: 1.2rem; text-decoration: none;"
                         title="Цены по периодам">
@@ -67,9 +72,9 @@
                 <label style="display: block; margin-bottom: 0.5rem;">Название</label>
                 <input type="text" name="name" required style="width: 100%; padding: 0.5rem;">
             </div>
-            <div class="mb-4">
+            <div class="mb-4" id="price-field">
                 <label style="display: block; margin-bottom: 0.5rem;">Цена</label>
-                <input type="number" step="0.01" name="price" required style="width: 100%; padding: 0.5rem;">
+                <input type="number" step="0.01" name="price" style="width: 100%; padding: 0.5rem;">
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button type="button" onclick="closeModal()" class="btn" style="background: #e5e7eb;">Отмена</button>
@@ -85,15 +90,20 @@
         document.getElementById('add-service-form').reset();
         document.getElementById('modal-title').innerText = 'Добавить доп. услугу';
         document.getElementById('add-service-form').action = "{{ url_for('admin.add_additional_service') }}";
+        // Show price field when adding new service
+        document.getElementById('price-field').style.display = 'block';
+        document.getElementById('add-service-form').querySelector('[name="price"]').setAttribute('required', 'required');
     }
 
-    function editAddService(id, name, price) {
+    function editAddService(id, name) {
         document.getElementById('add-add-service-modal').style.display = 'block';
-        document.getElementById('modal-title').innerText = 'Редактировать доп. услугу';
+        document.getElementById('modal-title').innerText = 'Редактировать название';
         const form = document.getElementById('add-service-form');
         form.action = `/admin/additional_services/${id}/update`;
         form.querySelector('[name="name"]').value = name;
-        form.querySelector('[name="price"]').value = price;
+        // Hide price field when editing
+        document.getElementById('price-field').style.display = 'none';
+        form.querySelector('[name="price"]').removeAttribute('required');
     }
 
     function deleteAddService(id) {

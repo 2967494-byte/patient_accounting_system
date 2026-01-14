@@ -2389,7 +2389,10 @@ def update_additional_service(id):
 
     service.name = request.form.get('name')
 
-    service.price = float(request.form.get('price'))
+    # Only update price if provided (for name-only editing)
+    price = request.form.get('price')
+    if price:
+        service.price = float(price)
 
     db.session.commit()
 
