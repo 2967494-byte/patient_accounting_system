@@ -1,12 +1,11 @@
 {% extends "app_base.html" %}
 
 {% block content %}
-<div class="container" style="padding: 2rem; max-width: 1600px; margin: 0 auto;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
-
-
+<div class="reports-container" style="padding: 1.5rem; width: 100%; box-sizing: border-box; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
         <!-- Navigation Tabs -->
-        <div style="background: white; padding: 4px; border-radius: 8px; border: 1px solid #e5e7eb; display:flex;">
+        <div
+            style="background: white; padding: 4px; border-radius: 8px; border: 1px solid #e5e7eb; display:inline-flex;">
             <a href="{{ url_for('admin.reports_today') }}"
                 class="tab-link {% if request.endpoint == 'admin.reports_today' %}active{% endif %}"
                 style="padding: 0.5rem 1rem; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; color: #6b7280;">

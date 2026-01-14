@@ -3886,14 +3886,13 @@ def reports_comparative():
              .filter(Appointment.lab_tech != None)\
              .filter(Appointment.lab_tech != '').distinct().all()
             
-            # 2. Usernames from authors IF they have the 'lab_tech' role
+            # 2. Usernames from ALL authors of registered appointments
             lab_auth_query = db.session.query(
                 Appointment.center_id,
                 User.username
             ).join(User, Appointment.author_id == User.id)\
              .filter(Appointment.date == start)\
-             .filter(Appointment.payment_method_id != None)\
-             .filter(User.role == 'lab_tech').distinct().all()
+             .filter(Appointment.payment_method_id != None).distinct().all()
 
             for cid, val in lab_field_query:
                 if cid not in labs_per_center:
