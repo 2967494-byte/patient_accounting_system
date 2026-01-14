@@ -3825,6 +3825,7 @@ def reports_organizations_details():
             results.append({
                 'n_pp': i,
                 'patient_name': appt.patient_name,
+                'center_name': appt.center.name if appt.center else 'Unknown',
                 'date': appt.date.strftime('%d.%m.%Y'),
                 'time': appt.time,
                 'is_registered': is_registered

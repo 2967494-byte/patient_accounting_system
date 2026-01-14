@@ -61,6 +61,7 @@
                 <tr style="border-bottom: 2px solid #f3f4f6; text-align: left;">
                     <th style="padding: 0.5rem; color: #6b7280; width: 40px;">п.п</th>
                     <th style="padding: 0.5rem; color: #6b7280;">Пациент</th>
+                    <th style="padding: 0.5rem; color: #6b7280;">Центр</th>
                     <th style="padding: 0.5rem; color: #6b7280;">Дата</th>
                     <th style="padding: 0.5rem; color: #6b7280;">Время</th>
                     <th style="padding: 0.5rem; color: #6b7280; text-align: center; width: 80px;">Снимок</th>
@@ -136,6 +137,7 @@
                     tr.innerHTML = `
                         <td style="padding: 0.5rem; color: #6b7280;">${appt.n_pp}</td>
                         <td style="padding: 0.5rem; font-weight: 500;">${appt.patient_name}</td>
+                        <td style="padding: 0.5rem;">${appt.center_name}</td>
                         <td style="padding: 0.5rem;">${appt.date}</td>
                         <td style="padding: 0.5rem;">${appt.time}</td>
                         <td style="padding: 0.5rem; text-align: center;">
