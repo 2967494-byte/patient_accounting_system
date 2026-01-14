@@ -97,6 +97,8 @@ def register():
 @auth.route('/logout')
 @login_required
 def logout():
+    from flask import get_flashed_messages
+    get_flashed_messages() # Consume all pending flashes to avoid leakage after logout
     logout_user()
     return redirect(url_for('auth.login'))
 

@@ -45,15 +45,14 @@ admin = Blueprint('admin', __name__, template_folder='templates')
 
 
 @admin.before_request
-
 @login_required
-
 def require_admin():
+    # Allow org users specifically for their stats API, everyone else must be superadmin
+    if current_user.role == 'org' and request.endpoint == 'admin.reports_organizations_details':
+        return
 
     if current_user.role != 'superadmin':
-
         flash('Доступ запрещен', 'danger')
-
         return redirect(url_for('main.dashboard'))
 
 
@@ -3761,11 +3760,13 @@ def reports_organizations():
 @admin.route('/reports/api/organizations/details')
 @login_required
 def reports_organizations_details():
+    user_id = request.args.get('user_id', type=int)
+    
     if current_user.role != 'superadmin':
-        return jsonify({'error': 'Unauthorized'}), 403
+        if current_user.role != 'org' or user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
         
     try:
-        user_id = int(request.args.get('user_id'))
         month_str = request.args.get('month')
         
         if not user_id or not month_str:

@@ -135,11 +135,13 @@ function renderMessages(messages, role) {
     messages.forEach(msg => {
         const div = document.createElement('div');
         div.style.maxWidth = '80%';
+        div.style.minWidth = '80px';
         div.style.padding = '8px 12px';
         div.style.borderRadius = '8px';
         div.style.marginBottom = '8px';
         div.style.position = 'relative';
         div.style.fontSize = '14px';
+        div.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
 
         // Logic depends on viewer role
         // For Org: My messages (sender_id = my_id) are Right/Green. Support messages are Left/White.

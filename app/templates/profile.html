@@ -76,6 +76,11 @@
         <header class="top-bar">
             <h1>Профиль пользователя</h1>
             <div class="user-controls">
+                {% if current_user.role == 'org' %}
+                <button type="button" onclick="openOrgStatsModal()" class="btn-logout"
+                    style="border:none; background:none; cursor:pointer; color: #4f46e5; margin-right: 1.5rem; font-weight: 500;">Статистика
+                    записей</button>
+                {% endif %}
                 <a href="{{ url_for('main.dashboard') }}" class="btn-logout">Назад к календарю</a>
             </div>
         </header>
@@ -119,6 +124,7 @@
                             {% endfor %}
                         </select>
                     </div>
+
 
                     <button type="submit" class="btn-save">Сохранить изменения</button>
                 </form>

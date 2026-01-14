@@ -769,3 +769,34 @@ body {
 .appt-content.status-org .appt-service {
     color: #be185d !important;
 }
+
+/* Flash Messages */
+.flash-messages-container {
+    padding: 1rem 2rem 0 2rem;
+}
+
+.flash {
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.flash-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.flash-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.flash-info {
+    background-color: #e0f2fe;
+    color: #075985;
+    border: 1px solid #bae6fd;
+}
