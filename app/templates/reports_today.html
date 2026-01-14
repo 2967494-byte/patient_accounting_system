@@ -1,13 +1,205 @@
 {% extends "reports_base.html" %}
 
 {% block report_content %}
-<div
-    style="text-align: center; padding: 4rem; background: white; border-radius: 0.5rem; border: 1px solid #e5e7eb; color: #6b7280;">
-    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem; color: #d1d5db;">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-    </svg>
-    <p>Отчеты за сегодня будут доступны позже</p>
+<div class="report-card"
+    style="background: white; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 600; color: #1f2937;">Сравнительный отчет</h3>
+        <div style="display: flex; gap: 0.5rem;">
+            <select id="report-day" onchange="fetchComparativeReport()"
+                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
+                <option value="00">Весь месяц</option>
+                <!-- Filled via JS -->
+            </select>
+            <select id="report-month" onchange="fetchComparativeReport()"
+                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
+                <option value="00">Весь год</option>
+                <option value="01">Январь</option>
+                <option value="02">Февраль</option>
+                <option value="03">Март</option>
+                <option value="04">Апрель</option>
+                <option value="05">Май</option>
+                <option value="06">Июнь</option>
+                <option value="07">Июль</option>
+                <option value="08">Август</option>
+                <option value="09">Сентябрь</option>
+                <option value="10">Октябрь</option>
+                <option value="11">Ноябрь</option>
+                <option value="12">Декабрь</option>
+            </select>
+            <select id="report-year" onchange="fetchComparativeReport()"
+                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.9rem; background-color: white;">
+                <!-- Filled via JS -->
+            </select>
+        </div>
+    </div>
+
+    <div id="report-loading" style="color:#6b7280; font-size:0.9rem; margin-bottom: 1rem;">Загрузка...</div>
+
+    <div style="overflow-x: auto;">
+        <table id="comparative-table" style="width:100%; border-collapse: collapse; font-size: 0.9rem; display:none;">
+            <thead>
+                <tr style="border-bottom: 2px solid #f3f4f6; text-align: left; background: #f9fafb;">
+                    <th style="padding: 0.75rem; color: #1f2937; border: 1px solid #e5e7eb;">Показатель</th>
+                    <!-- Centers will be injected here as columns -->
+                    <th id="totals-header" style="padding: 0.75rem; color: #1f2937; border: 1px solid #e5e7eb; font-weight: 700; background: #eef2ff;">ИТОГО</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="row-labs">
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">Лаборант</td>
+                    <!-- data -->
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff;"></td>
+                </tr>
+                <tr id="row-patients">
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">Пациентов Сегодня</td>
+                    <!-- data -->
+                    <td id="total-curr-patients" style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; font-weight: 600;"></td>
+                </tr>
+                <tr id="row-patients-prev">
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb; color: #6b7280;">в прошлом году (пац.)</td>
+                    <!-- data -->
+                    <td id="total-prev-patients" style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; color: #6b7280;"></td>
+                </tr>
+                <tr id="row-money">
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">Сумма Сегодня</td>
+                    <!-- data -->
+                    <td id="total-curr-money" style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; font-weight: 600;"></td>
+                </tr>
+                <tr id="row-money-prev">
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb; color: #6b7280;">в прошлом году (сумма)</td>
+                    <!-- data -->
+                    <td id="total-prev-money" style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; color: #6b7280;"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<script>
+    async function fetchComparativeReport() {
+        const day = document.getElementById('report-day').value;
+        const month = document.getElementById('report-month').value;
+        const year = document.getElementById('report-year').value;
+        const loading = document.getElementById('report-loading');
+        const table = document.getElementById('comparative-table');
+        
+        if (!year) return;
+
+        loading.style.display = 'block';
+        table.style.display = 'none';
+
+        try {
+            const res = await fetch(`/admin/reports/api/comparative?year=${year}&month=${month}&day=${day}`);
+            const data = await res.json();
+
+            loading.style.display = 'none';
+            table.style.display = 'table';
+
+            // Clear dynamic columns (all between index 0 and totals-header)
+            const headerRow = table.querySelector('thead tr');
+            const totalsHeader = document.getElementById('totals-header');
+            while (headerRow.children.length > 2) {
+                headerRow.removeChild(headerRow.children[1]);
+            }
+
+            const rowLabs = document.getElementById('row-labs');
+            const rowPatients = document.getElementById('row-patients');
+            const rowPatientsPrev = document.getElementById('row-patients-prev');
+            const rowMoney = document.getElementById('row-money');
+            const rowMoneyPrev = document.getElementById('row-money-prev');
+
+            // Reset Rows (Keep first cell and last cell)
+            const resetRow = (row) => {
+                while (row.children.length > 2) {
+                    row.removeChild(row.children[1]);
+                }
+            };
+            [rowLabs, rowPatients, rowPatientsPrev, rowMoney, rowMoneyPrev].forEach(resetRow);
+
+            // Hide Lab tech row if Month/Year view
+            rowLabs.style.display = (day === '00' || month === '00') ? 'none' : 'table-row';
+
+            // Fill Data
+            data.centers.forEach(c => {
+                // Header
+                const th = document.createElement('th');
+                th.style.cssText = 'padding: 0.75rem; border: 1px solid #e5e7eb;';
+                th.textContent = c.name;
+                headerRow.insertBefore(th, totalsHeader);
+
+                // Labs
+                const tdLabs = document.createElement('td');
+                tdLabs.style.cssText = 'padding: 0.75rem; border: 1px solid #e5e7eb;';
+                tdLabs.innerHTML = c.labs.join('<br>') || '-';
+                rowLabs.insertBefore(tdLabs, rowLabs.lastElementChild);
+
+                // Patients
+                const tdPat = document.createElement('td');
+                tdPat.style.cssText = 'padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 500;';
+                tdPat.textContent = c.current_patients;
+                rowPatients.insertBefore(tdPat, rowPatients.lastElementChild);
+
+                const tdPatPrev = document.createElement('td');
+                tdPatPrev.style.cssText = 'padding: 0.75rem; border: 1px solid #e5e7eb; color: #6b7280;';
+                tdPatPrev.textContent = c.prev_patients;
+                rowPatientsPrev.insertBefore(tdPatPrev, rowPatientsPrev.lastElementChild);
+
+                // Money
+                const tdMon = document.createElement('td');
+                tdMon.style.cssText = 'padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 500;';
+                tdMon.textContent = c.current_sum.toLocaleString();
+                rowMoney.insertBefore(tdMon, rowMoney.lastElementChild);
+
+                const tdMonPrev = document.createElement('td');
+                tdMonPrev.style.cssText = 'padding: 0.75rem; border: 1px solid #e5e7eb; color: #6b7280;';
+                tdMonPrev.textContent = c.prev_sum.toLocaleString();
+                rowMoneyPrev.insertBefore(tdMonPrev, rowMoneyPrev.lastElementChild);
+            });
+
+            // Set Totals
+            document.getElementById('total-curr-patients').textContent = data.totals.current_patients;
+            document.getElementById('total-prev-patients').textContent = data.totals.prev_patients;
+            document.getElementById('total-curr-money').textContent = data.totals.current_money.toLocaleString();
+            document.getElementById('total-prev-money').textContent = data.totals.prev_money.toLocaleString();
+
+        } catch (e) {
+            console.error('Comparative fetch err', e);
+            loading.textContent = 'Ошибка загрузки данных';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+        const currentDay = String(today.getDate()).padStart(2, '0');
+
+        // Populate Years
+        const yearSelect = document.getElementById('report-year');
+        for (let y = currentYear - 3; y <= currentYear + 1; y++) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+
+        // Set Month
+        document.getElementById('report-month').value = currentMonth;
+
+        // Populate Days
+        const daySelect = document.getElementById('report-day');
+        for (let d = 1; d <= 31; d++) {
+            const val = String(d).padStart(2, '0');
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val;
+            if (val === currentDay) opt.selected = true;
+            daySelect.appendChild(opt);
+        }
+
+        fetchComparativeReport();
+    });
+</script>
 {% endblock %}

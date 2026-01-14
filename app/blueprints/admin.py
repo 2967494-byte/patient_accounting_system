@@ -3818,6 +3818,120 @@ def reports_lab_techs():
     
     return jsonify(data)
 
+@admin.route('/reports/api/comparative')
+@login_required
+def reports_comparative():
+    if current_user.role != 'superadmin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    year_str = request.args.get('year')
+    month_str = request.args.get('month')
+    day_str = request.args.get('day')
+
+    if not year_str:
+        return jsonify({'error': 'Year is required'}), 400
+
+    def get_period_stats(year, month, day):
+        # date filtering logic
+        start = None
+        end = None
+        try:
+            if month and day and day != '00':
+                start = datetime.strptime(f"{year}-{month}-{day}", '%Y-%m-%d').date()
+                end = start + timedelta(days=1)
+            elif month and month != '00':
+                start = datetime.strptime(f"{year}-{month}", '%Y-%m').date()
+                if start.month == 12:
+                    end = start.replace(year=start.year + 1, month=1, day=1)
+                else:
+                    end = start.replace(month=start.month + 1, day=1)
+            else:
+                start = datetime(int(year), 1, 1).date()
+                end = datetime(int(year) + 1, 1, 1).date()
+        except ValueError:
+            return None, None
+
+        # Query stats per center
+        stats = db.session.query(
+            Location.id.label('center_id'),
+            Location.name.label('center_name'),
+            db.func.count(db.func.distinct(Appointment.patient_name)).label('patient_count'),
+            db.func.sum(Appointment.cost).label('total_sum')
+        ).select_from(Location)\
+         .outerjoin(Appointment, (Appointment.center_id == Location.id) & (Appointment.date >= start) & (Appointment.date < end))\
+         .filter(Location.type == 'center')\
+         .group_by(Location.id, Location.name).all()
+
+        # Lab techs for chosen date (only if day is selected)
+        labs_per_center = {}
+        if day and day != '00':
+            lab_query = db.session.query(
+                Appointment.center_id,
+                User.username
+            ).join(User, Appointment.author_id == User.id)\
+             .filter(Appointment.date == start)\
+             .filter(User.role.in_(['lab_tech', 'superadmin']))\
+             .filter(User.username != 'admin').distinct().all()
+            
+            for cid, uname in lab_query:
+                if cid not in labs_per_center:
+                    labs_per_center[cid] = []
+                labs_per_center[cid].append(uname)
+
+        res_data = {}
+        for s in stats:
+            res_data[s.center_id] = {
+                'name': s.center_name,
+                'patient_count': s.patient_count,
+                'total_sum': float(s.total_sum or 0),
+                'labs': labs_per_center.get(s.center_id, [])
+            }
+        return res_data
+
+    current_data = get_period_stats(year_str, month_str, day_str)
+    last_year_data = get_period_stats(str(int(year_str) - 1), month_str, day_str)
+
+    if current_data is None:
+        return jsonify({'error': 'Invalid date'}), 400
+
+    # Combine
+    centers_result = []
+    total_patients_curr = 0
+    total_sum_curr = 0
+    total_patients_prev = 0
+    total_sum_prev = 0
+
+    for cid in current_data:
+        curr = current_data[cid]
+        prev = last_year_data.get(cid, {'patient_count': 0, 'total_sum': 0})
+        
+        centers_result.append({
+            'id': cid,
+            'name': curr['name'],
+            'labs': curr['labs'],
+            'current_patients': curr['patient_count'],
+            'current_sum': curr['total_sum'],
+            'prev_patients': prev['patient_count'],
+            'prev_sum': prev['total_sum']
+        })
+
+        total_patients_curr += curr['patient_count']
+        total_sum_curr += curr['total_sum']
+        total_patients_prev += prev['patient_count']
+        total_sum_prev += prev['total_sum']
+
+    return jsonify({
+        'centers': centers_result,
+        'totals': {
+            'current_patients': total_patients_curr,
+            'current_sum': total_patients_curr, # User asked for total sum by patients? Wait, user said "общую сумму по пациентам и деньгам"
+            # That likely means total patients count and total money sum.
+            'current_money': total_sum_curr,
+            'prev_patients': total_patients_prev,
+            'prev_money': total_sum_prev
+        }
+    })
+
 @admin.route('/reports/api/audit')
 @login_required
 def reports_audit():
