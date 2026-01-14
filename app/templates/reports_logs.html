@@ -32,13 +32,6 @@
 </div>
 
 <script>
-    // Utility function to convert UTC timestamp to Moscow time (UTC+3)
-    function toMoscowTime(utcTimestamp) {
-        const date = new Date(utcTimestamp);
-        date.setHours(date.getHours() + 3);
-        return date;
-    }
-
     document.addEventListener('DOMContentLoaded', async function () {
         try {
             const res = await fetch('/admin/reports/api/audit');
@@ -54,7 +47,7 @@
                 data.forEach(item => {
                     const tr = document.createElement('tr');
                     // Simple formatting for timestamp
-                    const date = toMoscowTime(item.timestamp).toLocaleString('ru-RU');
+                    const date = new Date(item.timestamp).toLocaleString('ru-RU');
                     tr.innerHTML = `
                     <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; color: #6b7280; font-size:0.85rem;">${date}</td>
                     <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb;">${item.user}</td>

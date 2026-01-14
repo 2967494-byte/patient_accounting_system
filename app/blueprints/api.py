@@ -670,7 +670,7 @@ def create_referral_request():
             sender_id=current_user.id,
             recipient_id=None,  # None = Support chat
             body=message_text,
-            timestamp=(datetime.utcnow() + timedelta(hours=3)),
+            timestamp=datetime.now(),  # Use server local time (Moscow)
             is_read=False
         )
         
