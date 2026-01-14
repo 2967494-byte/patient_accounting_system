@@ -748,3 +748,24 @@ body {
 .appt-content.status-pending .appt-service {
     color: #075985 !important;
 }
+
+/* Organization Status - Pink Theme #EE26BC */
+.time-slot-cell.status-org {
+    background-color: #fdf2f8 !important;
+    border-left: 3px solid #ee26bc !important;
+}
+
+.time-slot-cell.booked.status-org {
+    border-left: 3px solid #ee26bc !important;
+}
+
+.appt-content.status-org {
+    background-color: transparent !important;
+    border-left: none !important;
+    color: #be185d !important;
+}
+
+.appt-content.status-org .appt-name,
+.appt-content.status-org .appt-service {
+    color: #be185d !important;
+}

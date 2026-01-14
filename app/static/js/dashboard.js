@@ -376,6 +376,7 @@ async function fetchAppointments() {
             cell.classList.remove('status-completed');
             cell.classList.remove('status-late');
             cell.classList.remove('status-pending');
+            cell.classList.remove('status-org');
             cell.title = "";
             cell.innerHTML = '';
             // Reset inline styles applied for merging/warnings
@@ -408,7 +409,11 @@ async function fetchAppointments() {
                 } else {
                     if (appt.status === 'completed') statusClass = 'status-completed';
                     else if (appt.status === 'late') statusClass = 'status-late';
-                    else if (appt.status === 'pending') statusClass = 'status-pending';
+                    else if (appt.status === 'pending') {
+                        // Highlight Organization-created entries that are still pending
+                        if (appt.author_role === 'org') statusClass = 'status-org';
+                        else statusClass = 'status-pending';
+                    }
 
                     if (statusClass) cell.classList.add(statusClass);
 

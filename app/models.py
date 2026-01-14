@@ -208,6 +208,7 @@ class Appointment(db.Model):
             'time': self.time,
             'doctor': self.doctor, # Return raw doctor string too if needed
             'author_name': self.author.username if self.author else 'Unknown',
+            'author_role': self.author.role if self.author else None,
             'center_id': self.center_id,
             'center_name': self.center.name if self.center else 'Unknown',
             'history': [{
