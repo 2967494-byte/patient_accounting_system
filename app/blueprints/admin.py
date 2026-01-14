@@ -3746,6 +3746,7 @@ def reports_organizations():
         return jsonify({'error': 'Invalid month format'}), 400
 
     stats = db.session.query(
+        User.id,
         User.username, 
         db.func.count(Appointment.id).label('count')
     ).join(Appointment, Appointment.author_id == User.id)\
@@ -3754,8 +3755,79 @@ def reports_organizations():
      .group_by(User.id)\
      .all()
      
-    data = [{'username': s.username, 'count': s.count} for s in stats]
+    data = [{'id': s.id, 'username': s.username, 'count': s.count} for s in stats]
     return jsonify(data)
+
+@admin.route('/reports/api/organizations/details')
+@login_required
+def reports_organizations_details():
+    if current_user.role != 'superadmin':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    user_id = request.args.get('user_id')
+    month_str = request.args.get('month')
+    
+    if not user_id or not month_str:
+        return jsonify({'error': 'Missing parameters'}), 400
+        
+    try:
+        start_date = datetime.strptime(month_str, '%Y-%m').date()
+        if start_date.month == 12:
+            end_date = start_date.replace(year=start_date.year + 1, month=1, day=1)
+        else:
+            end_date = start_date.replace(month=start_date.month + 1, day=1)
+    except ValueError:
+        return jsonify({'error': 'Invalid month format'}), 400
+
+    # Fetch appointments
+    appts = Appointment.query.filter_by(author_id=user_id)\
+            .filter(Appointment.date >= start_date, Appointment.date < end_date)\
+            .order_by(Appointment.date, Appointment.time).all()
+
+    # To check "In Journal", we look for registered appointments on the same day for the same patient.
+    # We'll use a local search for registered appts on the days where organization appts exist.
+    relevant_dates = {a.date for a in appts}
+    
+    registered_appts_on_dates = Appointment.query.filter(
+        Appointment.date.in_(relevant_dates),
+        Appointment.payment_method_id.isnot(None)
+    ).all()
+
+    # Helper for name normalization
+    import difflib
+    def normalize_name(name):
+        return name.lower().replace(' ', '') if name else ''
+
+    results = []
+    for i, appt in enumerate(appts, 1):
+        is_registered = False
+        
+        # 1. Direct check
+        if appt.payment_method_id isnot None:
+            is_registered = True
+        else:
+            # 2. Fuzzy match with registered appointments on the same day
+            appt_norm_name = normalize_name(appt.patient_name)
+            if appt_norm_name:
+                for reg in registered_appts_on_dates:
+                    if reg.date == appt.date:
+                        reg_norm_name = normalize_name(reg.patient_name)
+                        if appt_norm_name == reg_norm_name:
+                            is_registered = True
+                            break
+                        if difflib.SequenceMatcher(None, appt_norm_name, reg_norm_name).ratio() > 0.85:
+                            is_registered = True
+                            break
+        
+        results.append({
+            'n_pp': i,
+            'patient_name': appt.patient_name,
+            'date': appt.date.strftime('%d.%m.%Y'),
+            'time': appt.time,
+            'is_registered': is_registered
+        })
+
+    return jsonify(results)
 
 @admin.route('/reports/api/lab_techs')
 @login_required

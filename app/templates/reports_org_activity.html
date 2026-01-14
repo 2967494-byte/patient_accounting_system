@@ -36,9 +36,37 @@
                 <tr style="border-bottom: 2px solid #f3f4f6; text-align: left;">
                     <th style="padding: 0.5rem; color: #6b7280;">Пользователь</th>
                     <th style="padding: 0.5rem; color: #6b7280; text-align: right;">Записей</th>
+                    <th style="padding: 0.5rem; color: #6b7280; text-align: right; width: 50px;"></th>
                 </tr>
             </thead>
             <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div id="org-details-modal" class="modal"
+    style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
+    <div
+        style="background-color: #fefefe; padding: 2rem; border-radius: 0.5rem; width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 id="modal-title" style="margin: 0; font-size: 1.25rem; font-weight: 700;">Детали записей: <span
+                    id="org-username" style="color: #4f46e5;"></span></h3>
+            <button onclick="closeOrgModal()"
+                style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">&times;</button>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="border-bottom: 2px solid #f3f4f6; text-align: left;">
+                    <th style="padding: 0.5rem; color: #6b7280; width: 40px;">п.п</th>
+                    <th style="padding: 0.5rem; color: #6b7280;">Пациент</th>
+                    <th style="padding: 0.5rem; color: #6b7280;">Дата</th>
+                    <th style="padding: 0.5rem; color: #6b7280;">Время</th>
+                    <th style="padding: 0.5rem; color: #6b7280; text-align: center; width: 80px;">Снимок</th>
+                </tr>
+            </thead>
+            <tbody id="org-details-tbody"></tbody>
         </table>
     </div>
 </div>
@@ -65,18 +93,74 @@
 
             tbody.innerHTML = '';
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="2" style="padding:1rem; text-align:center; color:#9ca3af;">Нет данных за выбранный месяц</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="padding:1rem; text-align:center; color:#9ca3af;">Нет данных за выбранный месяц</td></tr>';
             } else {
                 data.forEach(item => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb;">${item.username || 'Unknown'}</td>
-                    <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; text-align: right; font-weight:600;">${item.count}</td>
-                `;
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb;">${item.username || 'Unknown'}</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; text-align: right; font-weight:600;">${item.count}</td>
+                        <td style="padding: 0.5rem; border-bottom: 1px solid #f9fafb; text-align: right;">
+                            <button onclick="showOrgDetails(${item.id}, '${item.username}')" style="background:none; border:none; color:#4f46e5; cursor:pointer; font-size:1.1rem;" title="Подробнее">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            </button>
+                        </td>
+                    `;
                     tbody.appendChild(tr);
                 });
             }
         } catch (e) { console.error('Org fetch err', e); }
+    }
+
+    async function showOrgDetails(userId, username) {
+        const month = document.getElementById('org-month').value;
+        const year = document.getElementById('org-year').value;
+        const modal = document.getElementById('org-details-modal');
+        const tbody = document.getElementById('org-details-tbody');
+        document.getElementById('org-username').textContent = username;
+
+        tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align:center;">Загрузка...</td></tr>';
+        modal.style.display = 'flex';
+
+        try {
+            const res = await fetch(`/admin/reports/api/organizations/details?user_id=${userId}&month=${year}-${month}`);
+            const details = await res.json();
+
+            tbody.innerHTML = '';
+            if (details.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align:center; color:#9ca3af;">Записи не найдены</td></tr>';
+            } else {
+                details.forEach(appt => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid #f9fafb';
+                    tr.innerHTML = `
+                        <td style="padding: 0.5rem; color: #6b7280;">${appt.n_pp}</td>
+                        <td style="padding: 0.5rem; font-weight: 500;">${appt.patient_name}</td>
+                        <td style="padding: 0.5rem;">${appt.date}</td>
+                        <td style="padding: 0.5rem;">${appt.time}</td>
+                        <td style="padding: 0.5rem; text-align: center;">
+                            ${appt.is_registered ? '<span style="color: #16a34a; font-size: 1.2rem;">✓</span>' : '<span style="color: #d1d5db;">-</span>'}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (e) {
+            console.error('Details fetch err', e);
+            tbody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align:center; color:#dc2626;">Ошибка загрузки данных</td></tr>';
+        }
+    }
+
+    function closeOrgModal() {
+        document.getElementById('org-details-modal').style.display = 'none';
+    }
+
+    // Close on outside click
+    window.onclick = function (event) {
+        const modal = document.getElementById('org-details-modal');
+        if (event.target == modal) {
+            closeOrgModal();
+        }
     }
 
     document.addEventListener('DOMContentLoaded', async function () {
