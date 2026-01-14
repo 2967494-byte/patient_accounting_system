@@ -3,7 +3,8 @@
 {% block report_content %}
 <div class="report-card"
     style="background: white; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div
+        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap: wrap; gap: 1rem;">
         <h3 style="font-size: 1.1rem; font-weight: 600; color: #1f2937;">Сравнительный отчет</h3>
         <div style="display: flex; gap: 0.5rem;">
             <select id="report-day" onchange="fetchComparativeReport()"
@@ -37,39 +38,60 @@
     <div id="report-loading" style="color:#6b7280; font-size:0.9rem; margin-bottom: 1rem;">Загрузка...</div>
 
     <div style="overflow-x: auto;">
-        <table id="comparative-table" style="width:100%; border-collapse: collapse; font-size: 0.9rem; display:none;">
+        <table id="comparative-table"
+            style="width:100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; display:none;">
+            <colgroup>
+                <col style="width: 180px;">
+                <!-- Center columns will have equal width by default with table-layout fixed -->
+                <!-- The totals column can also be slightly different if needed, but let's keep it simple -->
+            </colgroup>
             <thead>
                 <tr style="border-bottom: 2px solid #f3f4f6; text-align: left; background: #f9fafb;">
                     <th style="padding: 0.75rem; color: #1f2937; border: 1px solid #e5e7eb;">Показатель</th>
                     <!-- Centers will be injected here as columns -->
-                    <th id="totals-header" style="padding: 0.75rem; color: #1f2937; border: 1px solid #e5e7eb; font-weight: 700; background: #eef2ff;">ИТОГО</th>
+                    <th id="totals-header"
+                        style="padding: 0.75rem; color: #1f2937; border: 1px solid #e5e7eb; font-weight: 700; background: #eef2ff;">
+                        ИТОГО</th>
                 </tr>
             </thead>
             <tbody>
                 <tr id="row-labs">
-                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">Лаборант</td>
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">
+                        Лаборант</td>
                     <!-- data -->
                     <td style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff;"></td>
                 </tr>
                 <tr id="row-patients">
-                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">Пациентов Сегодня</td>
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">
+                        Пациентов Сегодня</td>
                     <!-- data -->
-                    <td id="total-curr-patients" style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; font-weight: 600;"></td>
+                    <td id="total-curr-patients"
+                        style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; font-weight: 600;">
+                    </td>
                 </tr>
                 <tr id="row-patients-prev">
-                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb; color: #6b7280;">в прошлом году (пац.)</td>
+                    <td
+                        style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb; color: #6b7280;">
+                        в прошлом году (пац.)</td>
                     <!-- data -->
-                    <td id="total-prev-patients" style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; color: #6b7280;"></td>
+                    <td id="total-prev-patients"
+                        style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; color: #6b7280;"></td>
                 </tr>
                 <tr id="row-money">
-                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">Сумма Сегодня</td>
+                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb;">
+                        Сумма Сегодня</td>
                     <!-- data -->
-                    <td id="total-curr-money" style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; font-weight: 600;"></td>
+                    <td id="total-curr-money"
+                        style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; font-weight: 600;">
+                    </td>
                 </tr>
                 <tr id="row-money-prev">
-                    <td style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb; color: #6b7280;">в прошлом году (сумма)</td>
+                    <td
+                        style="padding: 0.75rem; border: 1px solid #e5e7eb; font-weight: 600; background: #f9fafb; color: #6b7280;">
+                        в прошлом году (сумма)</td>
                     <!-- data -->
-                    <td id="total-prev-money" style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; color: #6b7280;"></td>
+                    <td id="total-prev-money"
+                        style="padding: 0.75rem; border: 1px solid #e5e7eb; background: #eef2ff; color: #6b7280;"></td>
                 </tr>
             </tbody>
         </table>
@@ -83,7 +105,7 @@
         const year = document.getElementById('report-year').value;
         const loading = document.getElementById('report-loading');
         const table = document.getElementById('comparative-table');
-        
+
         if (!year) return;
 
         loading.style.display = 'block';
@@ -169,7 +191,7 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const today = new Date();
         const currentYear = today.getFullYear();
         const currentMonth = String(today.getMonth() + 1).padStart(2, '0');

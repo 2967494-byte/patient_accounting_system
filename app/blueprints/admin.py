@@ -3865,18 +3865,31 @@ def reports_comparative():
         # Lab techs for chosen date (only if day is selected)
         labs_per_center = {}
         if day and day != '00':
-            lab_query = db.session.query(
+            # 1. Names from the string field 'lab_tech'
+            lab_field_query = db.session.query(
+                Appointment.center_id,
+                Appointment.lab_tech
+            ).filter(Appointment.date == start)\
+             .filter(Appointment.lab_tech != None)\
+             .filter(Appointment.lab_tech != '').distinct().all()
+            
+            # 2. Usernames from authors IF they have the 'lab_tech' role
+            lab_auth_query = db.session.query(
                 Appointment.center_id,
                 User.username
             ).join(User, Appointment.author_id == User.id)\
              .filter(Appointment.date == start)\
-             .filter(User.role.in_(['lab_tech', 'superadmin']))\
-             .filter(User.username != 'admin').distinct().all()
-            
-            for cid, uname in lab_query:
+             .filter(User.role == 'lab_tech').distinct().all()
+
+            for cid, val in lab_field_query:
                 if cid not in labs_per_center:
-                    labs_per_center[cid] = []
-                labs_per_center[cid].append(uname)
+                    labs_per_center[cid] = set()
+                labs_per_center[cid].add(val)
+            
+            for cid, val in lab_auth_query:
+                if cid not in labs_per_center:
+                    labs_per_center[cid] = set()
+                labs_per_center[cid].add(val)
 
         res_data = {}
         for s in stats:
@@ -3884,7 +3897,7 @@ def reports_comparative():
                 'name': s.center_name,
                 'patient_count': s.patient_count,
                 'total_sum': float(s.total_sum or 0),
-                'labs': labs_per_center.get(s.center_id, [])
+                'labs': list(labs_per_center.get(s.center_id, []))
             }
         return res_data
 
