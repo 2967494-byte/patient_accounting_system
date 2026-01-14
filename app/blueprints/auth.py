@@ -102,27 +102,65 @@ def logout():
 
 @auth.route('/captcha')
 def captcha():
-    # Simple captcha generation - increased size by 50%
-    image = Image.new('RGB', (180, 60), color=(255, 255, 255))
+    # Robust captcha generation with larger size and multiple font candidates
+    width = 180
+    height = 60
+    image = Image.new('RGB', (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(image)
     
     # Generate random text
     text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     session['captcha'] = text
     
-    # Try to use a larger font, fallback to default
-    try:
-        font = ImageFont.truetype("arial.ttf", 36)
-    except:
-        # Default font - draw each character manually for larger size
+    # Comprehensive font candidates for Windows and Linux
+    font_candidates = [
+        "arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+        "DejaVuSans.ttf",
+        "LiberationSans-Regular.ttf"
+    ]
+    
+    font = None
+    font_size = 40
+    for font_name in font_candidates:
+        try:
+            font = ImageFont.truetype(font_name, font_size)
+            break
+        except:
+            continue
+    
+    if font:
+        # Calculate text position (center)
+        try:
+            # Pillow 8.0.0+
+            bbox = draw.textbbox((0, 0), text, font=font)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+        except AttributeError:
+            # Older Pillow versions
+            tw, th = draw.textsize(text, font=font)
+            
+        x = (width - tw) // 2
+        y = (height - th) // 2 - 5
+        draw.text((x, y), text, fill=(0, 0, 0), font=font)
+    else:
+        # Last resort fallback: default font
+        # Default font is tiny, so we draw it and shift slightly for "bold" effect
         font = ImageFont.load_default()
+        draw.text((15, 15), text, fill=(0, 0, 0), font=font)
+        draw.text((16, 15), text, fill=(0, 0, 0), font=font) # shadow for bold
     
-    draw.text((15, 10), text, fill=(0, 0, 0), font=font)
-    
-    # Add some noise
-    for _ in range(150):
-        x = random.randint(0, 180)
-        y = random.randint(0, 60)
+    # Add some noise (lines and points)
+    for _ in range(8):
+        x1, y1 = random.randint(0, width), random.randint(0, height)
+        x2, y2 = random.randint(0, width), random.randint(0, height)
+        draw.line((x1, y1, x2, y2), fill=(random.randint(180, 220), random.randint(180, 220), random.randint(180, 220)), width=2)
+        
+    for _ in range(100):
+        x, y = random.randint(0, width), random.randint(0, height)
         draw.point((x, y), fill=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
         
     buf = io.BytesIO()
