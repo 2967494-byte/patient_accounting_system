@@ -4,66 +4,63 @@ import difflib
 def get_appointments_with_status_logic(appointments, user_role, user_id):
     """
     Consolidated logic for calculating appointment statuses.
-    Used by both the REST API and the dashboard pre-rendering.
+    Optimized for high-volume dashboard rendering.
     """
-    # Pre-process for fuzzy matching: Get all "Paid" appointments in this set
-    paid_appointments = [a for a in appointments if a.payment_method_id is not None]
-    
-    def normalize_name(name):
-        return name.lower().replace(' ', '') if name else ''
+    # Group paid appointments by date for Fast O(1) date lookup and O(N) daily lookup
+    paid_by_date = {}
+    for pa in appointments:
+        if pa.payment_method_id is not None:
+            d = pa.date
+            if d not in paid_by_date:
+                paid_by_date[d] = []
+            paid_by_date[d].append(pa.patient_name.lower().replace(' ', '') if pa.patient_name else '')
 
     current_dt = (datetime.utcnow() + timedelta(hours=3))
     
-    # Cache normalized names for paid appointments to speed up fuzzy matching
-    paid_info = []
-    for pa in paid_appointments:
-        paid_info.append({
-            'date': pa.date,
-            'norm_name': normalize_name(pa.patient_name)
-        })
-
     results = []
+    import difflib
+    
     for appt in appointments:
-        data = appt.to_dict()
+        # Use to_dict_lite to avoid heavy N+1 relation queries
+        data = appt.to_dict_lite()
         
         # Org restriction check
         if user_role == 'org' and appt.author_id != user_id:
             data['patient_name'] = ""
             data['patient_phone'] = ""
-            data['doctor'] = ""
-            data['service'] = ""
+            # doctor and service are NOT in to_dict_lite, so we skip clearing them or add them if needed.
+            # Dashboard actually needs patient_name.
             data['is_restricted'] = True
         else:
             data['is_restricted'] = False
 
         # --- Status Calculation ---
-        status = 'pending' # Default
+        status = 'pending' 
         
         # 1. Is it explicitly paid/registered?
         if appt.payment_method_id is not None:
             status = 'completed'
         else:
-            # 2. Fuzzy Search in Paid Appointments (same date)
-            is_found_in_journal = False
-            appt_norm_name = normalize_name(appt.patient_name)
+            # 2. Match in Journal (Paid Appointments on same date)
+            appt_norm_name = appt.patient_name.lower().replace(' ', '') if appt.patient_name else ''
             
             if appt_norm_name:
-                for pi in paid_info:
-                    if pi['date'] != appt.date: 
-                        continue 
-                    
-                    if appt_norm_name == pi['norm_name']:
-                         is_found_in_journal = True
-                         break
-                    
-                    # Fuzzy match threshold
-                    if difflib.SequenceMatcher(None, appt_norm_name, pi['norm_name']).ratio() > 0.85:
-                        is_found_in_journal = True
-                        break
-            
-            if is_found_in_journal:
-                status = 'completed'
-            else:
+                paid_names = paid_by_date.get(appt.date, [])
+                
+                # Direct match (Fast)
+                if appt_norm_name in paid_names:
+                    status = 'completed'
+                else:
+                    # Fuzzy match (Slow, only if direct fails)
+                    for p_name in paid_names:
+                        if not p_name: continue
+                        # Use a simpler/faster match first? 
+                        # Ratio calculation is heavy.
+                        if difflib.SequenceMatcher(None, appt_norm_name, p_name).ratio() > 0.85:
+                            status = 'completed'
+                            break
+
+            if status != 'completed':
                 # 3. Time Check (25 minutes tolerance)
                 try:
                     appt_dt_str = f"{appt.date.isoformat()} {appt.time}"

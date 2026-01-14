@@ -231,7 +231,8 @@ def get_appointments():
     end_date_str = request.args.get('end_date')
     clinic_id_str = request.args.get('clinic_id')
 
-    query = Appointment.query
+    from sqlalchemy.orm import joinedload
+    query = Appointment.query.options(joinedload(Appointment.author))
 
     if clinic_id_str:
          try:

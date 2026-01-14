@@ -218,6 +218,20 @@ class Appointment(db.Model):
             } for h in self.history]
         }
 
+    def to_dict_lite(self):
+        """Lighter version for dashboard grid to avoid N+1 queries"""
+        return {
+            'id': self.id,
+            'patient_name': self.patient_name,
+            'date': self.date.isoformat(),
+            'time': self.time,
+            'duration': self.duration,
+            'author_role': self.author.role if self.author else None,
+            'author_id': self.author_id,
+            'payment_method_id': self.payment_method_id,
+            'center_id': self.center_id
+        }
+
 class AppointmentHistory(db.Model):
     __tablename__ = 'appointment_history'
     

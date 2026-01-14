@@ -406,7 +406,8 @@ def dashboard():
     initial_appts = []
     if current_center_id:
         end_of_week = start_of_week + timedelta(days=7)
-        query = Appointment.query.filter_by(center_id=current_center_id)\
+        from sqlalchemy.orm import joinedload
+        query = Appointment.query.options(joinedload(Appointment.author)).filter_by(center_id=current_center_id)\
                 .filter(Appointment.date >= start_of_week.date(), Appointment.date < end_of_week.date())
         
         raw_appts = query.all()
