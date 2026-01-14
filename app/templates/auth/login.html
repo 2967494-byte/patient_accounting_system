@@ -30,15 +30,17 @@
             {% endif %}
             {% endwith %}
 
-            <form action="{{ url_for('auth.login') }}" method="POST" class="login-form">
+            <form action="{{ url_for('auth.login') }}" method="POST" class="login-form" id="login-form">
                 {{ form.hidden_tag() }}
                 <div class="form-group">
                     {{ form.username.label }}
                     {{ form.username(class="form-control", placeholder="Введите имя пользователя") }}
+                    <div class="invalid-feedback"></div>
                 </div>
                 <div class="form-group">
                     {{ form.password.label }}
                     {{ form.password(class="form-control", placeholder="Введите пароль") }}
+                    <div class="invalid-feedback"></div>
                 </div>
                 <!-- Remove Remember Me if not strictly needed or verify field existence -->
                 <div class="form-check">
@@ -66,17 +68,19 @@
                 <p>Зарегистрируйте новую организацию или присоединитесь к существующей</p>
             </div>
 
-            <form action="{{ url_for('auth.register') }}" method="POST" class="register-form">
+            <form action="{{ url_for('auth.register') }}" method="POST" class="register-form" id="register-form">
                 {{ registration_form.hidden_tag() }}
 
                 <div class="form-group">
                     {{ registration_form.username.label }}
                     {{ registration_form.username(class="form-control", placeholder="ИвановИИ") }}
+                    <div class="invalid-feedback"></div>
                 </div>
 
                 <div class="form-group">
                     {{ registration_form.email.label }}
                     {{ registration_form.email(class="form-control", placeholder="Введите ваш email") }}
+                    <div class="invalid-feedback"></div>
                 </div>
 
                 <div class="form-group">
@@ -92,21 +96,25 @@
                         <option value="" disabled>Нет доступных городов</option>
                         {% endif %}
                     </select>
+                    <div class="invalid-feedback">Пожалуйста, выберите город</div>
                 </div>
 
                 <div class="form-group">
                     {{ registration_form.organization_name.label }}
                     {{ registration_form.organization_name(class="form-control", placeholder="Название организации") }}
+                    <div class="invalid-feedback"></div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group col-half">
                         {{ registration_form.password.label }}
                         {{ registration_form.password(class="form-control", placeholder="Пароль") }}
+                        <div class="invalid-feedback"></div>
                     </div>
                     <div class="form-group col-half">
                         {{ registration_form.confirm_password.label }}
                         {{ registration_form.confirm_password(class="form-control", placeholder="Повторите пароль") }}
+                        <div class="invalid-feedback"></div>
                     </div>
                 </div>
 
@@ -115,8 +123,9 @@
                     <div class="captcha-container">
                         <img src="{{ url_for('auth.captcha') }}" alt="Captcha" class="captcha-image">
                         <button type="button" class="btn-refresh"
-                            onclick="document.querySelector('.captcha-image').src='{{ url_for('auth.captcha') }}?' + new Date().getTime()">&#x21bb;</button>
+                            onclick="document.querySelector('.captcha-image').src='{{ url_for('auth.captcha') }}?' + new Date().getTime(); return false;">&#x21bb;</button>
                         {{ registration_form.captcha(class="form-control captcha-input", placeholder="Введите код") }}
+                        <div class="invalid-feedback"></div>
                     </div>
                 </div>
 
@@ -152,6 +161,78 @@
         if (window.location.hash === '#register') {
             modal.style.display = "flex";
         }
+
+        // Unified AJAX Auth Handler
+        const setupAjaxAuth = (formId, isRegistration = false) => {
+            const form = document.getElementById(formId);
+            if (!form) return;
+
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                // Clear previous validation
+                form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+                // Client-side quick check (City is special/manual)
+                if (isRegistration) {
+                    const citySelect = document.getElementById('city_select');
+                    if (citySelect && !citySelect.value) {
+                        citySelect.classList.add('is-invalid');
+                        const feedback = citySelect.parentElement.querySelector('.invalid-feedback');
+                        if (feedback) feedback.textContent = 'Пожалуйста, выберите город';
+                        citySelect.focus();
+                        return;
+                    }
+                }
+
+                // AJAX Submit
+                try {
+                    const formData = new FormData(form);
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        window.location.href = result.redirect;
+                    } else {
+                        // Handle server-side validation errors
+                        for (const [field, errors] of Object.entries(result.errors || {})) {
+                            const input = form.querySelector(`[name="${field}"]`) || document.getElementById(field);
+                            if (input) {
+                                input.classList.add('is-invalid');
+                                // Find the feedback div
+                                let feedback = input.nextElementSibling;
+                                if (!feedback || !feedback.classList.contains('invalid-feedback')) {
+                                    feedback = input.parentElement.querySelector('.invalid-feedback');
+                                }
+                                if (feedback) {
+                                    feedback.textContent = errors.join(', ');
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Auth error:', error);
+                    alert('Произошла ошибка. Попробуйте еще раз.');
+                }
+            });
+
+            // Remove error highlight on input
+            form.querySelectorAll('input, select').forEach(input => {
+                input.addEventListener('input', () => input.classList.remove('is-invalid'));
+                input.addEventListener('change', () => input.classList.remove('is-invalid'));
+            });
+        };
+
+        setupAjaxAuth('login-form');
+        setupAjaxAuth('register-form', true);
     </script>
 </body>
 
