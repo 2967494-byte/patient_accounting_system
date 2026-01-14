@@ -3803,7 +3803,7 @@ def reports_organizations_details():
         is_registered = False
         
         # 1. Direct check
-        if appt.payment_method_id isnot None:
+        if appt.payment_method_id is not None:
             is_registered = True
         else:
             # 2. Fuzzy match with registered appointments on the same day
