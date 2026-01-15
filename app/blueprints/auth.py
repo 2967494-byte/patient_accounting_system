@@ -67,13 +67,15 @@ def register():
             }), 400
 
         # Check/Create Organization
-        org = Organization.query.filter_by(name=form.organization_name.data).first()
+        org_name = form.organization_name.data.strip()
+        org = Organization.query.filter_by(name=org_name).first()
         if not org:
-            org = Organization(name=form.organization_name.data)
+            org = Organization(name=org_name)
             db.session.add(org)
             db.session.commit()
             
-        user = User(username=form.username.data, email=form.email.data, organization_id=org.id)
+        username = form.username.data.strip()
+        user = User(username=username, email=form.email.data, organization_id=org.id)
         user.city_id = int(city_id)
         user.password_hash = generate_password_hash(form.password.data)
         

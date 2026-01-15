@@ -1,0 +1,229 @@
+{% extends "app_base.html" %}
+
+{% block content %}
+<div class="card" style="padding: 1rem; max-width: 1200px; margin: 0 auto;">
+    <div class="page-header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+            <h2 style="margin: 0;">✍️ Редактор справки КНД 1151156</h2>
+            <p style="color: #6b7280; margin: 0.25rem 0 0 0;">Заполните недостающие поля прямо на бланке и нажмите
+                "Сгенерировать"</p>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <div id="calibration-controls"
+                style="background: rgba(0,0,0,0.05); padding: 5px; border-radius: 4px; display: flex; gap: 5px; align-items: center;">
+                <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 5px;">СДВИГ
+                    (КАЛИБРОВКА):</span>
+                <button onclick="shiftAll(0, -1)"
+                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px;">↑</button>
+                <button onclick="shiftAll(0, 1)"
+                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px;">↓</button>
+                <button onclick="shiftAll(-1, 0)"
+                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px;">←</button>
+                <button onclick="shiftAll(1, 0)"
+                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px;">→</button>
+                <button onclick="resetShift()"
+                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px; font-size: 10px;">Сброс</button>
+            </div>
+            <button onclick="saveAndGenerate()" class="btn"
+                style="background: #10b981; color: white; padding: 0.75rem 1.5rem;">
+                🚀 Сгенерировать и скачать
+            </button>
+        </div>
+    </div>
+
+    <!-- The Editor Container -->
+    <div id="editor-container"
+        style="position: relative; width: 100%; height: 1600px; background: #f3f4f6; overflow: auto; border: 1px solid #d1d5db; border-radius: 0.5rem;">
+        <div id="pdf-background"
+            style="position: relative; width: 1121px; height: 1585px; margin: 0 auto; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2);">
+            <img src="{{ url_for('static', filename='uploads/certificate_bg.png') }}"
+                style="width: 100%; height: 100%; pointer-events: none;">
+
+            <!-- Overlay Inputs -->
+            <div id="overlay-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                <!-- These will be added via JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stamp-input {
+        position: absolute;
+        border: 1px solid transparent;
+        background: rgba(59, 130, 246, 0.05);
+        font-family: "Courier New", Courier, monospace;
+        font-weight: bold;
+        font-size: 16px;
+        padding: 0;
+        text-transform: uppercase;
+        outline: none;
+        transition: background 0.2s, border-color 0.2s;
+    }
+
+    .stamp-input:hover {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: #3b82f6;
+    }
+
+    .stamp-input:focus {
+        background: white;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    /* Box-grid inputs (character by character) */
+    .char-box {
+        position: absolute;
+        width: 19px;
+        height: 25px;
+        border: 1px solid transparent;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, Helvetica, sans-serif;
+        font-weight: 400;
+        font-size: 22px;
+        padding: 0;
+        outline: none;
+    }
+
+    .char-box:focus {
+        background: rgba(37, 99, 235, 0.05);
+        border-color: #2563eb;
+    }
+</style>
+
+<script>
+    const appointmentId = JSON.parse('{{ appointment_id | tojson }}');
+    const patientData = JSON.parse('{{ patient_data | tojson }}');
+
+    const fields = [
+        { id: 'top_inn', type: 'grid', count: 12, startX: 350, startY: 28.5, spacing: 26.5 },
+        { id: 'top_kpp', type: 'grid', count: 9, startX: 350, startY: 68.5, spacing: 26.5 },
+        { id: 'page_no', type: 'grid', count: 3, startX: 620, startY: 68.5, spacing: 26.5 },
+        { id: 'cert_no', type: 'grid', count: 15, startX: 162.5, startY: 250.5, spacing: 26.5, val: String(patientData.contract_no || '') },
+        { id: 'correction', type: 'grid', count: 3, startX: 700, startY: 248.5, spacing: 26.5 },
+        { id: 'year', type: 'grid', count: 4, startX: 990, startY: 250.5, spacing: 26.5, val: new Date().getFullYear().toString() },
+        { id: 'org_l1', type: 'grid', count: 40, startX: 35, startY: 348.5, spacing: 26.5 },
+        { id: 'org_l2', type: 'grid', count: 40, startX: 35, startY: 385.5, spacing: 26.5 },
+        { id: 'org_l3', type: 'grid', count: 40, startX: 35, startY: 422.5, spacing: 26.5 },
+        { id: 'org_l4', type: 'grid', count: 40, startX: 35, startY: 459.5, spacing: 26.5 },
+        { id: 'surname', type: 'grid', count: 40, startX: 35, startY: 578.5, spacing: 26.5, val: patientData.surname },
+        { id: 'name', type: 'grid', count: 40, startX: 35, startY: 615.5, spacing: 26.5, val: patientData.name },
+        { id: 'patronymic', type: 'grid', count: 40, startX: 35, startY: 652.5, spacing: 26.5, val: patientData.patronymic },
+        { id: 'p_inn', type: 'grid', count: 12, startX: 35, startY: 748.5, spacing: 26.5, val: patientData.inn },
+        { id: 'b_day', type: 'grid', count: 2, startX: 570, startY: 748.5, spacing: 26.5, val: patientData.b_day },
+        { id: 'b_month', type: 'grid', count: 2, startX: 633, startY: 748.5, spacing: 26.5, val: patientData.b_month },
+        { id: 'b_year', type: 'grid', count: 4, startX: 695, startY: 748.5, spacing: 26.5, val: patientData.b_year },
+        { id: 'doc_code', type: 'grid', count: 2, startX: 470, startY: 828.5, spacing: 26.5, val: '21' },
+        { id: 'doc_info', type: 'grid', count: 25, startX: 520, startY: 828.5, spacing: 26.5, val: patientData.doc_info },
+        { id: 'amount', type: 'grid', count: 15, startX: 35, startY: 928.5, spacing: 26.5, val: patientData.amount },
+        { id: 'c_day', type: 'grid', count: 2, startX: 35, startY: 1048.5, spacing: 26.5, val: patientData.c_day },
+        { id: 'c_month', type: 'grid', count: 2, startX: 98, startY: 1048.5, spacing: 26.5, val: patientData.c_month },
+        { id: 'c_year', type: 'grid', count: 4, startX: 160, startY: 1048.5, spacing: 26.5, val: patientData.c_year },
+    ];
+
+    function initEditor() {
+        const overlay = document.getElementById('overlay-layer');
+        // Save current values to restore them after re-init (if any)
+        const currentVals = {};
+        document.querySelectorAll('.char-box').forEach(inp => {
+            const field = inp.dataset.field;
+            const index = inp.dataset.index;
+            if (!currentVals[field]) currentVals[field] = {};
+            currentVals[field][index] = inp.value;
+        });
+
+        overlay.innerHTML = '';
+
+        const globalX = parseInt(localStorage.getItem('cert_x') || '0');
+        const globalY = parseInt(localStorage.getItem('cert_y') || '0');
+
+        fields.forEach(f => {
+            for (let i = 0; i < f.count; i++) {
+                const input = document.createElement('input');
+                input.className = 'char-box';
+                input.style.left = (f.startX + (i * f.spacing) + globalX) + 'px';
+                input.style.top = (f.startY + globalY) + 'px';
+                input.maxLength = 1;
+                input.dataset.field = f.id;
+                input.dataset.index = i;
+
+                // Restore value or use default
+                if (currentVals[f.id] && currentVals[f.id][i] !== undefined) {
+                    input.value = currentVals[f.id][i];
+                } else if (f.val && f.val[i]) {
+                    input.value = f.val[i];
+                }
+
+                input.oninput = (e) => {
+                    if (e.target.value && e.target.nextElementSibling && e.target.nextElementSibling.dataset.field === f.id) {
+                        e.target.nextElementSibling.focus();
+                    }
+                };
+                input.onkeydown = (e) => {
+                    if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling && e.target.previousElementSibling.dataset.field === f.id) {
+                        e.target.previousElementSibling.focus();
+                    }
+                };
+
+                overlay.appendChild(input);
+            }
+        });
+    }
+
+    function shiftAll(dx, dy) {
+        const x = parseInt(localStorage.getItem('cert_x') || '0') + dx;
+        const y = parseInt(localStorage.getItem('cert_y') || '0') + dy;
+        localStorage.setItem('cert_x', x);
+        localStorage.setItem('cert_y', y);
+        initEditor();
+    }
+
+    function resetShift() {
+        localStorage.setItem('cert_x', '0');
+        localStorage.setItem('cert_y', '0');
+        initEditor();
+    }
+
+    async function saveAndGenerate() {
+        // Collect all data
+        const inputs = document.querySelectorAll('.char-box');
+        const formData = {};
+        inputs.forEach(inp => {
+            const field = inp.dataset.field;
+            if (!formData[field]) formData[field] = '';
+            formData[field] += inp.value || ' ';
+        });
+
+        try {
+            const response = await fetch('/stamp-tool/certificate/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    appointment_id: appointmentId,
+                    form_data: formData,
+                    calibration: {
+                        x: parseInt(localStorage.getItem('cert_x') || '0'),
+                        y: parseInt(localStorage.getItem('cert_y') || '0')
+                    }
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Справка успешно сгенерирована!');
+                window.location.href = result.download_url;
+            } else {
+                alert('Ошибка: ' + result.error);
+            }
+        } catch (e) {
+            alert('Ошибка сети: ' + e.message);
+        }
+    }
+
+    window.onload = initEditor;
+</script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "app_base.html" %}
+
+{% block content %}
+<div class="card" style="padding: 2rem;">
+    <div class="page-header" style="margin-bottom: 2rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem;">
+        <h2 style="color: #1f2937; margin: 0;">🛠️ Инструмент создания справок</h2>
+        <p style="color: #6b7280; margin-top: 0.5rem;">Выберите пациента и заполните данные для справки (Форма КНД
+            1151156)</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+        <div>
+            <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Поиск
+                пациента:</label>
+            <input type="text" id="patient-search" list="patients-list" class="form-control"
+                placeholder="Введите ФИО для поиска..."
+                style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+            <datalist id="patients-list"></datalist>
+        </div>
+
+        <div id="patient-data"
+            style="display: none; background: #f9fafb; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+            <h4 style="margin-top: 0;">Данные пациента:</h4>
+            <div style="font-size: 0.9rem;">
+                <p><strong>ФИО:</strong> <span id="display-name"></span></p>
+                <p><strong>Сумма:</strong> <span id="display-amount"></span> руб.</p>
+                <p><strong>Дата приема:</strong> <span id="display-date"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <div
+        style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2.5rem; background: #fff; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+        <div>
+            <label class="form-label">ИНН пациента:</label>
+            <input type="text" id="inn" class="form-control" placeholder="12 цифр">
+        </div>
+        <div>
+            <label class="form-label">Дата рождения:</label>
+            <input type="date" id="birth-date" class="form-control">
+        </div>
+        <div>
+            <label class="form-label">Серия паспорта:</label>
+            <input type="text" id="doc-series" class="form-control" placeholder="4 цифры">
+        </div>
+        <div>
+            <label class="form-label">Номер паспорта:</label>
+            <input type="text" id="doc-number" class="form-control" placeholder="6 цифр">
+        </div>
+        <div style="grid-column: span 2;">
+            <label class="form-label">Дата выдачи паспорта:</label>
+            <input type="date" id="doc-issue-date" class="form-control">
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 2.5rem;">
+        <button onclick="openEditor()" class="btn" style="background: #10b981; color: white;">
+            ✍️ Открыть редактор и создать справку
+        </button>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <h4 style="margin-bottom: 1rem;">Сгенерированные справки:</h4>
+        <div id="certificates-list"></div>
+    </div>
+</div>
+
+<script>
+    let currentAppointmentId = null;
+    let patientsData = [];
+
+    // Load patients and certificates on page load
+    loadPatients();
+    loadCertificates();
+
+    async function loadPatients() {
+        try {
+            const response = await fetch('{{ url_for("main.get_patients_for_certificate") }}');
+            const data = await response.json();
+
+            if (data.success) {
+                patientsData = data.patients;
+                const datalist = document.getElementById('patients-list');
+                datalist.innerHTML = '';
+
+                data.patients.forEach(patient => {
+                    const option = document.createElement('option');
+                    option.value = patient.patient_name;
+                    option.dataset.id = patient.id;
+                    datalist.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.error('Failed to load patients:', e);
+        }
+    }
+
+    // Handle patient selection
+    document.getElementById('patient-search').addEventListener('change', function (e) {
+        const selectedName = e.target.value;
+        const patient = patientsData.find(p => p.patient_name === selectedName);
+
+        if (patient) {
+            currentAppointmentId = patient.id;
+            document.getElementById('display-name').textContent = patient.patient_name;
+            document.getElementById('display-amount').textContent = patient.cost || '0';
+            document.getElementById('display-date').textContent = patient.date;
+            document.getElementById('patient-data').style.display = 'block';
+        }
+    });
+
+    function openEditor() {
+        if (!currentAppointmentId) {
+            alert('Пожалуйста, выберите пациента');
+            return;
+        }
+        window.location.href = `/stamp-tool/certificate/edit/${currentAppointmentId}`;
+    }
+
+    async function loadCertificates() {
+        try {
+            const response = await fetch('{{ url_for("main.list_certificates") }}');
+            const data = await response.json();
+
+            if (data.success) {
+                const list = document.getElementById('certificates-list');
+                list.innerHTML = '';
+
+                data.certificates.forEach(cert => {
+                    const certDiv = document.createElement('div');
+                    certDiv.style.cssText = 'padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; margin-bottom: 0.5rem;';
+                    certDiv.innerHTML = `
+                        <strong>${cert.patient_name}</strong> - ${cert.amount} руб.
+                        <br><small>${new Date(cert.generated_at).toLocaleString('ru-RU')}</small>
+                        <br><a href="/stamp-tool/certificate/${cert.id}/download" style="color: #3b82f6;">Скачать</a>
+                    `;
+                    list.appendChild(certDiv);
+                });
+            }
+        } catch (e) {
+            console.error('Failed to load certificates:', e);
+        }
+    }
+</script>
+
+<style>
+    .form-label {
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}

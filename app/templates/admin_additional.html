@@ -248,5 +248,31 @@
         </div>
     </div>
 
+    <!-- Stamp Image Section -->
+    <div class="card">
+        <h3 class="mb-4">Изображение Печати</h3>
+
+        <div style="display: flex; gap: 1rem; align-items: start;">
+            <div style="flex: 1;">
+                <p class="mb-2">Печать для документов (PNG с прозрачным фоном)</p>
+                <form action="{{ url_for('admin.upload_stamp_image') }}" method="POST" enctype="multipart/form-data"
+                    style="display: flex; gap: 0.5rem; flex-direction: column;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="file" name="stamp_image" accept="image/png" required class="form-input"
+                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    <button type="submit" class="btn btn-primary" style="width: fit-content;">Загрузить</button>
+                </form>
+            </div>
+
+            {% if stamp_image %}
+            <div style="text-align: center;">
+                <p class="mb-2 text-sm text-gray-500">Текущая:</p>
+                <img src="{{ url_for('static', filename=stamp_image) }}" alt="Stamp"
+                    style="width: 100px; height: 100px; object-fit: contain; border: 2px solid #e5e7eb; border-radius: 0.5rem; background: #f9fafb;">
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
 </div>
 {% endblock %}

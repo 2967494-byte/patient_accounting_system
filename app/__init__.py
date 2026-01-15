@@ -95,5 +95,48 @@ def create_app(test_config=None):
     
     atexit.register(on_exit)
 
+    # Setup APScheduler for metrics collection (daily at 12:00 MSK = 09:00 UTC)
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        import pytz
+        
+        scheduler = BackgroundScheduler(timezone=pytz.timezone('Europe/Moscow'))
+        
+        # Collect metrics daily at 12:00 MSK
+        scheduler.add_job(
+            func=lambda: collect_system_metrics_job(app),
+            trigger=CronTrigger(hour=12, minute=0),
+            id='collect_metrics',
+            name='Collect System Metrics',
+            replace_existing=True
+        )
+        
+        # Cleanup certificates daily at 01:00 MSK
+        scheduler.add_job(
+            func=lambda: cleanup_certificates_job(app),
+            trigger=CronTrigger(hour=1, minute=0),
+            id='cleanup_certificates',
+            name='Cleanup Old Certificates',
+            replace_existing=True
+        )
+        
+        scheduler.start()
+        
+        # Shutdown scheduler on exit
+        atexit.register(lambda: scheduler.shutdown())
+
     return app
+
+def collect_system_metrics_job(app):
+    """Job function to collect metrics with app context"""
+    with app.app_context():
+        from app.blueprints.admin import collect_system_metrics
+        collect_system_metrics()
+
+def cleanup_certificates_job(app):
+    """Job function to cleanup old certificates with app context"""
+    with app.app_context():
+        from app.blueprints.main import cleanup_old_certificates
+        cleanup_old_certificates()
 

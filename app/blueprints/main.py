@@ -1,10 +1,13 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, abort, current_app, send_file
 from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
-from app.models import Location, Organization, Doctor, Service, Appointment, AdditionalService, Clinic, PaymentMethod
+from app.models import Location, Organization, Doctor, Service, Appointment, AdditionalService, Clinic, PaymentMethod, GlobalSetting, MedicalCertificate
 from app import db
+from app.extensions import csrf
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from sqlalchemy import extract
+import os
 
 main = Blueprint('main', __name__)
 
@@ -502,3 +505,317 @@ def journal():
     summary_stats = calculate_stats(registered_appointments)
 
     return render_template('journal.html', centers=centers, current_center_id=current_center_id, todays_appointments=unregistered_appointments, appointments=registered_appointments, current_date=current_date, services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats)
+
+
+# ========== Stamp Tool Routes ==========
+
+@main.route('/stamp-tool')
+@login_required
+def stamp_tool():
+    """Render the document stamp tool page"""
+    stamp_setting = GlobalSetting.query.get('stamp_image')
+    stamp_image = stamp_setting.value if stamp_setting else None
+    
+    return render_template('admin_stamp_tool.html', stamp_image=stamp_image)
+
+
+@main.route('/stamp-tool/template-image')
+@login_required
+def get_certificate_template():
+    """Serve certificate template image for calibration"""
+    template_path = os.path.join(current_app.root_path, '..', 'orbital logo files', 'Без заказчика.png')
+    if not os.path.exists(template_path):
+        abort(404)
+    return send_file(template_path, mimetype='image/png')
+
+
+@main.route('/stamp-tool/upload', methods=['POST'])
+@login_required
+@csrf.exempt
+def stamp_tool_upload():
+    """Upload and convert PDF document to PNG images"""
+    from pdf2image import convert_from_path
+    import tempfile
+    import uuid
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not file.filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'Invalid file format. Only PDF files are supported'}), 400
+    
+    try:
+        # Create temporary directory for processing
+        temp_dir = tempfile.mkdtemp()
+        session_id = str(uuid.uuid4())
+        
+        # Save uploaded PDF file
+        filename = secure_filename(file.filename)
+        pdf_path = os.path.join(temp_dir, filename)
+        file.save(pdf_path)
+        
+        # Create output directory for this session
+        output_dir = os.path.join(current_app.static_folder, 'uploads', 'temp_docs', session_id)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Convert PDF to images using poppler
+        images = convert_from_path(pdf_path, dpi=200)
+        
+        page_paths = []
+        for i, image in enumerate(images):
+            page_filename = f'page_{i+1}.png'
+            page_path = os.path.join(output_dir, page_filename)
+            image.save(page_path, 'PNG')
+            page_paths.append(f'static/uploads/temp_docs/{session_id}/{page_filename}')
+        
+        # Clean up temp directory
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'pages': page_paths,
+            'total_pages': len(page_paths)
+        })
+            
+    except Exception as e:
+        return jsonify({'error': f'Conversion failed: {str(e)}'}), 500
+
+
+@main.route('/stamp-tool/apply-stamp', methods=['POST'])
+@login_required
+@csrf.exempt
+def stamp_tool_apply_stamp():
+    """Apply stamp to document page and return PNG"""
+    from PIL import Image
+    
+    data = request.get_json()
+    session_id = data.get('session_id')
+    page_index = data.get('page_index', 0)
+    stamp_x = data.get('stamp_x', 100)
+    stamp_y = data.get('stamp_y', 100)
+    stamp_size = data.get('stamp_size', 150)
+    rotation = data.get('rotation', 0)
+    
+    if not session_id:
+        return jsonify({'error': 'No session ID provided'}), 400
+    
+    try:
+        # Get stamp image
+        stamp_setting = GlobalSetting.query.get('stamp_image')
+        if not stamp_setting or not stamp_setting.value:
+            return jsonify({'error': 'No stamp image uploaded'}), 400
+        
+        stamp_path = os.path.join(current_app.static_folder, stamp_setting.value)
+        
+        # Get document page
+        page_filename = f'page_{page_index + 1}.png'
+        doc_page_path = os.path.join(current_app.static_folder, 'uploads', 'temp_docs', session_id, page_filename)
+        
+        if not os.path.exists(doc_page_path):
+            return jsonify({'error': 'Document page not found'}), 404
+        
+        # Open images
+        doc_image = Image.open(doc_page_path).convert('RGBA')
+        stamp_image = Image.open(stamp_path).convert('RGBA')
+        
+        # Resize stamp
+        stamp_image = stamp_image.resize((stamp_size, stamp_size), Image.Resampling.LANCZOS)
+        
+        # Rotate stamp if needed
+        if rotation != 0:
+            stamp_image = stamp_image.rotate(-rotation, expand=True, resample=Image.Resampling.BICUBIC)
+        
+        # Create a copy of document image
+        result = doc_image.copy()
+        
+        # Paste stamp at specified position
+        result.paste(stamp_image, (int(stamp_x), int(stamp_y)), stamp_image)
+        
+        # Save result
+        output_filename = f'stamped_page_{page_index + 1}.png'
+        output_path = os.path.join(current_app.static_folder, 'uploads', 'temp_docs', session_id, output_filename)
+        result.save(output_path, 'PNG')
+        
+        return jsonify({
+            'success': True,
+            'output_path': f'static/uploads/temp_docs/{session_id}/{output_filename}'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Stamp application failed: {str(e)}'}), 500
+
+
+# ========== Medical Certificate Generator ==========
+
+@main.route('/stamp-tool/patients', methods=['GET'])
+@login_required
+def get_patients_for_certificate():
+    """Get list of recent patients with appointment data"""
+    try:
+        # Get recent appointments (last 3 months) with unique patients
+        three_months_ago = date.today() - timedelta(days=90)
+        
+        appointments = Appointment.query.filter(
+            Appointment.date >= three_months_ago
+        ).order_by(Appointment.date.desc()).limit(500).all()
+        
+        # Create unique patient list with their data
+        patients_data = []
+        seen_names = set()
+        
+        for apt in appointments:
+            if apt.patient_name not in seen_names:
+                patients_data.append({
+                    'id': apt.id,
+                    'patient_name': apt.patient_name,
+                    'cost': apt.cost,
+                    'date': apt.date.isoformat()
+                })
+                seen_names.add(apt.patient_name)
+        
+        return jsonify({'success': True, 'patients': patients_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@main.route('/stamp-tool/certificate/edit/<int:appointment_id>')
+@login_required
+def certificate_edit(appointment_id):
+    """Render the interactive certificate editor with pre-filled data"""
+    appointment = Appointment.query.get_or_404(appointment_id)
+    
+    # Split name parts
+    full_name = appointment.patient_name or ""
+    parts = full_name.split()
+    surname = parts[0].upper() if len(parts) > 0 else ""
+    name = parts[1].upper() if len(parts) > 1 else ""
+    patronymic = parts[2].upper() if len(parts) > 2 else ""
+    
+    # Look for previous certificate for this patient to pre-fill INN, Birth Date, etc.
+    prev_cert = MedicalCertificate.query.filter_by(patient_name=appointment.patient_name).order_by(MedicalCertificate.generated_at.desc()).first()
+    
+    # Format dates
+    c_date = date.today()
+    
+    patient_data = {
+        'surname': surname,
+        'name': name,
+        'patronymic': patronymic,
+        'inn': prev_cert.inn if prev_cert and prev_cert.inn else "",
+        'b_day': prev_cert.birth_date.strftime('%d') if prev_cert and prev_cert.birth_date else "",
+        'b_month': prev_cert.birth_date.strftime('%m') if prev_cert and prev_cert.birth_date else "",
+        'b_year': prev_cert.birth_date.strftime('%Y') if prev_cert and prev_cert.birth_date else "",
+        'doc_info': f"{prev_cert.doc_series} {prev_cert.doc_number}".strip() if prev_cert and prev_cert.doc_series else "",
+        'amount': f"{appointment.cost or 0:,.2f}".replace(',', ' ').replace('.', ' '),
+        'c_day': c_date.strftime('%d'),
+        'c_month': c_date.strftime('%m'),
+        'c_year': c_date.strftime('%Y'),
+        'contract_no': appointment.contract_number or "",
+    }
+    
+    return render_template('certificate_editor.html', 
+                          appointment_id=appointment_id, 
+                          patient_data=patient_data)
+
+
+@main.route('/stamp-tool/certificate/generate', methods=['POST'])
+@login_required
+def generate_certificate():
+    """Receive form data and generate JPEG using Playwright"""
+    try:
+        from playwright.sync_api import sync_playwright
+        data = request.get_json()
+        appointment_id = data.get('appointment_id')
+        form_data = data.get('form_data', {})
+        
+        appointment = Appointment.query.get_or_404(appointment_id)
+        
+        # Prepare render data for Playwright
+        render_data = {
+            'form_data': form_data,
+            'calibration': data.get('calibration', {'x': 0, 'y': 0}),
+            'bg_url': url_for('static', filename='uploads/certificate_bg.png', _external=True)
+        }
+        
+        # We need a tiny template strictly for Playwright to "Photograph"
+        html_to_screenshot = render_template('certificate_render.html', **render_data)
+        
+        # Save temp HTML
+        temp_dir = os.path.join(current_app.static_folder, 'uploads', 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_html_path = os.path.join(temp_dir, f'render_{int(datetime.now().timestamp())}.html')
+        with open(temp_html_path, 'w', encoding='utf-8') as f:
+            f.write(html_to_screenshot)
+            
+        # Generate JPEG
+        cert_dir = os.path.join(current_app.static_folder, 'uploads', 'certificates')
+        os.makedirs(cert_dir, exist_ok=True)
+        # Sanitize filename
+        safe_name = "".join([c for c in appointment.patient_name if c.isalnum() or c in (' ', '_')]).rstrip()
+        filename = f'cert_{safe_name}_{int(datetime.now().timestamp())}.jpg'
+        filepath = os.path.join(cert_dir, filename)
+        
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            # Note: Viewport matches the 1121x1585 editor scale for now
+            page = browser.new_page(viewport={'width': 1121, 'height': 1585})
+            page.goto('file:///' + temp_html_path.replace('\\', '/'))
+            page.wait_for_timeout(1000) # Wait for bg
+            page.screenshot(path=filepath, type='jpeg', quality=95)
+            browser.close()
+            
+        os.remove(temp_html_path)
+        
+        # Prepare record
+        cert = MedicalCertificate(
+            appointment_id=appointment_id,
+            patient_name=appointment.patient_name,
+            inn=form_data.get('p_inn', '').strip(),
+            amount=appointment.cost or 0,
+            filename=filename,
+            created_by_id=current_user.id
+        )
+        db.session.add(cert)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'download_url': url_for('main.download_certificate', cert_id=cert.id)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@main.route('/stamp-tool/certificate/<int:cert_id>/download')
+@login_required
+def download_certificate(cert_id):
+    """Download generated certificate"""
+    cert = MedicalCertificate.query.get_or_404(cert_id)
+    filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', cert.filename)
+    
+    if not os.path.exists(filepath):
+        abort(404)
+    
+    return send_file(filepath, as_attachment=True, download_name=f'certificate_{cert.patient_name}_{cert.id}.jpg')
+
+
+@main.route('/stamp-tool/certificates', methods=['GET'])
+@login_required
+def list_certificates():
+    """List generated certificates"""
+    certificates = MedicalCertificate.query.order_by(
+        MedicalCertificate.generated_at.desc()
+    ).limit(50).all()
+    
+    return jsonify({
+        'success': True,
+        'certificates': [cert.to_dict() for cert in certificates]
+    })

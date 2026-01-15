@@ -400,7 +400,7 @@ class GlobalSetting(db.Model):
     __tablename__ = 'global_settings'
     
     key = db.Column(db.String(50), primary_key=True)
-    value = db.Column(db.String(255), nullable=True)
+    value = db.Column(db.Text, nullable=True)
 
 class Message(db.Model):
     __tablename__ = 'messages'
@@ -461,3 +461,81 @@ class BonusValue(db.Model):
             'col': self.column_index,
             'val': self.value
         }
+
+class SystemMetrics(db.Model):
+    __tablename__ = 'system_metrics'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    
+    # Disk usage
+    disk_total_gb = db.Column(db.Float, nullable=False)
+    disk_used_gb = db.Column(db.Float, nullable=False)
+    disk_percent = db.Column(db.Float, nullable=False)
+    
+    # System counts
+    users_count = db.Column(db.Integer, default=0)
+    appointments_count = db.Column(db.Integer, default=0)
+    journal_entries_count = db.Column(db.Integer, default=0)
+    doctors_count = db.Column(db.Integer, default=0)
+    clinics_count = db.Column(db.Integer, default=0)
+    organizations_count = db.Column(db.Integer, default=0)
+    services_count = db.Column(db.Integer, default=0)
+    
+    # Resource usage
+    cpu_percent = db.Column(db.Float, nullable=True)
+    ram_percent = db.Column(db.Float, nullable=True)
+    
+    def to_dict(self):
+        return {
+            'timestamp': self.timestamp.isoformat(),
+            'disk_total_gb': self.disk_total_gb,
+            'disk_used_gb': self.disk_used_gb,
+            'disk_percent': self.disk_percent,
+            'users_count': self.users_count,
+            'appointments_count': self.appointments_count,
+            'journal_entries_count': self.journal_entries_count,
+            'doctors_count': self.doctors_count,
+            'clinics_count': self.clinics_count,
+            'organizations_count': self.organizations_count,
+            'services_count': self.services_count,
+            'cpu_percent': self.cpu_percent,
+            'ram_percent': self.ram_percent
+        }
+
+class MedicalCertificate(db.Model):
+    __tablename__ = 'medical_certificates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=True)
+    patient_name = db.Column(db.String(200), nullable=False)
+    
+    # Manual input fields
+    inn = db.Column(db.String(20), nullable=True)  # ИНН
+    birth_date = db.Column(db.Date, nullable=True)  # Дата рождения
+    doc_series = db.Column(db.String(20), nullable=True)  # Серия документа
+    doc_number = db.Column(db.String(20), nullable=True)  # Номер документа
+    doc_issue_date = db.Column(db.Date, nullable=True)  # Дата выдачи
+    
+    # Auto-filled fields
+    amount = db.Column(db.Float, default=0.0)  # Сумма
+    
+    # File info
+    filename = db.Column(db.String(255), nullable=False)
+    generated_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Relationships
+    appointment = db.relationship('Appointment', backref='certificates')
+    created_by = db.relationship('User', backref='created_certificates')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'patient_name': self.patient_name,
+            'amount': self.amount,
+            'filename': self.filename,
+            'generated_at': self.generated_at.isoformat(),
+            'created_by': self.created_by.username if self.created_by else None
+        }
+

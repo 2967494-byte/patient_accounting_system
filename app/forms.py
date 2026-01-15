@@ -12,7 +12,7 @@ class LoginForm(FlaskForm):
 class RegistrationForm(FlaskForm):
     username = StringField('Имя пользователя', validators=[DataRequired(), Length(min=2, max=64)])
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=120)])
-    password = PasswordField('Пароль', validators=[DataRequired()])
+    password = PasswordField('Пароль', validators=[DataRequired(), Length(min=6, message='Пароль должен содержать минимум 6 символов')])
     confirm_password = PasswordField('Повторите пароль', validators=[DataRequired(), EqualTo('password')])
     
     organization_name = StringField('Название организации', validators=[DataRequired(), Length(min=2, max=128)])
@@ -21,11 +21,11 @@ class RegistrationForm(FlaskForm):
     submit = SubmitField('Зарегистрироваться')
 
     def validate_username(self, username):
-        user = User.query.filter_by(username=username.data).first()
+        user = User.query.filter_by(username=username.data.strip()).first()
         if user:
             raise ValidationError('Это имя пользователя уже занято. Пожалуйста, выберите другое.')
 
     def validate_email(self, email):
-        user = User.query.filter_by(email=email.data).first()
+        user = User.query.filter_by(email=email.data.strip()).first()
         if user:
             raise ValidationError('Этот email уже используется. Пожалуйста, выберите другой.')

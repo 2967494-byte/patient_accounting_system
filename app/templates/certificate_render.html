@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 1121px;
+            /* Matches editor scale */
+            height: 1585px;
+            overflow: hidden;
+        }
+
+        #background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .char-box {
+            position: absolute;
+            width: 19px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-weight: 400;
+            font-size: 22px;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <img id="background" src="{{ bg_url }}">
+
+    {% for field, value in form_data.items() %}
+    {% set f_id = field %}
+    {% set f_val = value %}
+
+    <script>
+        (function () {
+            const f_id = '{{ f_id }}';
+            const f_val = '{{ f_val }}';
+
+            // Basic offsets from backend
+            const globalX = parseInt('{{ calibration.x | default(0) }}');
+            const globalY = parseInt('{{ calibration.y | default(0) }}');
+
+            // individual offsets if provided
+            const individualOffsets = JSON.parse('{{ calibration.offsets | tojson | default("{}") }}');
+            const off = individualOffsets[f_id] || { x: 0, y: 0 };
+
+            const config = {
+                'top_inn': { startX: 350, startY: 28.5, spacing: 26.5 },
+                'top_kpp': { startX: 350, startY: 68.5, spacing: 26.5 },
+                'page_no': { startX: 620, startY: 68.5, spacing: 26.5 },
+                'cert_no': { startX: 162.5, startY: 250.5, spacing: 26.5 },
+                'correction': { startX: 700, startY: 248.5, spacing: 26.5 },
+                'year': { startX: 990, startY: 250.5, spacing: 26.5 },
+                'org_l1': { startX: 35, startY: 348.5, spacing: 26.5 },
+                'org_l2': { startX: 35, startY: 385.5, spacing: 26.5 },
+                'org_l3': { startX: 35, startY: 422.5, spacing: 26.5 },
+                'org_l4': { startX: 35, startY: 459.5, spacing: 26.5 },
+                'surname': { startX: 35, startY: 578.5, spacing: 26.5 },
+                'name': { startX: 35, startY: 615.5, spacing: 26.5 },
+                'patronymic': { startX: 35, startY: 652.5, spacing: 26.5 },
+                'p_inn': { startX: 35, startY: 748.5, spacing: 26.5 },
+                'b_day': { startX: 570, startY: 748.5, spacing: 26.5 },
+                'b_month': { startX: 633, startY: 748.5, spacing: 26.5 },
+                'b_year': { startX: 695, startY: 748.5, spacing: 26.5 },
+                'doc_code': { startX: 470, startY: 828.5, spacing: 26.5 },
+                'doc_info': { startX: 520, startY: 828.5, spacing: 26.5 },
+                'amount': { startX: 35, startY: 928.5, spacing: 26.5 },
+                'c_day': { startX: 35, startY: 1048.5, spacing: 26.5 },
+                'c_month': { startX: 98, startY: 1048.5, spacing: 26.5 },
+                'c_year': { startX: 160, startY: 1048.5, spacing: 26.5 },
+            };
+
+            const c = config[f_id];
+            if (c) {
+                for (let i = 0; i < f_val.length; i++) {
+                    const char = f_val[i];
+                    if (!char || char === ' ') continue;
+
+                    const div = document.createElement('div');
+                    div.className = 'char-box';
+                    div.style.left = (c.startX + (i * c.spacing) + globalX + off.x) + 'px';
+                    div.style.top = (c.startY + globalY + off.y) + 'px';
+                    div.textContent = char;
+                    document.body.appendChild(div);
+                }
+            }
+        })();
+    </script>
+    {% endfor %}
+</body>
+
+</html>

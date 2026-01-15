@@ -10,7 +10,9 @@ from app.models import (
 
     Clinic, Manager, PaymentMethod, Appointment, Organization, GlobalSetting, BonusPeriod,
 
-    AppointmentHistory, AppointmentAdditionalService, AppointmentService, BonusValue
+    AppointmentHistory, AppointmentAdditionalService, AppointmentService, BonusValue, SystemMetrics,
+    
+    MedicalCertificate
 
 )
 
@@ -18,13 +20,15 @@ from app.telegram_bot import telegram_bot
 
 import psutil
 
+from datetime import datetime, timedelta
+
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 
 
 
-from datetime import datetime, timedelta
+admin = Blueprint('admin', __name__)
 
 import csv
 
@@ -70,8 +74,12 @@ def additional():
     chat_setting = GlobalSetting.query.get('chat_image')
 
     chat_image = chat_setting.value if chat_setting else None
+    
+    stamp_setting = GlobalSetting.query.get('stamp_image')
+    
+    stamp_image = stamp_setting.value if stamp_setting else None
 
-    return render_template('admin_additional.html', managers=managers, payment_methods=payment_methods, centers=centers, chat_image=chat_image)
+    return render_template('admin_additional.html', managers=managers, payment_methods=payment_methods, centers=centers, chat_image=chat_image, stamp_image=stamp_image)
 
 
 
@@ -1308,9 +1316,357 @@ def update_chat_settings():
     return redirect(url_for('admin.additional'))
 
 
+@admin.route('/stamp/upload', methods=['POST'])
+
+@login_required
+
+def upload_stamp_image():
+
+    if 'stamp_image' not in request.files:
+
+        flash('Нет файла', 'error')
+
+        return redirect(url_for('admin.additional'))
+
+    
+
+    file = request.files['stamp_image']
+
+    if file.filename == '':
+
+        flash('Файл не выбран', 'error')
+
+        return redirect(url_for('admin.additional'))
+
+        
+
+    if file:
+
+        filename = secure_filename(file.filename)
+
+        # Save to static/uploads/stamps
+
+        upload_dir = os.path.join(current_app.static_folder, 'uploads', 'stamps')
+
+        os.makedirs(upload_dir, exist_ok=True)
+
+        
+
+        file_path = os.path.join(upload_dir, filename)
+
+        file.save(file_path)
+
+        
+
+        # Save relative path to DB
+
+        relative_path = f"uploads/stamps/{filename}"
+
+        
+
+        setting = GlobalSetting.query.get('stamp_image')
+
+        if not setting:
+
+            setting = GlobalSetting(key='stamp_image')
+
+            db.session.add(setting)
+
+        
+
+        setting.value = relative_path
+
+        db.session.commit()
+
+        
+
+        flash('Изображение печати обновлено', 'success')
+
+        
+
+    return redirect(url_for('admin.additional'))
 
 
+# ========== Medical Certificate Generator ==========
 
+@admin.route('/stamp-tool/patients', methods=['GET'])
+@login_required
+def get_patients_for_certificate():
+    """Get list of recent patients with appointment data"""
+    try:
+        # Get recent appointments (last 3 months) with unique patients
+        from datetime import date
+        three_months_ago = date.today() - timedelta(days=90)
+        
+        appointments = Appointment.query.filter(
+            Appointment.date >= three_months_ago
+        ).order_by(Appointment.date.desc()).limit(500).all()
+        
+        # Create unique patient list with their data
+        patients_data = []
+        seen_names = set()
+        
+        for apt in appointments:
+            if apt.patient_name not in seen_names:
+                patients_data.append({
+                    'id': apt.id,
+                    'patient_name': apt.patient_name,
+                    'cost': apt.cost,
+                    'date': apt.date.isoformat()
+                })
+                seen_names.add(apt.patient_name)
+        
+        return jsonify({'success': True, 'patients': patients_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin.route('/stamp-tool/certificate/generate', methods=['POST'])
+@login_required
+@csrf.exempt
+def generate_certificate():
+    """Generate medical certificate JPG from template"""
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        from datetime import date
+        
+        data = request.get_json()
+        
+        # Extract data
+        appointment_id = data.get('appointment_id')
+        patient_name = data.get('patient_name')
+        inn = data.get('inn', '')
+        birth_date_str = data.get('birth_date')
+        doc_series = data.get('doc_series', '')
+        doc_number = data.get('doc_number', '')
+        doc_issue_date_str = data.get('doc_issue_date')
+        amount = float(data.get('amount', 0))
+        
+        # Parse dates
+        birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date() if birth_date_str else None
+        doc_issue_date = datetime.strptime(doc_issue_date_str, '%Y-%m-%d').date() if doc_issue_date_str else None
+        
+        # Split patient name into parts (Фамилия Имя Отчество)
+        name_parts = patient_name.split()
+        surname = name_parts[0] if len(name_parts) > 0 else ''
+        name = name_parts[1] if len(name_parts) > 1 else ''
+        patronymic = name_parts[2] if len(name_parts) > 2 else ''
+        
+        # Load template
+        template_path = os.path.join(current_app.root_path, '..', 'orbital logo files', 'Без заказчика.png')
+        if not os.path.exists(template_path):
+            return jsonify({'error': 'Template not found'}), 404
+        
+        img = Image.open(template_path).convert('RGB')
+        draw = ImageDraw.Draw(img)
+        
+        # Font setup (try different fonts, fallback to default)
+        try:
+            font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf', 28)
+            font_small = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf', 24)
+        except:
+            font = ImageFont.load_default()
+            font_small = font
+        
+        # Draw fields on template (coordinates to be adjusted based on actual template)
+        # These are placeholder coordinates - need to be calibrated
+        draw.text((200, 250), surname, fill='black', font=font)  # Фамилия
+        draw.text((200, 300), name, fill='black', font=font)  # Имя
+        draw.text((200, 350), patronymic, fill='black', font=font)  # Отчество
+        
+        if inn:
+            draw.text((600, 200), inn, fill='black', font=font_small)  # ИНН
+        
+        if birth_date:
+            draw.text((400, 400), birth_date.strftime('%d.%m.%Y'), fill='black', font=font_small)  # Дата рождения
+        
+        draw.text((200, 450), doc_series, fill='black', font=font_small)  # Серия
+        draw.text((350, 450), doc_number, fill='black', font=font_small)  # Номер
+        
+        if doc_issue_date:
+            draw.text((550, 450), doc_issue_date.strftime('%d.%m.%Y'), fill='black', font=font_small)  # Дата выдачи
+        
+        # Auto-filled fields
+        draw.text((700, 500), '21', fill='black', font=font)  # Код документа
+        draw.text((850, 550), '1', fill='black', font=font)  # Налогоплательщик = пациент
+        draw.text((400, 600), f'{amount:.2f}', fill='black', font=font)  # Сумма
+        draw.text((700, 650), date.today().strftime('%d.%m.%Y'), fill='black', font=font_small)  # Сегодняшняя дата
+        
+        # Overlay stamp at bottom
+        stamp_setting = GlobalSetting.query.get('stamp_image')
+        if stamp_setting and stamp_setting.value:
+            stamp_path = os.path.join(current_app.static_folder, stamp_setting.value)
+            if os.path.exists(stamp_path):
+                stamp = Image.open(stamp_path).convert('RGBA')
+                # Resize stamp if needed
+                stamp = stamp.resize((200, 200), Image.Resampling.LANCZOS)
+                # Paste at bottom (adjust coordinates)
+                img.paste(stamp, (300, img.height - 250), stamp)
+        
+        # Save certificate
+        cert_dir = os.path.join(current_app.static_folder, 'uploads', 'certificates')
+        os.makedirs(cert_dir, exist_ok=True)
+        
+        filename = f'cert_{date.today().strftime("%Y_%m_%d")}_{int(datetime.now().timestamp())}.jpg'
+        filepath = os.path.join(cert_dir, filename)
+        
+        img.save(filepath, 'JPEG', quality=95)
+        
+        # Save to database
+        cert = MedicalCertificate(
+            appointment_id=appointment_id,
+            patient_name=patient_name,
+            inn=inn,
+            birth_date=birth_date,
+            doc_series=doc_series,
+            doc_number=doc_number,
+            doc_issue_date=doc_issue_date,
+            amount=amount,
+            filename=filename,
+            created_by_id=current_user.id
+        )
+        
+        db.session.add(cert)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'certificate_id': cert.id,
+            'filename': filename,
+            'download_url': url_for('admin.download_certificate', cert_id=cert.id)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Generation failed: {str(e)}'}), 500
+
+
+@admin.route('/stamp-tool/certificate/<int:cert_id>/download')
+@login_required
+def download_certificate(cert_id):
+    """Download generated certificate"""
+    cert = MedicalCertificate.query.get_or_404(cert_id)
+    filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', cert.filename)
+    
+    if not os.path.exists(filepath):
+        abort(404)
+    
+    from flask import send_file
+    return send_file(filepath, as_attachment=True, download_name=f'certificate_{cert.patient_name}_{cert.id}.jpg')
+
+
+@admin.route('/stamp-tool/certificates', methods=['GET'])
+@login_required
+def list_certificates():
+    """List generated certificates"""
+    certificates = MedicalCertificate.query.order_by(
+        MedicalCertificate.generated_at.desc()
+    ).limit(50).all()
+    
+    return jsonify({
+        'success': True,
+        'certificates': [cert.to_dict() for cert in certificates]
+    })
+
+
+def cleanup_old_certificates():
+    """Cleanup certificates older than 30 days"""
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=30)
+        old_certs = MedicalCertificate.query.filter(
+            MedicalCertificate.generated_at < cutoff
+        ).all()
+        
+        for cert in old_certs:
+            # Delete file
+            filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', cert.filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            # Delete DB record
+            db.session.delete(cert)
+        
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Certificate cleanup error: {e}")
+        return False
+
+
+# ========== Monitoring Metrics Collection ==========
+
+# Simple in-memory cache for statistics (5-minute expiration)
+_stats_cache = {'data': None, 'timestamp': None}
+
+def get_cached_statistics():
+    """Get system statistics with 5-minute cache"""
+    now = datetime.utcnow()
+    
+    # Check if cache is valid
+    if (_stats_cache['timestamp'] and 
+        now - _stats_cache['timestamp'] < timedelta(minutes=5)):
+        return _stats_cache['data']
+    
+    # Recalculate statistics
+    stats = {
+        'users_count': User.query.count(),
+        'appointments_count': Appointment.query.count(),
+        'journal_entries_count': AppointmentHistory.query.count(),
+        'doctors_count': Doctor.query.count(),
+        'clinics_count': Location.query.filter_by(type='center').count() + 
+                        Location.query.filter(Location.type != 'center', Location.type != 'city').count(),
+        'organizations_count': Organization.query.count(),
+        'services_count': Service.query.count(),
+        'locations_count': Location.query.count()
+    }
+    
+    # Update cache
+    _stats_cache['data'] = stats
+    _stats_cache['timestamp'] = now
+    
+    return stats
+
+def collect_system_metrics():
+    """Collect all system metrics and save to database"""
+    try:
+        # Get current statistics
+        stats = get_cached_statistics()
+        
+        # Get system resource usage
+        cpu_percent = psutil.cpu_percent(interval=1)
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        # Create new metrics record
+        metrics = SystemMetrics(
+            timestamp=datetime.utcnow(),
+            disk_total_gb=round(disk.total / (1024**3), 2),
+            disk_used_gb=round(disk.used / (1024**3), 2),
+            disk_percent=disk.percent,
+            users_count=stats['users_count'],
+            appointments_count=stats['appointments_count'],
+            journal_entries_count=stats['journal_entries_count'],
+            doctors_count=stats['doctors_count'],
+            clinics_count=stats['clinics_count'],
+            organizations_count=stats['organizations_count'],
+            services_count=stats['services_count'],
+            cpu_percent=cpu_percent,
+            ram_percent=mem.percent
+        )
+        
+        db.session.add(metrics)
+        db.session.commit()
+        
+        # Cleanup old metrics (keep 30 days)
+        cutoff_date = datetime.utcnow() - timedelta(days=30)
+        SystemMetrics.query.filter(SystemMetrics.timestamp < cutoff_date).delete()
+        db.session.commit()
+        
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error collecting metrics: {e}")
+        return False
 
 
 @admin.route('/monitoring')
@@ -1339,7 +1695,7 @@ def monitoring():
 
     
 
-    # System Stats
+    # Current System Stats
 
     cpu_percent = psutil.cpu_percent(interval=None) # Non-blocking
 
@@ -1362,6 +1718,22 @@ def monitoring():
     disk_free_gb = round(disk.free / (1024**3), 2)
 
     disk_percent = disk.percent
+    
+    # Get cached statistics
+    stats = get_cached_statistics()
+    
+    # Get historical metrics for graph (last 7 days)
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    historical_metrics = SystemMetrics.query.filter(
+        SystemMetrics.timestamp >= seven_days_ago
+    ).order_by(SystemMetrics.timestamp.asc()).all()
+    
+    # Format graph data
+    graph_data = {
+        'labels': [m.timestamp.strftime('%d.%m') for m in historical_metrics],
+        'disk_used': [m.disk_used_gb for m in historical_metrics],
+        'disk_percent': [m.disk_percent for m in historical_metrics]
+    }
 
     
 
@@ -1383,10 +1755,29 @@ def monitoring():
 
                            disk_free_gb=disk_free_gb,
 
-                           disk_percent=disk_percent
+                           disk_percent=disk_percent,
+                           
+                           # Statistics
+                           stats=stats,
+                           
+                           # Graph data
+                           graph_data=graph_data
 
                            )
 
+
+@admin.route('/monitoring/refresh', methods=['POST'])
+@login_required
+def monitoring_refresh():
+    """Manually refresh statistics cache and collect metrics"""
+    # Clear cache
+    global _stats_cache
+    _stats_cache = {'data': None, 'timestamp': None}
+    
+    # Collect new metrics snapshot
+    success = collect_system_metrics()
+    
+    return jsonify({'success': success})
 
 
 @admin.route('/monitoring/test-message', methods=['POST'])
