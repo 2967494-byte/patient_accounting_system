@@ -517,9 +517,11 @@ def stamp_tool():
     """Render the document stamp tool page"""
     stamp_setting = GlobalSetting.query.get('stamp_image')
     stamp_image = stamp_setting.value if stamp_setting else None
+    
+    current_center_id = request.args.get('center_id', type=int)
     centers = Location.query.filter_by(type='center').all()
     
-    return render_template('admin_stamp_tool.html', stamp_image=stamp_image, centers=centers)
+    return render_template('admin_stamp_tool.html', stamp_image=stamp_image, centers=centers, current_center_id=current_center_id)
 
 
 @main.route('/stamp-tool/template-image')

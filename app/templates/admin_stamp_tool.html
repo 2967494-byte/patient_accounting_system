@@ -10,20 +10,9 @@
     <div class="main-grid">
         <!-- Left: Input Form -->
         <div class="form-section">
-            <div class="filters-row">
-                <div class="form-group">
-                    <label class="form-label">Центр:</label>
-                    <select id="filter-center" class="form-control" onchange="loadPatients()">
-                        <option value="">Все центры</option>
-                        {% for center in centers %}
-                        <option value="{{ center.id }}">{{ center.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Месяц:</label>
-                    <input type="month" id="filter-month" class="form-control" onchange="loadPatients()">
-                </div>
+            <div class="form-group">
+                <label class="form-label">Месяц:</label>
+                <input type="month" id="filter-month" class="form-control" onchange="loadPatients()">
             </div>
 
             <div class="form-group">
@@ -105,7 +94,7 @@
 
     async function loadPatients() {
         try {
-            const centerId = document.getElementById('filter-center').value;
+            const centerId = currentCenterId;
             const monthVal = document.getElementById('filter-month').value;
 
             let url = '{{ url_for("main.get_patients_for_certificate") }}';
