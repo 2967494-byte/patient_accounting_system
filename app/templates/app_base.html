@@ -138,8 +138,8 @@
                 </a>
                 {% endif %}
 
-                <!-- Stamp Tool Icon (Superadmin & Admin) -->
-                {% if current_user.role in ['superadmin', 'admin'] %}
+                <!-- Stamp Tool Icon (Superadmin, Admin & Lab Tech) -->
+                {% if current_user.role in ['superadmin', 'admin', 'lab_tech'] %}
                 <a href="{{ url_for('main.stamp_tool') }}" class="btn-icon" title="Печать справок"
                     style="margin-right: 1rem; color: #4b5563; text-decoration: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
