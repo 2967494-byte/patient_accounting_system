@@ -13,7 +13,7 @@ def get_appointments_with_status_logic(appointments, user_role, user_id):
             d = pa.date
             if d not in paid_by_date:
                 paid_by_date[d] = []
-            paid_by_date[d].append(pa.patient_name.lower().replace(' ', '') if pa.patient_name else '')
+            paid_by_date[d].append(pa.patient_name.lower().strip() if pa.patient_name else '')
 
     current_dt = (datetime.utcnow() + timedelta(hours=3))
     
@@ -42,21 +42,49 @@ def get_appointments_with_status_logic(appointments, user_role, user_id):
             status = 'completed'
         else:
             # 2. Match in Journal (Paid Appointments on same date)
-            appt_norm_name = appt.patient_name.lower().replace(' ', '') if appt.patient_name else ''
+            appt_raw_name = appt.patient_name.lower().strip() if appt.patient_name else ''
             
-            if appt_norm_name:
+            if appt_raw_name:
                 paid_names = paid_by_date.get(appt.date, [])
                 
                 # Direct match (Fast)
-                if appt_norm_name in paid_names:
+                if appt_raw_name in paid_names:
                     status = 'completed'
                 else:
-                    # Fuzzy match (Slow, only if direct fails)
-                    for p_name in paid_names:
-                        if not p_name: continue
-                        # Use a simpler/faster match first? 
-                        # Ratio calculation is heavy.
-                        if difflib.SequenceMatcher(None, appt_norm_name, p_name).ratio() > 0.85:
+                    # Smart matching logic
+                    appt_parts = appt_raw_name.split()
+                    
+                    for p_full_name in paid_names:
+                        if not p_full_name: continue
+                        
+                        # 1. Start-with match (e.g. "Ivanov" matches "Ivanov Ivan")
+                        if p_full_name.startswith(appt_raw_name):
+                            status = 'completed'
+                            break
+                            
+                        # 2. Surname + Initial check (e.g. "Ivanov I." matches "Ivanov Ivan")
+                        p_parts = p_full_name.split()
+                        if len(appt_parts) >= 1 and len(p_parts) >= 1:
+                            surname_match = (appt_parts[0] == p_parts[0])
+                            
+                            if surname_match:
+                                # If Calendar has only surname, and it matches Journal's surname - it's a match
+                                if len(appt_parts) == 1:
+                                    status = 'completed'
+                                    break
+                                
+                                # If Calendar has surname + something else (initial?)
+                                if len(appt_parts) > 1 and len(p_parts) > 1:
+                                    # Check if second part of Calendar entry is an initial of the Journal entry
+                                    if appt_parts[1].startswith(p_parts[1][0]) or p_parts[1].startswith(appt_parts[1][0]):
+                                        status = 'completed'
+                                        break
+
+                        # 3. Fuzzy match (Final fallback)
+                        # We use compressed names for fuzzy to stay consistent with previous behavior for typos
+                        appt_compressed = appt_raw_name.replace(' ', '')
+                        p_compressed = p_full_name.replace(' ', '')
+                        if difflib.SequenceMatcher(None, appt_compressed, p_compressed).ratio() > 0.8:
                             status = 'completed'
                             break
 

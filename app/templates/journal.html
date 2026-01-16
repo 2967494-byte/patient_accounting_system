@@ -173,8 +173,22 @@
         /* Padding feeling */
     }
 
-    .journal-table-wrapper::-webkit-scrollbar-thumb:hover {
-        background-color: #555;
+    .btn-date-shortcut {
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        padding: 0.5rem 0.8rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: #374151;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .btn-date-shortcut:hover {
+        background: #e5e7eb;
+        border-color: #9ca3af;
+        color: #111827;
     }
 </style>
 {% endblock %}
@@ -189,6 +203,19 @@
         // Or accurate: set width auto, measure? 
         // Better: use 'size' attribute as proxy for 'ch' width
         el.size = (el.value.length || 1) + 2;
+    }
+
+    function setJournalDate(relativeDays) {
+        const dateInput = document.getElementById('journal-date');
+        const date = new Date();
+        date.setDate(date.getDate() + relativeDays);
+
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+        dateInput.onchange();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -252,6 +279,10 @@
     <div class="filters-bar"
         style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; justify-content: space-between;">
         <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="display: flex; gap: 0.5rem; margin-right: 0.5rem;">
+                <button type="button" onclick="setJournalDate(-2)" class="btn-date-shortcut">Позавчера</button>
+                <button type="button" onclick="setJournalDate(-1)" class="btn-date-shortcut">Вчера</button>
+            </div>
             <label for="journal-date" style="font-weight: 500; font-size: 1.1rem; color: #374151;">Дата:</label>
             <input type="date" id="journal-date" value="{{ current_date }}"
                 style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;"
