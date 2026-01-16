@@ -670,7 +670,7 @@ def get_patients_for_certificate():
         query = Appointment.query
         
         if center_id:
-            query = query.filter(Appointment.location_id == center_id)
+            query = query.filter(Appointment.center_id == center_id)
             
         if month and year:
             # Filter by specific month and year

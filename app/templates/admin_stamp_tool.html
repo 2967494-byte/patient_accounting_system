@@ -19,7 +19,7 @@
                 <label class="form-label">Поиск пациента:</label>
                 <div style="position: relative;">
                     <input type="text" id="patient-search" list="patients-list" class="form-control"
-                        placeholder="Введите ФИО...">
+                        placeholder="Введите ФИО..." autocomplete="off">
                     <button id="clear-search" class="btn-clear" style="display: none;"
                         onclick="clearSearch()">✕</button>
                 </div>
@@ -140,19 +140,25 @@
 
     document.getElementById('patient-search').addEventListener('input', function (e) {
         document.getElementById('clear-search').style.display = e.target.value ? 'block' : 'none';
+
+        // Instant match for better UX with datalist
+        const selectedName = e.target.value;
+        const patient = patientsData.find(p => p.patient_name === selectedName);
+        if (patient) selectPatient(patient);
     });
+
+    function selectPatient(patient) {
+        currentAppointmentId = patient.id;
+        document.getElementById('display-name').textContent = patient.patient_name;
+        document.getElementById('display-amount').textContent = patient.cost || '0';
+        document.getElementById('display-date').textContent = new Date(patient.date).toLocaleDateString('ru-RU');
+        document.getElementById('patient-data').style.display = 'flex';
+    }
 
     document.getElementById('patient-search').addEventListener('change', function (e) {
         const selectedName = e.target.value;
         const patient = patientsData.find(p => p.patient_name === selectedName);
-
-        if (patient) {
-            currentAppointmentId = patient.id;
-            document.getElementById('display-name').textContent = patient.patient_name;
-            document.getElementById('display-amount').textContent = patient.cost || '0';
-            document.getElementById('display-date').textContent = new Date(patient.date).toLocaleDateString('ru-RU');
-            document.getElementById('patient-data').style.display = 'flex';
-        }
+        if (patient) selectPatient(patient);
     });
 
     function openEditor() {
