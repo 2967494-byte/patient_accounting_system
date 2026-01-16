@@ -10,21 +10,6 @@
                 "Сгенерировать"</p>
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
-            <div id="calibration-controls"
-                style="background: rgba(0,0,0,0.05); padding: 5px; border-radius: 4px; display: flex; gap: 5px; align-items: center;">
-                <span style="font-size: 11px; font-weight: bold; color: #666; margin-right: 5px;">СДВИГ
-                    (КАЛИБРОВКА):</span>
-                <button onclick="shiftAll(0, -1)"
-                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px;">↑</button>
-                <button onclick="shiftAll(0, 1)"
-                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px;">↓</button>
-                <button onclick="shiftAll(-1, 0)"
-                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px;">←</button>
-                <button onclick="shiftAll(1, 0)"
-                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px;">→</button>
-                <button onclick="resetShift()"
-                    style="padding: 2px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px; font-size: 10px;">Сброс</button>
-            </div>
             <button onclick="saveAndGenerate()" class="btn"
                 style="background: #10b981; color: white; padding: 0.75rem 1.5rem;">
                 🚀 Сгенерировать и скачать
@@ -194,19 +179,6 @@
         });
     }
 
-    function shiftAll(dx, dy) {
-        const x = parseInt(localStorage.getItem('cert_x') || '0') + dx;
-        const y = parseInt(localStorage.getItem('cert_y') || '0') + dy;
-        localStorage.setItem('cert_x', x);
-        localStorage.setItem('cert_y', y);
-        initEditor();
-    }
-
-    function resetShift() {
-        localStorage.setItem('cert_x', '0');
-        localStorage.setItem('cert_y', '0');
-        initEditor();
-    }
 
     async function saveAndGenerate() {
         // Collect all data
