@@ -8,6 +8,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import extract
 import os
+import random
+from PIL import Image, ImageEnhance, ImageFilter
 
 main = Blueprint('main', __name__)
 
@@ -700,23 +702,76 @@ def certificate_edit(appointment_id):
     # Look for previous certificate for this patient to pre-fill INN, Birth Date, etc.
     prev_cert = MedicalCertificate.query.filter_by(patient_name=appointment.patient_name).order_by(MedicalCertificate.generated_at.desc()).first()
     
-    # Format dates
     c_date = date.today()
+
+    # Priority: Query params > Previous certificate data
+    q_inn = request.args.get('inn')
+    q_b_date = request.args.get('b_date') # YYYY-MM-DD
+    q_series = request.args.get('series')
+    q_number = request.args.get('number')
+    q_issue_date = request.args.get('issue_date') # YYYY-MM-DD
+    
+    # Process dates
+    b_day = b_month = b_year = ""
+    if q_b_date:
+        try:
+            bd = datetime.strptime(q_b_date, '%Y-%m-%d')
+            b_day = bd.strftime('%d')
+            b_month = bd.strftime('%m')
+            b_year = bd.strftime('%Y')
+        except: pass
+    elif prev_cert and prev_cert.birth_date:
+        b_day = prev_cert.birth_date.strftime('%d')
+        b_month = prev_cert.birth_date.strftime('%m')
+        b_year = prev_cert.birth_date.strftime('%Y')
+
+    i_day = i_month = i_year = ""
+    if q_issue_date:
+        try:
+            idat = datetime.strptime(q_issue_date, '%Y-%m-%d')
+            i_day = idat.strftime('%d')
+            i_month = idat.strftime('%m')
+            i_year = idat.strftime('%Y')
+        except: pass
+
+    # Process document info
+    doc_info = ""
+    if q_series or q_number:
+        doc_info = (q_series or "") + (q_number or "")
+    elif prev_cert and prev_cert.doc_series:
+        doc_info = f"{prev_cert.doc_series}{prev_cert.doc_number}".strip()
+
+    # Process amount
+    amount_val = appointment.cost or 0
+    cost_str = f"{amount_val:.2f}"
+    rub, kop = cost_str.split('.')
+    rub_formatted = str(int(rub)).ljust(13, '-') # Left align and pad with dashes to 13 cells
+
+    # Fetch stamp image from GlobalSetting
+    stamp_setting = GlobalSetting.query.get('stamp_image')
+    stamp_path = stamp_setting.value if stamp_setting else 'uploads/stamps/orbital_stamp.png'
     
     patient_data = {
         'surname': surname,
         'name': name,
         'patronymic': patronymic,
-        'inn': prev_cert.inn if prev_cert and prev_cert.inn else "",
-        'b_day': prev_cert.birth_date.strftime('%d') if prev_cert and prev_cert.birth_date else "",
-        'b_month': prev_cert.birth_date.strftime('%m') if prev_cert and prev_cert.birth_date else "",
-        'b_year': prev_cert.birth_date.strftime('%Y') if prev_cert and prev_cert.birth_date else "",
-        'doc_info': f"{prev_cert.doc_series} {prev_cert.doc_number}".strip() if prev_cert and prev_cert.doc_series else "",
-        'amount': f"{appointment.cost or 0:,.2f}".replace(',', ' ').replace('.', ' '),
+        'inn': q_inn if q_inn else (prev_cert.inn if prev_cert and prev_cert.inn else ""),
+        'b_day': b_day,
+        'b_month': b_month,
+        'b_year': b_year,
+        'i_day': i_day,
+        'i_month': i_month,
+        'i_year': i_year,
+        'doc_info': doc_info,
+        'amount': rub_formatted,
+        'amount_kop': kop,
+        'amount_raw': f"{amount_val:.2f}",
         'c_day': c_date.strftime('%d'),
         'c_month': c_date.strftime('%m'),
         'c_year': c_date.strftime('%Y'),
         'contract_no': appointment.contract_number or "",
+        'stamp': '1',
+        'stamp_url': url_for('static', filename=stamp_path, _external=True)
     }
     
     return render_template('certificate_editor.html', 
@@ -736,11 +791,16 @@ def generate_certificate():
         
         appointment = Appointment.query.get_or_404(appointment_id)
         
+        # Fetch stamp image from GlobalSetting
+        stamp_setting = GlobalSetting.query.get('stamp_image')
+        stamp_path = stamp_setting.value if stamp_setting else 'uploads/stamps/orbital_stamp.png'
+        
         # Prepare render data for Playwright
         render_data = {
             'form_data': form_data,
             'calibration': data.get('calibration', {'x': 0, 'y': 0}),
-            'bg_url': url_for('static', filename='uploads/certificate_bg.png', _external=True)
+            'bg_url': url_for('static', filename='uploads/certificate_bg.png', _external=True),
+            'stamp_url': url_for('static', filename=stamp_path, _external=True)
         }
         
         # We need a tiny template strictly for Playwright to "Photograph"
@@ -766,9 +826,32 @@ def generate_certificate():
             # Note: Viewport matches the 1121x1585 editor scale for now
             page = browser.new_page(viewport={'width': 1121, 'height': 1585})
             page.goto('file:///' + temp_html_path.replace('\\', '/'))
-            page.wait_for_timeout(1000) # Wait for bg
+            page.wait_for_load_state('networkidle') # Wait for bg AND stamp to load
             page.screenshot(path=filepath, type='jpeg', quality=95)
             browser.close()
+            
+        # Post-process image to look like a scan
+        try:
+            with Image.open(filepath) as img:
+                # 1. Subtle random rotation (-0.3 to 0.3 degrees)
+                angle = random.uniform(-0.3, 0.3)
+                img = img.rotate(angle, resample=Image.BICUBIC, expand=False, fillcolor='white')
+                
+                # 2. Enhance contrast slightly
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(1.1)
+                
+                # 3. Adjust brightness to scanner levels (whites slightly blown, blacks deep)
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(0.98)
+                
+                # 4. Final subtle softness
+                img = img.filter(ImageFilter.GaussianBlur(radius=0.1))
+                
+                # Overwrite the file
+                img.save(filepath, "JPEG", quality=90)
+        except Exception as img_err:
+            print(f"[WARN] Failed to post-process cert image: {img_err}")
             
         os.remove(temp_html_path)
         

@@ -11,6 +11,8 @@
             /* Matches editor scale */
             height: 1585px;
             overflow: hidden;
+            filter: blur(0.15px);
+            /* Digital edges softener */
         }
 
         #background {
@@ -23,8 +25,8 @@
 
         .char-box {
             position: absolute;
-            width: 19px;
-            height: 25px;
+            width: 26px;
+            height: 26px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -53,33 +55,44 @@
             const globalY = parseInt('{{ calibration.y | default(0) }}');
 
             // individual offsets if provided
-            const individualOffsets = JSON.parse('{{ calibration.offsets | tojson | default("{}") }}');
+            const individualOffsets = JSON.parse('{{ (calibration.offsets or {}) | tojson }}');
             const off = individualOffsets[f_id] || { x: 0, y: 0 };
 
             const config = {
-                'top_inn': { startX: 350, startY: 28.5, spacing: 26.5 },
-                'top_kpp': { startX: 350, startY: 68.5, spacing: 26.5 },
-                'page_no': { startX: 620, startY: 68.5, spacing: 26.5 },
-                'cert_no': { startX: 162.5, startY: 250.5, spacing: 26.5 },
-                'correction': { startX: 700, startY: 248.5, spacing: 26.5 },
-                'year': { startX: 990, startY: 250.5, spacing: 26.5 },
-                'org_l1': { startX: 35, startY: 348.5, spacing: 26.5 },
-                'org_l2': { startX: 35, startY: 385.5, spacing: 26.5 },
-                'org_l3': { startX: 35, startY: 422.5, spacing: 26.5 },
-                'org_l4': { startX: 35, startY: 459.5, spacing: 26.5 },
-                'surname': { startX: 35, startY: 578.5, spacing: 26.5 },
-                'name': { startX: 35, startY: 615.5, spacing: 26.5 },
-                'patronymic': { startX: 35, startY: 652.5, spacing: 26.5 },
-                'p_inn': { startX: 35, startY: 748.5, spacing: 26.5 },
-                'b_day': { startX: 570, startY: 748.5, spacing: 26.5 },
-                'b_month': { startX: 633, startY: 748.5, spacing: 26.5 },
-                'b_year': { startX: 695, startY: 748.5, spacing: 26.5 },
-                'doc_code': { startX: 470, startY: 828.5, spacing: 26.5 },
-                'doc_info': { startX: 520, startY: 828.5, spacing: 26.5 },
-                'amount': { startX: 35, startY: 928.5, spacing: 26.5 },
-                'c_day': { startX: 35, startY: 1048.5, spacing: 26.5 },
-                'c_month': { startX: 98, startY: 1048.5, spacing: 26.5 },
-                'c_year': { startX: 160, startY: 1048.5, spacing: 26.5 },
+                'top_inn': { startX: 352, startY: 28.5, spacing: 26.7 },
+                'top_kpp': { startX: 352, startY: 68.5, spacing: 26.7 },
+                'page_no': { startX: 622, startY: 68.5, spacing: 26.7 },
+                'cert_no': { startX: 164.5, startY: 248.5, spacing: 26.7 },
+                'correction': { startX: 702, startY: 248.5, spacing: 26.7 },
+                'year': { startX: 992, startY: 248.5, spacing: 26.7 },
+                'org_l1': { startX: 37, startY: 348.5, spacing: 26.7 },
+                'org_l2': { startX: 37, startY: 385.5, spacing: 26.7 },
+                'org_l3': { startX: 37, startY: 422.5, spacing: 26.7 },
+                'org_l4': { startX: 37, startY: 459.5, spacing: 26.7 },
+                'surname': { startX: 139, startY: 575.5, spacing: 26.7 },
+                'name': { startX: 139, startY: 621.0, spacing: 26.7 },
+                'patronymic': { startX: 139, startY: 666.5, spacing: 26.7 },
+                'p_inn': { startX: 139, startY: 712.0, spacing: 26.7 },
+                'b_day': { startX: 700, startY: 712.0, spacing: 26.7 },
+                'b_month': { startX: 781, startY: 712.0, spacing: 26.7 },
+                'b_year': { startX: 862, startY: 712.0, spacing: 26.7 },
+                'doc_code': { startX: 219, startY: 800.5, spacing: 26.7 },
+                'doc_info': { startX: 567.7, startY: 800.5, spacing: 26.7 },
+                'i_day': { startX: 219, startY: 846.0, spacing: 26.7 },
+                'i_month': { startX: 300, startY: 846.0, spacing: 26.7 },
+                'i_year': { startX: 381, startY: 846.0, spacing: 26.7 },
+                'amount': { startX: 621.1, startY: 955.5, spacing: 26.7 },
+                'amount_kop': { startX: 994.9, startY: 955.5, spacing: 26.7 },
+                'c_day': { startX: 307, startY: 1282.5, spacing: 26.7 },
+                'c_month': { startX: 388, startY: 1282.5, spacing: 26.7 },
+                'c_year': { startX: 469, startY: 1282.5, spacing: 26.7 },
+                'rep_surname': { startX: 140, startY: 1150.5, spacing: 26.7 },
+                'rep_name': { startX: 140, startY: 1196.0, spacing: 26.7 },
+                'rep_patronymic': { startX: 140, startY: 1241.5, spacing: 26.7 },
+            };
+
+            const images = {
+                'stamp': { url: '{{ stamp_url }}', startX: 34, startY: 1210, width: 264 }
             };
 
             const c = config[f_id];
@@ -91,14 +104,42 @@
                     const div = document.createElement('div');
                     div.className = 'char-box';
                     div.style.left = (c.startX + (i * c.spacing) + globalX + off.x) + 'px';
-                    div.style.top = (c.startY + globalY + off.y) + 'px';
+                    div.style.top = (c.startY + globalY + off.y - 2) + 'px';
                     div.textContent = char;
                     document.body.appendChild(div);
                 }
             }
+
         })();
     </script>
     {% endfor %}
+
+    <script>
+        (function () {
+            // Basic offsets from backend
+            const globalX = parseInt('{{ calibration.x | default(0) }}');
+            const globalY = parseInt('{{ calibration.y | default(0) }}');
+
+            const images = {
+                'stamp': { url: '{{ stamp_url }}', startX: 34, startY: 1210, width: 264 }
+            };
+
+            Object.keys(images).forEach(id => {
+                const imgConfig = images[id];
+                if (imgConfig && imgConfig.url && imgConfig.url !== '') {
+                    const img = document.createElement('img');
+                    img.src = imgConfig.url;
+                    img.style.position = 'absolute';
+                    img.style.left = (imgConfig.startX + globalX) + 'px';
+                    img.style.top = (imgConfig.startY + globalY) + 'px';
+                    img.style.width = imgConfig.width + 'px';
+                    img.style.opacity = '1.0'; // Multiply works better with full opacity
+                    img.style.mixBlendMode = 'multiply';
+                    document.body.appendChild(img);
+                }
+            });
+        })();
+    </script>
 </body>
 
 </html>

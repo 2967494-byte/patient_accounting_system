@@ -127,8 +127,6 @@
             <nav class="nav-tabs">
                 <a href="{{ url_for('admin.users') }}"
                     class="nav-link {% if request.endpoint == 'admin.users' %}active{% endif %}">Пользователи</a>
-                <a href="{{ url_for('admin.locations') }}"
-                    class="nav-link {% if request.endpoint == 'admin.locations' %}active{% endif %}">Города и Центры</a>
                 <a href="{{ url_for('admin.clinics') }}"
                     class="nav-link {% if request.endpoint == 'admin.clinics' %}active{% endif %}">Клиники</a>
                 <a href="{{ url_for('admin.doctors') }}"
@@ -147,11 +145,6 @@
                 <span style="border-left: 1px solid rgba(255,255,255,0.2); margin: 0 0.5rem; height: auto;"></span>
                 <a href="{{ url_for('main.dashboard') }}" class="nav-link">Вернуться на сайт</a>
             </nav>
-        </div>
-        <div>
-            <span style="opacity: 0.8; margin-right: 1rem;">{{ current_user.username }}</span>
-            <a href="{{ url_for('auth.logout') }}" class="btn-logout">Выйти</a>
-        </div>
     </header>
 
     <main class="admin-container">

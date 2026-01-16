@@ -76,8 +76,8 @@
     /* Box-grid inputs (character by character) */
     .char-box {
         position: absolute;
-        width: 19px;
-        height: 25px;
+        width: 26px;
+        height: 26px;
         border: 1px solid transparent;
         background: transparent;
         display: flex;
@@ -101,29 +101,37 @@
     const patientData = JSON.parse('{{ patient_data | tojson }}');
 
     const fields = [
-        { id: 'top_inn', type: 'grid', count: 12, startX: 350, startY: 28.5, spacing: 26.5 },
-        { id: 'top_kpp', type: 'grid', count: 9, startX: 350, startY: 68.5, spacing: 26.5 },
-        { id: 'page_no', type: 'grid', count: 3, startX: 620, startY: 68.5, spacing: 26.5 },
-        { id: 'cert_no', type: 'grid', count: 15, startX: 162.5, startY: 250.5, spacing: 26.5, val: String(patientData.contract_no || '') },
-        { id: 'correction', type: 'grid', count: 3, startX: 700, startY: 248.5, spacing: 26.5 },
-        { id: 'year', type: 'grid', count: 4, startX: 990, startY: 250.5, spacing: 26.5, val: new Date().getFullYear().toString() },
-        { id: 'org_l1', type: 'grid', count: 40, startX: 35, startY: 348.5, spacing: 26.5 },
-        { id: 'org_l2', type: 'grid', count: 40, startX: 35, startY: 385.5, spacing: 26.5 },
-        { id: 'org_l3', type: 'grid', count: 40, startX: 35, startY: 422.5, spacing: 26.5 },
-        { id: 'org_l4', type: 'grid', count: 40, startX: 35, startY: 459.5, spacing: 26.5 },
-        { id: 'surname', type: 'grid', count: 40, startX: 35, startY: 578.5, spacing: 26.5, val: patientData.surname },
-        { id: 'name', type: 'grid', count: 40, startX: 35, startY: 615.5, spacing: 26.5, val: patientData.name },
-        { id: 'patronymic', type: 'grid', count: 40, startX: 35, startY: 652.5, spacing: 26.5, val: patientData.patronymic },
-        { id: 'p_inn', type: 'grid', count: 12, startX: 35, startY: 748.5, spacing: 26.5, val: patientData.inn },
-        { id: 'b_day', type: 'grid', count: 2, startX: 570, startY: 748.5, spacing: 26.5, val: patientData.b_day },
-        { id: 'b_month', type: 'grid', count: 2, startX: 633, startY: 748.5, spacing: 26.5, val: patientData.b_month },
-        { id: 'b_year', type: 'grid', count: 4, startX: 695, startY: 748.5, spacing: 26.5, val: patientData.b_year },
-        { id: 'doc_code', type: 'grid', count: 2, startX: 470, startY: 828.5, spacing: 26.5, val: '21' },
-        { id: 'doc_info', type: 'grid', count: 25, startX: 520, startY: 828.5, spacing: 26.5, val: patientData.doc_info },
-        { id: 'amount', type: 'grid', count: 15, startX: 35, startY: 928.5, spacing: 26.5, val: patientData.amount },
-        { id: 'c_day', type: 'grid', count: 2, startX: 35, startY: 1048.5, spacing: 26.5, val: patientData.c_day },
-        { id: 'c_month', type: 'grid', count: 2, startX: 98, startY: 1048.5, spacing: 26.5, val: patientData.c_month },
-        { id: 'c_year', type: 'grid', count: 4, startX: 160, startY: 1048.5, spacing: 26.5, val: patientData.c_year },
+        { id: 'top_inn', type: 'grid', count: 12, startX: 351, startY: 28.5, spacing: 26.7 },
+        { id: 'top_kpp', type: 'grid', count: 9, startX: 351, startY: 68.5, spacing: 26.7 },
+        { id: 'page_no', type: 'grid', count: 3, startX: 621, startY: 68.5, spacing: 26.7 },
+        { id: 'cert_no', type: 'grid', count: 15, startX: 163.5, startY: 248.5, spacing: 26.7, val: String(patientData.contract_no || '') },
+        { id: 'correction', type: 'grid', count: 3, startX: 701, startY: 248.5, spacing: 26.7 },
+        { id: 'year', type: 'grid', count: 4, startX: 991, startY: 248.5, spacing: 26.7, val: new Date().getFullYear().toString() },
+        { id: 'org_l1', type: 'grid', count: 40, startX: 35, startY: 348.5, spacing: 26.7 },
+        { id: 'org_l2', type: 'grid', count: 40, startX: 35, startY: 385.5, spacing: 26.7 },
+        { id: 'org_l3', type: 'grid', count: 40, startX: 35, startY: 422.5, spacing: 26.7 },
+        { id: 'org_l4', type: 'grid', count: 40, startX: 35, startY: 459.5, spacing: 26.7 },
+        { id: 'surname', type: 'grid', count: 40, startX: 139, startY: 575.5, spacing: 26.7, val: patientData.surname },
+        { id: 'name', type: 'grid', count: 40, startX: 139, startY: 621.0, spacing: 26.7, val: patientData.name },
+        { id: 'patronymic', type: 'grid', count: 40, startX: 139, startY: 666.5, spacing: 26.7, val: patientData.patronymic },
+        { id: 'p_inn', type: 'grid', count: 12, startX: 139, startY: 712.0, spacing: 26.7, val: patientData.inn },
+        { id: 'b_day', type: 'grid', count: 2, startX: 700, startY: 712.0, spacing: 26.7, val: patientData.b_day },
+        { id: 'b_month', type: 'grid', count: 2, startX: 781, startY: 712.0, spacing: 26.7, val: patientData.b_month },
+        { id: 'b_year', type: 'grid', count: 4, startX: 862, startY: 712.0, spacing: 26.7, val: patientData.b_year },
+        { id: 'doc_code', type: 'grid', count: 2, startX: 219, startY: 800.5, spacing: 26.7, val: '21' },
+        { id: 'doc_info', type: 'grid', count: 25, startX: 567.7, startY: 800.5, spacing: 26.7, val: patientData.doc_info },
+        { id: 'i_day', type: 'grid', count: 2, startX: 219, startY: 846.0, spacing: 26.7, val: patientData.i_day },
+        { id: 'i_month', type: 'grid', count: 2, startX: 300, startY: 846.0, spacing: 26.7, val: patientData.i_month },
+        { id: 'i_year', type: 'grid', count: 4, startX: 381, startY: 846.0, spacing: 26.7, val: patientData.i_year },
+        { id: 'amount', type: 'grid', count: 13, startX: 621.1, startY: 955.5, spacing: 26.7, val: patientData.amount },
+        { id: 'amount_kop', type: 'grid', count: 2, startX: 994.9, startY: 955.5, spacing: 26.7, val: patientData.amount_kop },
+        { id: 'c_day', type: 'grid', count: 2, startX: 307, startY: 1282.5, spacing: 26.7, val: patientData.c_day },
+        { id: 'c_month', type: 'grid', count: 2, startX: 388, startY: 1282.5, spacing: 26.7, val: patientData.c_month },
+        { id: 'c_year', type: 'grid', count: 4, startX: 469, startY: 1282.5, spacing: 26.7, val: patientData.c_year },
+        { id: 'rep_surname', type: 'grid', count: 40, startX: 139, startY: 1150.5, spacing: 26.7, val: '' },
+        { id: 'rep_name', type: 'grid', count: 40, startX: 139, startY: 1196.0, spacing: 26.7, val: '' },
+        { id: 'rep_patronymic', type: 'grid', count: 40, startX: 139, startY: 1241.5, spacing: 26.7, val: '' },
+        { id: 'stamp', type: 'image', url: patientData.stamp_url, startX: 34, startY: 1210, width: 264 },
     ];
 
     function initEditor() {
@@ -143,34 +151,45 @@
         const globalY = parseInt(localStorage.getItem('cert_y') || '0');
 
         fields.forEach(f => {
-            for (let i = 0; i < f.count; i++) {
-                const input = document.createElement('input');
-                input.className = 'char-box';
-                input.style.left = (f.startX + (i * f.spacing) + globalX) + 'px';
-                input.style.top = (f.startY + globalY) + 'px';
-                input.maxLength = 1;
-                input.dataset.field = f.id;
-                input.dataset.index = i;
+            if (f.type === 'grid') {
+                for (let i = 0; i < f.count; i++) {
+                    const input = document.createElement('input');
+                    input.className = 'char-box';
+                    input.style.left = (f.startX + (i * f.spacing) + globalX) + 'px';
+                    input.style.top = (f.startY + globalY - 2) + 'px';
+                    input.maxLength = 1;
+                    input.dataset.field = f.id;
+                    input.dataset.index = i;
 
-                // Restore value or use default
-                if (currentVals[f.id] && currentVals[f.id][i] !== undefined) {
-                    input.value = currentVals[f.id][i];
-                } else if (f.val && f.val[i]) {
-                    input.value = f.val[i];
+                    if (currentVals[f.id] && currentVals[f.id][i] !== undefined) {
+                        input.value = currentVals[f.id][i];
+                    } else if (f.val && f.val[i]) {
+                        input.value = f.val[i];
+                    }
+
+                    input.oninput = (e) => {
+                        if (e.target.value && e.target.nextElementSibling && e.target.nextElementSibling.dataset.field === f.id) {
+                            e.target.nextElementSibling.focus();
+                        }
+                    };
+                    input.onkeydown = (e) => {
+                        if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling && e.target.previousElementSibling.dataset.field === f.id) {
+                            e.target.previousElementSibling.focus();
+                        }
+                    };
+
+                    overlay.appendChild(input);
                 }
-
-                input.oninput = (e) => {
-                    if (e.target.value && e.target.nextElementSibling && e.target.nextElementSibling.dataset.field === f.id) {
-                        e.target.nextElementSibling.focus();
-                    }
-                };
-                input.onkeydown = (e) => {
-                    if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling && e.target.previousElementSibling.dataset.field === f.id) {
-                        e.target.previousElementSibling.focus();
-                    }
-                };
-
-                overlay.appendChild(input);
+            } else if (f.type === 'image') {
+                const img = document.createElement('img');
+                img.src = f.url;
+                img.style.position = 'absolute';
+                img.style.left = (f.startX + globalX) + 'px';
+                img.style.top = (f.startY + globalY) + 'px';
+                img.style.width = f.width + 'px';
+                img.style.pointerEvents = 'none';
+                img.style.opacity = '0.7';
+                overlay.appendChild(img);
             }
         });
     }
@@ -202,7 +221,10 @@
         try {
             const response = await fetch('/stamp-tool/certificate/generate', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
                 body: JSON.stringify({
                     appointment_id: appointmentId,
                     form_data: formData,

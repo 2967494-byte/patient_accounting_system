@@ -1,9 +1,41 @@
 {% extends "admin_base.html" %}
 
 {% block content %}
-<div class="card">
+<style>
+    .card table {
+        font-size: 0.75rem;
+    }
+
+    .card table th,
+    .card table td {
+        padding: 0.4rem 0.5rem;
+        white-space: nowrap;
+    }
+
+    .card table th {
+        font-size: 0.7rem;
+    }
+
+    .card table select {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.3rem;
+        max-width: 120px;
+    }
+
+    .card table button {
+        font-size: 0.9rem;
+    }
+
+    .count-badge {
+        font-size: 0.8rem;
+        color: #6b7280;
+        font-weight: 400;
+        margin-left: 0.5rem;
+    }
+</style>
+<div class="card" style="overflow-x: auto;">
     <div class="flex-between mb-4">
-        <h2>Услуги</h2>
+        <h2>Услуги <span class="count-badge">всего {{ services|length }}</span></h2>
         <div style="display: flex; gap: 10px;">
             <button onclick="document.getElementById('import-file').click()" class="btn"
                 style="background-color: #10b981; color: white;">

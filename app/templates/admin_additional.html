@@ -1,278 +1,634 @@
 {% extends "admin_base.html" %}
 
 {% block content %}
-<div class="page-header mb-4">
-    <h2>Дополнительно</h2>
-</div>
+<div class="additional-page">
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-
-    <!-- Managers Section -->
-    <div class="card">
-        <h3 class="mb-4">Менеджеры</h3>
-
-        <!-- Add Manager Form -->
-        <form action="{{ url_for('admin.add_manager') }}" method="POST" class="mb-4"
-            style="display: flex; gap: 0.5rem;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <input type="text" name="name" placeholder="Имя менеджера" class="form-input"
-                style="flex: 1; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;" required>
-            <button type="submit" class="btn btn-primary">Добавить</button>
-        </form>
-
-        <!-- Managers Table -->
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Имя</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for manager in managers %}
-                <tr>
-                    <td>{{ manager.id }}</td>
-                    <td>
-                        <form action="{{ url_for('admin.update_manager', id=manager.id) }}" method="POST"
-                            style="display: flex; gap: 0.5rem;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <input type="text" name="name" value="{{ manager.name }}"
-                                style="border: 1px solid #e5e7eb; border-radius: 0.25rem; padding: 0.25rem; width: 100%;"
-                                required>
-                            <button type="submit" class="btn"
-                                style="background: transparent; color: #4f46e5; padding: 0.25rem;">💾</button>
-                        </form>
-                    </td>
-                    <td>
-                        <form action="{{ url_for('admin.delete_manager', id=manager.id) }}" method="POST"
-                            onsubmit="return confirm('Вы уверены?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <button type="submit" class="btn"
-                                style="background: transparent; color: #ef4444; padding: 0.25rem;">✕</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="3" style="text-align: center; color: #9ca3af; padding: 1rem;">Нет менеджеров</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Payment Methods Section -->
-    <div class="card">
-        <h3 class="mb-4">Способы Оплаты</h3>
-
-        <!-- Add Payment Method Form -->
-        <form action="{{ url_for('admin.add_payment_method') }}" method="POST" class="mb-4"
-            style="display: flex; gap: 0.5rem;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <input type="text" name="name" placeholder="Название способа" class="form-input"
-                style="flex: 1; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;" required>
-            <button type="submit" class="btn btn-primary">Добавить</button>
-        </form>
-
-        <!-- Payment Methods Table -->
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Название</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for method in payment_methods %}
-                <tr>
-                    <td>{{ method.id }}</td>
-                    <td>
-                        <form action="{{ url_for('admin.update_payment_method', id=method.id) }}" method="POST"
-                            style="display: flex; gap: 0.5rem;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <input type="text" name="name" value="{{ method.name }}"
-                                style="border: 1px solid #e5e7eb; border-radius: 0.25rem; padding: 0.25rem; width: 100%;"
-                                required>
-                            <button type="submit" class="btn"
-                                style="background: transparent; color: #4f46e5; padding: 0.25rem;">💾</button>
-                        </form>
-                    </td>
-                    <td>
-                        <form action="{{ url_for('admin.delete_payment_method', id=method.id) }}" method="POST"
-                            onsubmit="return confirm('Вы уверены?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                            <button type="submit" class="btn"
-                                style="background: transparent; color: #ef4444; padding: 0.25rem;">✕</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="3" style="text-align: center; color: #9ca3af; padding: 1rem;">Нет способов оплаты</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Grid for Danger Zone and Recalculate -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-
-        <!-- Danger/Caution Section -->
-        <div class="card" style="border: 1px solid #ef4444; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);">
-            <h3 class="mb-4" style="color: #ef4444; display: flex; align-items: center; gap: 0.5rem;">
-                ⚠️ С осторожностью
-            </h3>
-
-            <!-- Clear Data -->
-            <div class="mb-6">
-                <h4 class="mb-2" style="font-size: 1.1em; color: #374151;">Очистить данные журнала</h4>
-                <p class="text-sm text-gray-500 mb-2">Удаление всех записей за выбранный период.</p>
-                <form action="{{ url_for('admin.clear_journal_data') }}" method="POST"
-                    onsubmit="return confirm('Вы уверены? Данные будут удалены безвозвратно.');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                        <select name="center_id" class="form-input"
-                            style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
-                            <option value="">Выберите центр</option>
-                            {% for center in centers %}
-                            <option value="{{ center.id }}">{{ center.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <input type="month" name="month" class="form-input"
-                            style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
-                        <input type="password" name="password" placeholder="Пароль для подтверждения" class="form-input"
-                            style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
-                        <button type="submit" class="btn"
-                            style="background-color: #ef4444; color: white; padding: 0.5rem; border-radius: 0.375rem; border: none; cursor: pointer;">Очистить</button>
-                    </div>
-                </form>
+    <!-- Row 0: Locations (Cities & Centers) -->
+    <div class="section-row">
+        <div class="section-card locations-card" style="grid-column: span 2;">
+            <div class="section-header">
+                <span class="section-icon">📍</span>
+                <h3>Города и Центры</h3>
+                <button class="btn-add-city" onclick="openLocModal('city')">+ Город</button>
             </div>
-
-            <hr style="margin: 1.5rem 0; border-top: 1px solid #e5e7eb;">
-
-            <!-- Load Journal Data -->
-            <div class="mb-6">
-                <h4 class="mb-2" style="font-size: 1.1em; color: #374151;">Загрузить данные журнала</h4>
-                <p class="text-sm text-gray-500 mb-2">Импорт записей из Excel/CSV.</p>
-                <form action="{{ url_for('admin.import_journal_data') }}" method="POST" enctype="multipart/form-data"
-                    onsubmit="return confirm('Вы уверены? Записи будут добавлены в журнал.');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                        <select name="center_id" class="form-input"
-                            style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
-                            <option value="">Выберите центр</option>
-                            {% for center in centers %}
-                            <option value="{{ center.id }}">{{ center.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <input type="file" name="file" accept=".csv, .xlsx" class="form-input">
-                        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0;">
-                            <input type="checkbox" name="delete_old" id="delete_old" style="width: 1rem; height: 1rem;">
-                            <label for="delete_old" class="text-sm text-gray-700">Удалить старые данные за эти
-                                дни</label>
+            <div class="locations-list">
+                {% for city in cities %}
+                <div class="city-block">
+                    <div class="city-row">
+                        <span class="city-name">{{ city.name }}</span>
+                        <div class="city-actions">
+                            <button class="btn-mini" onclick="openLocModal('center', {{ city.id }})">+ Центр</button>
+                            <button class="btn-mini edit"
+                                onclick="openLocEditModal({{ city.id }}, '{{ city.name }}', 'city')">✎</button>
                         </div>
                     </div>
-                    <button type="submit" class="btn"
-                        style="margin-top: 0.5rem; background: #3b82f6; color: white; border: none; padding: 0.5rem; border-radius: 0.375rem; cursor: pointer;">Загрузить</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Recalculate Data Section (Right Column) -->
-        <div class="card">
-            <h3 class="mb-4">Пересчет данных</h3>
-            <div class="mb-6">
-                <p class="text-sm text-gray-500 mb-2">Пересчет сумм на основе истории цен.</p>
-                <form action="{{ url_for('admin.recalculate_journal_data') }}" method="POST"
-                    onsubmit="return confirm('Вы уверены? Суммы будут пересчитаны.');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                        <select name="center_id" class="form-input"
-                            style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
-                            <option value="">Выберите центр</option>
-                            {% for center in centers %}
-                            <option value="{{ center.id }}">{{ center.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <input type="month" name="month" class="form-input"
-                            style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" required>
-                        <button type="submit" class="btn"
-                            style="background-color: #f59e0b; color: white; padding: 0.5rem; border-radius: 0.375rem; border: none; cursor: pointer;">Пересчитать</button>
+                    <div class="centers-list">
+                        {% for center in city.children %}
+                        <div class="center-row">
+                            <div class="center-color" style="background-color: {{ center.color }};"></div>
+                            <span>{{ center.name }}</span>
+                            <button class="btn-mini edit"
+                                onclick="openLocEditModal({{ center.id }}, '{{ center.name }}', 'center', '{{ center.color }}')">✎</button>
+                        </div>
+                        {% else %}
+                        <span class="empty-text" style="margin-left: 1rem;">Нет центров</span>
+                        {% endfor %}
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- ICS Import Section -->
-        <div class="card">
-            <h3 class="mb-4">Импорт Календаря</h3>
-            <div class="mb-6">
-                <p class="text-sm text-gray-500 mb-2">Загрузка записей из .ics файла (Google Calendar и др.)</p>
-                <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                    <a href="{{ url_for('admin.import_ics') }}" class="btn"
-                        style="text-align: center; text-decoration: none; background-color: #10b981; color: white; padding: 0.5rem; border-radius: 0.375rem; border: none; cursor: pointer;">
-                        Перейти к импорту (.ics)
-                    </a>
                 </div>
+                {% else %}
+                <p class="empty-text">Нет городов</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 1: Quick Lists -->
+    <div class="section-row">
+        <div class="section-card">
+            <div class="section-header">
+                <span class="section-icon">👥</span>
+                <h3>Менеджеры</h3>
+            </div>
+            <form action="{{ url_for('admin.add_manager') }}" method="POST" class="inline-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="text" name="name" placeholder="Новый менеджер..." required>
+                <button type="submit">+</button>
+            </form>
+            <div class="items-list">
+                {% for manager in managers %}
+                <div class="list-item">
+                    <form action="{{ url_for('admin.update_manager', id=manager.id) }}" method="POST" class="item-edit">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <input type="text" name="name" value="{{ manager.name }}" required>
+                        <button type="submit" class="btn-save" title="Сохранить">💾</button>
+                    </form>
+                    <form action="{{ url_for('admin.delete_manager', id=manager.id) }}" method="POST"
+                        onsubmit="return confirm('Удалить?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" class="btn-delete" title="Удалить">×</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="empty-text">Нет менеджеров</p>
+                {% endfor %}
             </div>
         </div>
 
+        <div class="section-card">
+            <div class="section-header">
+                <span class="section-icon">💳</span>
+                <h3>Способы оплаты</h3>
+            </div>
+            <form action="{{ url_for('admin.add_payment_method') }}" method="POST" class="inline-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="text" name="name" placeholder="Новый способ..." required>
+                <button type="submit">+</button>
+            </form>
+            <div class="items-list">
+                {% for method in payment_methods %}
+                <div class="list-item">
+                    <form action="{{ url_for('admin.update_payment_method', id=method.id) }}" method="POST"
+                        class="item-edit">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <input type="text" name="name" value="{{ method.name }}" required>
+                        <button type="submit" class="btn-save" title="Сохранить">💾</button>
+                    </form>
+                    <form action="{{ url_for('admin.delete_payment_method', id=method.id) }}" method="POST"
+                        onsubmit="return confirm('Удалить?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" class="btn-delete" title="Удалить">×</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="empty-text">Нет способов</p>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
-    <!-- Chat Settings Section -->
-    <div class="card">
-        <h3 class="mb-4">Настройки Чата</h3>
-
-        <div style="display: flex; gap: 1rem; align-items: start;">
-            <div style="flex: 1;">
-                <p class="mb-2">Иконка "Поддержки" (для организаций)</p>
+    <!-- Row 2: Media Uploads -->
+    <div class="section-row">
+        <div class="section-card media-card">
+            <div class="section-header">
+                <span class="section-icon">💬</span>
+                <h3>Иконка чата</h3>
+            </div>
+            <div class="media-content">
                 <form action="{{ url_for('admin.update_chat_settings') }}" method="POST" enctype="multipart/form-data"
-                    style="display: flex; gap: 0.5rem; flex-direction: column;">
+                    class="upload-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <input type="file" name="chat_image" accept="image/*" required class="form-input"
-                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
-                    <button type="submit" class="btn btn-primary" style="width: fit-content;">Загрузить</button>
+                    <input type="file" name="chat_image" accept="image/*" required>
+                    <button type="submit" class="btn-upload">Загрузить</button>
                 </form>
+                {% if chat_image %}
+                <img src="{{ url_for('static', filename=chat_image) }}" alt="Chat" class="preview-img round">
+                {% endif %}
             </div>
+        </div>
 
-            {% if chat_image %}
-            <div style="text-align: center;">
-                <p class="mb-2 text-sm text-gray-500">Текущая:</p>
-                <img src="{{ url_for('static', filename=chat_image) }}" alt="Chat Icon"
-                    style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;">
+        <div class="section-card media-card">
+            <div class="section-header">
+                <span class="section-icon">🔏</span>
+                <h3>Печать</h3>
             </div>
-            {% endif %}
+            <div class="media-content">
+                <form action="{{ url_for('admin.upload_stamp_image') }}" method="POST" enctype="multipart/form-data"
+                    class="upload-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="file" name="stamp_image" accept="image/png" required>
+                    <button type="submit" class="btn-upload">Загрузить</button>
+                </form>
+                {% if stamp_image %}
+                <img src="{{ url_for('static', filename=stamp_image) }}" alt="Stamp" class="preview-img square">
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    <!-- Stamp Image Section -->
-    <div class="card">
-        <h3 class="mb-4">Изображение Печати</h3>
-
-        <div style="display: flex; gap: 1rem; align-items: start;">
-            <div style="flex: 1;">
-                <p class="mb-2">Печать для документов (PNG с прозрачным фоном)</p>
-                <form action="{{ url_for('admin.upload_stamp_image') }}" method="POST" enctype="multipart/form-data"
-                    style="display: flex; gap: 0.5rem; flex-direction: column;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <input type="file" name="stamp_image" accept="image/png" required class="form-input"
-                        style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
-                    <button type="submit" class="btn btn-primary" style="width: fit-content;">Загрузить</button>
-                </form>
+    <!-- Row 3: Data Operations -->
+    <div class="section-row">
+        <div class="section-card operations-card">
+            <div class="section-header">
+                <span class="section-icon">📥</span>
+                <h3>Импорт данных</h3>
             </div>
+            <form action="{{ url_for('admin.import_journal_data') }}" method="POST" enctype="multipart/form-data"
+                class="operation-form" onsubmit="return confirm('Добавить записи в журнал?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <select name="center_id" required>
+                    <option value="">Центр...</option>
+                    {% for center in centers %}
+                    <option value="{{ center.id }}">{{ center.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="file" name="file" accept=".csv, .xlsx" required>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="delete_old">
+                    Заменить старые
+                </label>
+                <button type="submit" class="btn-action blue">Импорт</button>
+            </form>
+            <div class="divider"></div>
+            <a href="{{ url_for('admin.import_ics') }}" class="btn-action green"
+                style="text-decoration: none; text-align: center;">📅 Импорт .ics</a>
+        </div>
 
-            {% if stamp_image %}
-            <div style="text-align: center;">
-                <p class="mb-2 text-sm text-gray-500">Текущая:</p>
-                <img src="{{ url_for('static', filename=stamp_image) }}" alt="Stamp"
-                    style="width: 100px; height: 100px; object-fit: contain; border: 2px solid #e5e7eb; border-radius: 0.5rem; background: #f9fafb;">
+        <div class="section-card operations-card">
+            <div class="section-header">
+                <span class="section-icon">🔄</span>
+                <h3>Пересчёт сумм</h3>
             </div>
-            {% endif %}
+            <form action="{{ url_for('admin.recalculate_journal_data') }}" method="POST" class="operation-form"
+                onsubmit="return confirm('Пересчитать суммы?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <select name="center_id" required>
+                    <option value="">Центр...</option>
+                    {% for center in centers %}
+                    <option value="{{ center.id }}">{{ center.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="month" name="month" required>
+                <button type="submit" class="btn-action orange">Пересчитать</button>
+            </form>
+        </div>
+
+        <div class="section-card operations-card danger">
+            <div class="section-header">
+                <span class="section-icon">⚠️</span>
+                <h3>Очистка</h3>
+            </div>
+            <form action="{{ url_for('admin.clear_journal_data') }}" method="POST" class="operation-form"
+                onsubmit="return confirm('ВНИМАНИЕ! Данные будут удалены безвозвратно!');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <select name="center_id" required>
+                    <option value="">Центр...</option>
+                    {% for center in centers %}
+                    <option value="{{ center.id }}">{{ center.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="month" name="month" required>
+                <input type="password" name="password" placeholder="Пароль" required>
+                <button type="submit" class="btn-action red">Очистить</button>
+            </form>
         </div>
     </div>
 
 </div>
+
+<style>
+    .additional-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .section-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .section-header h3 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .section-icon {
+        font-size: 1.1rem;
+    }
+
+    /* Inline forms for adding items */
+    .inline-form {
+        display: flex;
+        gap: 0.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .inline-form input {
+        flex: 1;
+        padding: 0.4rem 0.6rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        font-size: 0.8rem;
+    }
+
+    .inline-form button {
+        padding: 0.4rem 0.75rem;
+        background: #4f46e5;
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    /* List items */
+    .items-list {
+        max-height: 180px;
+        overflow-y: auto;
+    }
+
+    .list-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.3rem 0;
+        border-bottom: 1px solid #f9fafb;
+    }
+
+    .item-edit {
+        display: flex;
+        flex: 1;
+        gap: 0.25rem;
+    }
+
+    .item-edit input {
+        flex: 1;
+        padding: 0.25rem 0.5rem;
+        border: 1px solid transparent;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        background: transparent;
+    }
+
+    .item-edit input:focus {
+        border-color: #e5e7eb;
+        background: white;
+    }
+
+    .btn-save,
+    .btn-delete {
+        padding: 0.2rem 0.4rem;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 0.85rem;
+        border-radius: 0.25rem;
+    }
+
+    .btn-save:hover {
+        background: #e0e7ff;
+    }
+
+    .btn-delete {
+        color: #ef4444;
+    }
+
+    .btn-delete:hover {
+        background: #fee2e2;
+    }
+
+    .empty-text {
+        color: #9ca3af;
+        font-size: 0.8rem;
+        text-align: center;
+        padding: 1rem 0;
+        margin: 0;
+    }
+
+    /* Media cards */
+    .media-card .media-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .upload-form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex: 1;
+    }
+
+    .upload-form input[type="file"] {
+        font-size: 0.75rem;
+    }
+
+    .btn-upload {
+        padding: 0.4rem 0.75rem;
+        background: #4f46e5;
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        width: fit-content;
+    }
+
+    .preview-img {
+        width: 56px;
+        height: 56px;
+        object-fit: cover;
+        border: 2px solid #e5e7eb;
+    }
+
+    .preview-img.round {
+        border-radius: 50%;
+    }
+
+    .preview-img.square {
+        border-radius: 0.5rem;
+        object-fit: contain;
+        background: #f9fafb;
+    }
+
+    /* Operations */
+    .operations-card {
+        min-height: 160px;
+    }
+
+    .operation-form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .operation-form select,
+    .operation-form input {
+        padding: 0.4rem 0.6rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        font-size: 0.8rem;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .checkbox-label input {
+        width: 14px;
+        height: 14px;
+    }
+
+    .btn-action {
+        padding: 0.5rem 0.75rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: white;
+        display: block;
+    }
+
+    .btn-action.blue {
+        background: #3b82f6;
+    }
+
+    .btn-action.green {
+        background: #10b981;
+    }
+
+    .btn-action.orange {
+        background: #f59e0b;
+    }
+
+    .btn-action.red {
+        background: #ef4444;
+    }
+
+    .divider {
+        height: 1px;
+        background: #f3f4f6;
+        margin: 0.75rem 0;
+    }
+
+    /* Danger card styling */
+    .operations-card.danger {
+        border: 1px solid #fecaca;
+        background: linear-gradient(135deg, #fff 0%, #fef2f2 100%);
+    }
+
+    /* Locations card styles */
+    .locations-card {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .locations-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .city-block {
+        background: #f9fafb;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+    }
+
+    .city-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.25rem;
+    }
+
+    .city-name {
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .city-actions {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .centers-list {
+        padding-left: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .center-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        padding: 0.2rem 0;
+    }
+
+    .center-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 1px solid #ddd;
+    }
+
+    .btn-add-city {
+        margin-left: auto;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+        background: #4f46e5;
+        color: white;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+    }
+
+    .btn-mini {
+        padding: 0.15rem 0.4rem;
+        font-size: 0.65rem;
+        background: #e5e7eb;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+    }
+
+    .btn-mini.edit {
+        background: transparent;
+        color: #6b7280;
+    }
+</style>
+
+<!-- Location Modal -->
+<div id="loc-modal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; padding:1.5rem; border-radius:0.5rem; width:320px;">
+        <h4 id="loc-modal-title" style="margin:0 0 1rem 0;">Добавить</h4>
+        <form id="loc-form">
+            <input type="hidden" id="loc-id">
+            <input type="hidden" id="loc-parent-id">
+            <input type="hidden" id="loc-type">
+            <div style="margin-bottom:0.75rem;">
+                <label style="font-size:0.8rem;">Название</label>
+                <input type="text" id="loc-name" required
+                    style="width:100%; padding:0.4rem; border:1px solid #d1d5db; border-radius:0.375rem; box-sizing:border-box;">
+            </div>
+            <div id="loc-color-row" style="margin-bottom:0.75rem;">
+                <label style="font-size:0.8rem;">Цвет</label>
+                <input type="color" id="loc-color" value="#3b82f6" style="width:100%; height:32px;">
+            </div>
+            <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                <button type="button" onclick="closeLocModal()"
+                    style="padding:0.4rem 0.75rem; border:1px solid #d1d5db; background:white; border-radius:0.375rem; cursor:pointer;">Отмена</button>
+                <button type="submit"
+                    style="padding:0.4rem 0.75rem; background:#4f46e5; color:white; border:none; border-radius:0.375rem; cursor:pointer;">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const locModal = document.getElementById('loc-modal');
+    const locForm = document.getElementById('loc-form');
+    let locIsEdit = false;
+
+    function openLocModal(type, parentId = null) {
+        locIsEdit = false;
+        document.getElementById('loc-modal-title').textContent = type === 'city' ? 'Добавить город' : 'Добавить центр';
+        document.getElementById('loc-type').value = type;
+        document.getElementById('loc-parent-id').value = parentId || '';
+        document.getElementById('loc-id').value = '';
+        document.getElementById('loc-name').value = '';
+        document.getElementById('loc-color').value = '#3b82f6';
+        document.getElementById('loc-color-row').style.display = type === 'center' ? 'block' : 'none';
+        locModal.style.display = 'flex';
+    }
+
+    function openLocEditModal(id, name, type, color) {
+        locIsEdit = true;
+        document.getElementById('loc-modal-title').textContent = 'Редактировать';
+        document.getElementById('loc-id').value = id;
+        document.getElementById('loc-name').value = name;
+        document.getElementById('loc-type').value = type;
+        if (color) document.getElementById('loc-color').value = color;
+        document.getElementById('loc-color-row').style.display = type === 'center' ? 'block' : 'none';
+        locModal.style.display = 'flex';
+    }
+
+    function closeLocModal() { locModal.style.display = 'none'; }
+
+    locForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('loc-id').value;
+        const name = document.getElementById('loc-name').value;
+        const type = document.getElementById('loc-type').value;
+        const parentId = document.getElementById('loc-parent-id').value;
+        const color = document.getElementById('loc-color').value;
+
+        let url = locIsEdit ? `/admin/locations/${id}/edit` : '/admin/locations/add';
+        let method = locIsEdit ? 'PUT' : 'POST';
+        let body = locIsEdit ? JSON.stringify({ name, color }) : new FormData();
+        if (!locIsEdit) {
+            body.append('name', name);
+            body.append('type', type);
+            if (parentId) body.append('parent_id', parentId);
+            if (type === 'center') body.append('color', color);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'X-CSRFToken': csrfToken, ...(locIsEdit ? { 'Content-Type': 'application/json' } : {}) },
+                body: body
+            });
+            if (res.ok) location.reload();
+            else alert('Ошибка сохранения');
+        } catch (err) { console.error(err); }
+    });
+</script>
 {% endblock %}
