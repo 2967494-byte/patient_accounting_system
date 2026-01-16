@@ -10,10 +10,30 @@
     <div class="main-grid">
         <!-- Left: Input Form -->
         <div class="form-section">
+            <div class="filters-row">
+                <div class="form-group">
+                    <label class="form-label">Центр:</label>
+                    <select id="filter-center" class="form-control" onchange="loadPatients()">
+                        <option value="">Все центры</option>
+                        {% for center in centers %}
+                        <option value="{{ center.id }}">{{ center.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Месяц:</label>
+                    <input type="month" id="filter-month" class="form-control" onchange="loadPatients()">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Поиск пациента:</label>
-                <input type="text" id="patient-search" list="patients-list" class="form-control"
-                    placeholder="Введите ФИО...">
+                <div style="position: relative;">
+                    <input type="text" id="patient-search" list="patients-list" class="form-control"
+                        placeholder="Введите ФИО...">
+                    <button id="clear-search" class="btn-clear" style="display: none;"
+                        onclick="clearSearch()">✕</button>
+                </div>
                 <datalist id="patients-list"></datalist>
             </div>
 
@@ -85,7 +105,23 @@
 
     async function loadPatients() {
         try {
-            const response = await fetch('{{ url_for("main.get_patients_for_certificate") }}');
+            const centerId = document.getElementById('filter-center').value;
+            const monthVal = document.getElementById('filter-month').value;
+
+            let url = '{{ url_for("main.get_patients_for_certificate") }}';
+            const params = new URLSearchParams();
+            if (centerId) params.append('center_id', centerId);
+            if (monthVal) {
+                const [year, month] = monthVal.split('-');
+                params.append('year', year);
+                params.append('month', month);
+            }
+
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            const response = await fetch(url);
             const data = await response.json();
 
             if (data.success) {
@@ -105,6 +141,18 @@
         }
     }
 
+    function clearSearch() {
+        const searchInput = document.getElementById('patient-search');
+        searchInput.value = '';
+        document.getElementById('patient-data').style.display = 'none';
+        document.getElementById('clear-search').style.display = 'none';
+        currentAppointmentId = null;
+    }
+
+    document.getElementById('patient-search').addEventListener('input', function (e) {
+        document.getElementById('clear-search').style.display = e.target.value ? 'block' : 'none';
+    });
+
     document.getElementById('patient-search').addEventListener('change', function (e) {
         const selectedName = e.target.value;
         const patient = patientsData.find(p => p.patient_name === selectedName);
@@ -113,7 +161,7 @@
             currentAppointmentId = patient.id;
             document.getElementById('display-name').textContent = patient.patient_name;
             document.getElementById('display-amount').textContent = patient.cost || '0';
-            document.getElementById('display-date').textContent = patient.date;
+            document.getElementById('display-date').textContent = new Date(patient.date).toLocaleDateString('ru-RU');
             document.getElementById('patient-data').style.display = 'flex';
         }
     });
@@ -239,6 +287,39 @@
         padding: 1.25rem;
         border: 1px solid #e5e7eb;
         border-radius: 0.5rem;
+    }
+
+    .filters-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .btn-clear {
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #f3f4f6;
+        border: none;
+        border-radius: 50%;
+        width: 1.25rem;
+        height: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #6b7280;
+        cursor: pointer;
+        z-index: 5;
+    }
+
+    .btn-clear:hover {
+        background: #e5e7eb;
+        color: #1f2937;
     }
 
     .form-group {

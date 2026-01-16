@@ -517,8 +517,9 @@ def stamp_tool():
     """Render the document stamp tool page"""
     stamp_setting = GlobalSetting.query.get('stamp_image')
     stamp_image = stamp_setting.value if stamp_setting else None
+    centers = Location.query.filter_by(type='center').all()
     
-    return render_template('admin_stamp_tool.html', stamp_image=stamp_image)
+    return render_template('admin_stamp_tool.html', stamp_image=stamp_image, centers=centers)
 
 
 @main.route('/stamp-tool/template-image')
@@ -660,12 +661,32 @@ def stamp_tool_apply_stamp():
 def get_patients_for_certificate():
     """Get list of recent patients with appointment data"""
     try:
-        # Get recent appointments (last 3 months) with unique patients
-        three_months_ago = date.today() - timedelta(days=90)
+        center_id = request.args.get('center_id', type=int)
+        month = request.args.get('month', type=int)
+        year = request.args.get('year', type=int)
         
-        appointments = Appointment.query.filter(
-            Appointment.date >= three_months_ago
-        ).order_by(Appointment.date.desc()).limit(500).all()
+        query = Appointment.query
+        
+        if center_id:
+            query = query.filter(Appointment.location_id == center_id)
+            
+        if month and year:
+            # Filter by specific month and year
+            start_date = date(year, month, 1)
+            if month == 12:
+                end_date = date(year + 1, 1, 1)
+            else:
+                end_date = date(year, month + 1, 1)
+            query = query.filter(Appointment.date >= start_date, Appointment.date < end_date)
+            # When specific month is selected, we want all patients from that month, so no limit or a higher one
+            limit = 1000
+        else:
+            # Default: last 3 months
+            three_months_ago = date.today() - timedelta(days=90)
+            query = query.filter(Appointment.date >= three_months_ago)
+            limit = 500
+        
+        appointments = query.order_by(Appointment.date.desc()).limit(limit).all()
         
         # Create unique patient list with their data
         patients_data = []
