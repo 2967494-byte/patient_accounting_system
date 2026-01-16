@@ -53,6 +53,57 @@
         .chat-btn-border {
             border: 3px solid #9333ea;
         }
+
+        /* Center Navigation - Chip Style */
+        .center-nav-container {
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0.75rem 1rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: center;
+        }
+
+        .center-chips-scroll {
+            display: flex;
+            gap: 0.75rem;
+            overflow-x: auto;
+            padding-bottom: 0px;
+            scrollbar-width: none;
+            max-width: 100%;
+        }
+
+        .center-chips-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .center-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-decoration: none;
+            color: #4b5563;
+            background-color: #f3f4f6;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .center-chip:hover {
+            background-color: #e5e7eb;
+            color: #111827;
+        }
+
+        .center-chip.active {
+            background-color: var(--center-color, #3b82f6);
+            color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+            border-color: transparent;
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -202,16 +253,18 @@
         {% endif %}
         {% endwith %}
 
-        <!-- Center Tabs -->
+        <!-- Center Tabs (Redesigned) -->
         {% if centers %}
-        <div class="tabs-container">
-            {% for center in centers %}
-            <a href="{{ url_for(request.endpoint, center_id=center.id, start_date=request.args.get('start_date')) }}"
-                class="tab-link {% if current_center_id == center.id %}active{% endif %}"
-                style="{% if current_center_id == center.id %}background-color: {{ center.color }}20; border-color: {{ center.color }}; color: {{ center.color }};{% else %}border-left-color: {{ center.color }};{% endif %}">
-                {{ center.name }}
-            </a>
-            {% endfor %}
+        <div class="center-nav-container">
+            <div class="center-chips-scroll">
+                {% for center in centers %}
+                <a href="{{ url_for(request.endpoint, center_id=center.id, start_date=request.args.get('start_date')) }}"
+                    class="center-chip {% if current_center_id == center.id %}active{% endif %}"
+                    style="--center-color: {{ center.color }};">
+                    {{ center.name }}
+                </a>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
 
