@@ -1940,7 +1940,7 @@ def users():
 
         
 
-    users = query.all()
+    users = query.order_by(User.username.asc()).all()
 
     centers = Location.query.filter_by(type='center').all()
 
@@ -2400,11 +2400,8 @@ def import_doctors():
 
 
 @admin.route('/services')
-
 def services():
-
-    services = Service.query.all()
-
+    services = Service.query.order_by(Service.name.asc()).all()
     return render_template('admin_services.html', services=services)
 
 
@@ -2736,7 +2733,7 @@ def delete_service_price(price_id):
 
 def additional_services():
 
-    services = AdditionalService.query.all()
+    services = AdditionalService.query.order_by(AdditionalService.name.asc()).all()
 
     return render_template('admin_additional_services.html', additional_services=services)
 
@@ -3387,7 +3384,7 @@ def clinics():
 
     # Use Clinic model
 
-    clinics = Clinic.query.all()
+    clinics = Clinic.query.order_by(Clinic.name.asc()).all()
 
     cities = Location.query.filter_by(type='city').all()
 
