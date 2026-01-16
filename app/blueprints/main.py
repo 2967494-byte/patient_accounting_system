@@ -902,3 +902,24 @@ def list_certificates():
         'success': True,
         'certificates': [cert.to_dict() for cert in certificates]
     })
+
+
+@main.route('/stamp-tool/certificate/<int:cert_id>/delete', methods=['POST'])
+@login_required
+def delete_certificate(cert_id):
+    """Delete a generated certificate"""
+    cert = MedicalCertificate.query.get_or_404(cert_id)
+    
+    # Delete file if exists
+    if cert.filename:
+        filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', cert.filename)
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception as e:
+                print(f"[WARN] Could not delete cert file: {e}")
+    
+    db.session.delete(cert)
+    db.session.commit()
+    
+    return jsonify({'success': True})
