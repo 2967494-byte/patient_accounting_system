@@ -3,192 +3,400 @@
 {% block head %}
 
 <style>
-    /* Адаптивная таблица */
-    .journal-table {
-        min-width: 100%;
-        width: auto;
-        border-collapse: collapse;
-        table-layout: auto;
+    :root {
+        --bg-color: #f3f4f6;
+        --card-bg: #ffffff;
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+        --primary-color: #3b82f6;
+        --primary-hover: #2563eb;
+        --danger-color: #ef4444;
+        --success-color: #10b981;
+        --accent-color: #8b5cf6;
+        --header-bg: rgba(255, 255, 255, 0.95);
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
-    /* ... (CSS continues, simplified for brevity in prompt but tool keeps it) ... */
-    /* Wait, replace_file_content requires exact TargetContent. I should use multi_replace for small precise edits or replace_file_content with a huge block. */
-    /* Since I need to touch line 3, 5, and 191, multi_replace is better. */
-
-    /* Фиксированные минимальные ширины для узких столбцов */
-    .journal-table th:nth-child(1),
-    /* № */
-    .journal-table td:nth-child(1) {
-        min-width: 40px;
-        width: 1%;
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-primary);
     }
 
-    .journal-table th:nth-child(3),
-    /* Реб */
-    .journal-table td:nth-child(3) {
-        min-width: 40px;
-        width: 1%;
+    /* Container adjustments */
+    .journal-container {
+        padding: 1.5rem !important;
+        gap: 1rem;
     }
 
-    .journal-table th:nth-child(8),
-    /* Кол-во */
-    .journal-table td:nth-child(8),
-    .journal-table th:nth-child(8),
-    /* Кол-во */
-    .journal-table td:nth-child(8),
-    .journal-table th:nth-child(10),
-    /* Скидка */
-    .journal-table td:nth-child(10),
-    .journal-table th:nth-child(11),
-    /* Сумма */
-    .journal-table td:nth-child(11) {
-        min-width: 70px;
-        width: 1%;
+    /* Filters Bar */
+    .filters-bar {
+        background: var(--card-bg);
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
     }
 
-    /* Остальные столбцы с базовой минимальной шириной */
-    .journal-table th:nth-child(2),
-    /* Договор */
-    .journal-table td:nth-child(2),
-    .journal-table th:nth-child(4),
-    /* Клиника */
-    .journal-table td:nth-child(4),
-    .journal-table th:nth-child(5),
-    /* Врач */
-    .journal-table td:nth-child(5),
-    .journal-table th:nth-child(6),
-    /* Пациент */
-    .journal-table td:nth-child(6),
-    .journal-table th:nth-child(9),
-    /* Оплата (was 10) */
-    .journal-table td:nth-child(9),
-    .journal-table th:nth-child(12),
-    /* Комментарий (was 13) */
-    .journal-table td:nth-child(12),
-    .journal-table th:nth-child(13),
-    /* Лаборант (was 14) */
-    .journal-table td:nth-child(13),
-    .journal-table th:nth-child(14),
-    /* Действия (was 16/15) */
-    .journal-table td:nth-child(14) {
-        min-width: 100px;
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
     }
 
-    /* Column 7: Research - specific limit */
-    /* Column 7: Services - specific limit */
-    .journal-table th:nth-child(7),
-    .journal-table td:nth-child(7) {
-        min-width: 120px;
-        max-width: 250px;
-        white-space: normal;
-        /* Allow wrapping */
-        vertical-align: top;
+    .filter-label {
+        font-weight: 500;
+        font-size: 0.95rem;
+        color: var(--text-secondary);
     }
 
-    .journal-table td:nth-child(7) select {
-        max-width: 100%;
-        white-space: normal;
+    .filter-input {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        background-color: #f9fafb;
+        transition: all 0.2s;
+        outline: none;
     }
 
-    /* Оплата */
-    .journal-table td:nth-child(10),
-    .journal-table th:nth-child(13),
-    /* Комментарий */
-    .journal-table td:nth-child(13),
-    .journal-table th:nth-child(14),
-    /* Лаборант */
-    .journal-table td:nth-child(14),
-    .journal-table th:nth-child(15),
-    /* Менеджер */
-    .journal-table td:nth-child(15),
-    .journal-table th:nth-child(16),
-    /* Действия */
-    .journal-table td:nth-child(16) {
-        min-width: 100px;
-    }
-
-    /* Обрезка длинного текста */
-    .journal-table td {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        /* max-width removed to allow full expansion */
-        padding: 0.5rem;
-        font-size: 13px;
-    }
-
-    /* Для полей ввода в ячейках */
-    .journal-table td input,
-    .journal-table td select {
-        max-width: none;
-        /* Allow unlimited growth */
-        box-sizing: border-box;
-        width: auto;
-        /* Allow input to size to content */
-        min-width: 100%;
-        /* But take at least full cell width */
-        /* Seamless look */
-        font-size: 13px;
-        /* Ensure match with td */
-        font-family: inherit;
-    }
-
-    /* Fallback for field-sizing if supported */
-    @supports (field-sizing: content) {
-        .journal-table td input {
-            field-sizing: content;
-            min-width: 100%;
-        }
-    }
-
-    /* Контейнер для скролла */
-    .journal-table-wrapper {
-        overflow-x: auto;
-        width: 100%;
-        max-width: 100%;
-        /* Ensure scrollbar is visible */
-        scrollbar-width: auto;
-        /* Firefox */
-        scrollbar-color: #888 #f1f1f1;
-        /* Firefox */
-    }
-
-    /* Webkit Scrollbar Styling */
-    .journal-table-wrapper::-webkit-scrollbar {
-        height: 24px;
-        /* Vital for horizontal scrollbar visibility */
-        width: 24px;
-    }
-
-    .journal-table-wrapper::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 6px;
-    }
-
-    .journal-table-wrapper::-webkit-scrollbar-thumb {
-        background-color: #888;
-        /* Dark grey thumb */
-        border-radius: 6px;
-        border: 2px solid #f1f1f1;
-        /* Padding feeling */
+    .filter-input:focus,
+    .filter-input:hover {
+        background-color: #fff;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 
     .btn-date-shortcut {
-        background: #f3f4f6;
-        border: 1px solid #d1d5db;
-        padding: 0.5rem 0.8rem;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        font-size: 0.9rem;
-        color: #374151;
+        background: #f9fafb;
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
         font-weight: 500;
         transition: all 0.2s;
     }
 
     .btn-date-shortcut:hover {
-        background: #e5e7eb;
-        border-color: #9ca3af;
-        color: #111827;
+        background: #fff;
+        border-color: var(--text-secondary);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* Action Buttons */
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--primary-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background-color: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #4b5563;
+        transform: translateY(-1px);
+    }
+
+    .btn-success {
+        background-color: var(--success-color);
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #059669;
+        transform: translateY(-1px);
+    }
+
+    /* Table Container */
+    #bottom-scroll-wrapper {
+        background: var(--card-bg);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+        /* For border radius */
+    }
+
+    /* Table Styles */
+    .journal-table {
+        width: 100%;
+        border-collapse: separate;
+        /* Allow spacing/radius */
+        border-spacing: 0;
+        font-size: 0.9rem;
+    }
+
+    .journal-table th {
+        background: var(--header-bg);
+        backdrop-filter: blur(8px);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        padding: 1rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .journal-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+        vertical-align: middle;
+        transition: background 0.15s;
+    }
+
+    .journal-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .journal-table tbody tr:hover td {
+        background-color: #f9fafb;
+    }
+
+    .data-row {
+        background: #fff;
+    }
+
+    /* Compact Inputs in Cells */
+    .journal-input,
+    .journal-select {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 0.3rem 0.5rem;
+        width: 100%;
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+        transition: all 0.2s;
+    }
+
+    .journal-input:focus,
+    .journal-table tr:hover .journal-input,
+    .journal-select:focus,
+    .journal-table tr:hover .journal-select {
+        background: #fff;
+        border-color: var(--border-color);
+    }
+
+    .journal-input:focus,
+    .journal-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Specific Column Widths from user preference preserved/tuned */
+    .journal-table th:first-child,
+    .journal-table td:first-child {
+        width: 50px;
+        text-align: center;
+        color: #9ca3af;
+    }
+
+    .journal-table th:nth-child(3),
+    .journal-table td:nth-child(3) {
+        width: 50px;
+        text-align: center;
+    }
+
+    /* Child */
+
+    /* Badges & Pills */
+    .badge-services {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .service-pill {
+        background: #eff6ff;
+        color: #1e40af;
+        padding: 0.25rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid #bfdbfe;
+    }
+
+    .service-pill-qty {
+        background: #dbeafe;
+        color: #1e3a8a;
+        border-radius: 50%;
+        width: 1.25em;
+        height: 1.25em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75em;
+        margin-left: 0.4rem;
+        font-weight: 700;
+    }
+
+    .child-indicator {
+        font-size: 1.2rem;
+        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    .action-btn-icon {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .action-btn-icon:hover {
+        background: #f3f4f6;
+        color: var(--primary-color);
+    }
+
+    .action-btn-icon.delete:hover {
+        background: #fee2e2;
+        color: var(--danger-color);
+    }
+
+    /* Scrollbars */
+    .journal-table-wrapper::-webkit-scrollbar {
+        height: 12px;
+        width: 12px;
+    }
+
+    .journal-table-wrapper::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .journal-table-wrapper::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 6px;
+        border: 3px solid transparent;
+        background-clip: content-box;
+    }
+
+    .journal-table-wrapper::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8;
+    }
+
+    /* Summary Section */
+    .summary-section {
+        margin-top: 2rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    .summary-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+        padding: 1rem;
+    }
+
+    .summary-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .summary-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .summary-table td {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.875rem;
+    }
+
+    .summary-table th {
+        padding: 0.6rem 0.8rem;
+        position: static;
+        /* Remove sticky from summary tables */
+        background: transparent;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .summary-row-total {
+        background-color: #f9fafb;
+        font-weight: 600;
+        border-top: 2px solid var(--border-color);
+    }
+
+    .summary-subhead td {
+        background-color: #f3f4f6;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .summary-indent td:first-child {
+        padding-left: 1.5rem;
+        color: var(--text-secondary);
+    }
+
+    .text-right {
+        text-align: right;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .font-medium {
+        font-weight: 500;
+    }
+
+    .text-success {
+        color: var(--success-color);
+    }
+
+    .text-muted {
+        color: var(--text-secondary);
     }
 </style>
 {% endblock %}
@@ -276,36 +484,34 @@
 <div class="journal-container"
     style="padding: 1rem; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; flex: 1; overflow: hidden; height: 100%;">
     <!-- Filters -->
-    <div class="filters-bar"
-        style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <div style="display: flex; gap: 0.5rem; margin-right: 0.5rem;">
-                <button type="button" onclick="setJournalDate(-2)" class="btn-date-shortcut">Позавчера</button>
-                <button type="button" onclick="setJournalDate(-1)" class="btn-date-shortcut">Вчера</button>
+    <!-- Filters -->
+    <div class="filters-bar">
+        <div class="filter-group">
+            <div style="display: flex; gap: 0.25rem;">
+                <button type="button" onclick="setJournalDate(-2)" class="btn-date-shortcut" title="Позавчера">«
+                    -2</button>
+                <button type="button" onclick="setJournalDate(-1)" class="btn-date-shortcut" title="Вчера">« -1</button>
             </div>
-            <label for="journal-date" style="font-weight: 500; font-size: 1.1rem; color: #374151;">Дата:</label>
-            <input type="date" id="journal-date" value="{{ current_date }}"
-                style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;"
-                onchange="window.location.href = `{{ url_for('main.journal') }}?center_id={{ current_center_id }}&date=${this.value}`">
+            <div class="input-with-icon" style="position: relative; display: flex; align-items: center;">
+                <!-- <span style="position: absolute; left: 10px; color: #6b7280; font-size: 1.1rem;">📅</span> -->
+                <input type="date" id="journal-date" class="filter-input" value="{{ current_date }}"
+                    onchange="window.location.href = `{{ url_for('main.journal') }}?center_id={{ current_center_id }}&date=${this.value}`">
+            </div>
         </div>
-        <div style="display: flex; gap: 10px;">
+
+        <div class="filter-group">
+            <button class="btn-action btn-secondary" onclick="openAppointmentSelectionModal()">
+                <span>📋</span> Из записи
+            </button>
+            <button class="btn-action btn-primary" onclick="openModal()">
+                <span>➕</span> Добавить
+            </button>
             {% if current_user.role == 'admin' %}
-            <button onclick="document.getElementById('importJournalModal').style.display='block'" class="btn"
-                style="background-color: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
-                Импорт (Excel)
+            <button onclick="document.getElementById('importJournalModal').style.display='block'"
+                class="btn-action btn-success">
+                <span>📥</span> Импорт
             </button>
             {% endif %}
-            <div class="header-actions" style="display: flex; gap: 10px;">
-                <!-- Add from Appointment Button -->
-                <button class="btn" onclick="openAppointmentSelectionModal()"
-                    style="background-color: #6b7280; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer;">
-                    + Добавить из записи
-                </button>
-                <button class="btn btn-primary" onclick="openModal()"
-                    style="background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer;">
-                    + Добавить запись
-                </button>
-            </div>
         </div>
     </div>
 
@@ -415,25 +621,24 @@
                     <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.patient_name }}</td>
                     <td style="padding: 0.25rem 0.5rem; white-space: normal; vertical-align: middle;">
                         <!-- Main Services -->
-                        <div style="font-weight: 500; color: #111827;">
+                        <div class="badge-services">
                             {% if appointment.service_associations %}
                             {% for assoc in appointment.service_associations %}
-                            <div
-                                style="margin-bottom: 2px; display: flex; align-items: center; justify-content: space-between;">
+                            <div class="service-pill" title="{{ assoc.service.name }}">
                                 <span>{{ assoc.service.name }}</span>
-                                <span
-                                    style="font-size: 0.9em; color: #374151; margin-left: 8px; background: #f3f4f6; padding: 1px 6px; border-radius: 4px;">x{{
-                                    assoc.quantity or 1 }}</span>
+                                {% if assoc.quantity > 1 %}
+                                <span class="service-pill-qty">{{ assoc.quantity }}</span>
+                                {% endif %}
                             </div>
                             {% endfor %}
                             {% else %}
                             <!-- Fallback for legacy text service or if empty -->
                             {% if appointment.service %}
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div class="service-pill">
                                 <span>{{ appointment.service }}</span>
-                                <span
-                                    style="font-size: 0.9em; color: #374151; margin-left: 8px; background: #f3f4f6; padding: 1px 6px; border-radius: 4px;">x{{
-                                    appointment.quantity or 1 }}</span>
+                                {% if appointment.quantity > 1 %}
+                                <span class="service-pill-qty">{{ appointment.quantity }}</span>
+                                {% endif %}
                             </div>
                             {% endif %}
                             {% endif %}
@@ -442,13 +647,16 @@
                         <!-- Additional Services (Separated) -->
                         {% if appointment.additional_service_associations %}
                         <div
-                            style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #e5e7eb; font-size: 0.85em; color: #4b5563;">
+                            style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #e5e7eb; display: flex; flex-wrap: wrap; gap: 0.5rem;">
                             {% for assoc in appointment.additional_service_associations %}
-                            <div
-                                style="margin-bottom: 1px; display: flex; align-items: center; justify-content: space-between;">
+                            <div class="service-pill"
+                                style="background: #fdf2f8; color: #be185d; border-color: #fbcfe8;"
+                                title="{{ assoc.additional_service.name }}">
                                 <span>+ {{ assoc.additional_service.name }}</span>
-                                <span style="font-size: 0.9em; color: #6b7280; margin-left: 8px;">x{{ assoc.quantity or
-                                    1 }}</span>
+                                {% if assoc.quantity > 1 %}
+                                <span class="service-pill-qty" style="background: #fce7f3; color: #be185d;">{{
+                                    assoc.quantity }}</span>
+                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
@@ -479,41 +687,31 @@
 
     <!-- Summary Table -->
     {% if summary_stats %}
-    <div class="summary-section" style="margin-top: 2rem; display: flex; gap: 2rem; flex-wrap: wrap;">
+    <div class="summary-section">
         <!-- Financial Table -->
-        <div style="flex: 0 0 auto;">
-            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Финансы</h3>
-            <div style="overflow-x: auto;">
-                <table
-                    style="width: auto; min-width: 400px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+        <div class="summary-card">
+            <h3 class="summary-title">Финансы</h3>
+            <div class="summary-table-wrapper">
+                <table class="journal-table summary-table">
                     <thead>
-                        <tr style="background-color: #f3f4f6; text-align: left;">
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
-                                Категория
-                            </th>
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
-                                Количество
-                            </th>
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
-                                Сумма
-                                (₽)
-                            </th>
+                        <tr>
+                            <th>Категория</th>
+                            <th class="text-right">Кол-во</th>
+                            <th class="text-right">Сумма (₽)</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: #111827;">Всего пациентов
-                            </td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.total_count }}</td>
-                            <td style="padding: 0.75rem 1rem; font-weight: 600; color: #10b981;">{{
-                                "%.2f"|format(summary_stats.total_sum) }}</td>
+                        <tr class="summary-row-total">
+                            <td class="font-medium">Всего пациентов</td>
+                            <td class="text-right">{{ summary_stats.total_count }}</td>
+                            <td class="text-right text-success">{{ "%.2f"|format(summary_stats.total_sum) }}</td>
                         </tr>
                         {% for method_name, stats in summary_stats.methods.items() %}
                         {% if stats.count > 0 or True %}
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ method_name }}</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ stats.count }}</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(stats.sum) }}</td>
+                        <tr>
+                            <td>{{ method_name }}</td>
+                            <td class="text-right">{{ stats.count }}</td>
+                            <td class="text-right">{{ "%.2f"|format(stats.sum) }}</td>
                         </tr>
                         {% endif %}
                         {% endfor %}
@@ -523,71 +721,49 @@
         </div>
 
         <!-- Statistics Table -->
-        <div style="flex: 0 0 auto;">
-            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Статистика</h3>
-            <div style="overflow-x: auto;">
-                <table
-                    style="width: auto; min-width: 300px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+        <div class="summary-card">
+            <h3 class="summary-title">Статистика</h3>
+            <div class="summary-table-wrapper">
+                <table class="journal-table summary-table">
                     <thead>
-                        <tr style="background-color: #f3f4f6; text-align: left;">
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
-                                Категория
-                                (за день)
-                            </th>
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">
-                                Количество
-                            </th>
+                        <tr>
+                            <th>Категория (за день)</th>
+                            <th class="text-right">Кол-во</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; color: #374151;">Количество взрослых</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.adults_count }}</td>
+                        <tr>
+                            <td>Количество взрослых</td>
+                            <td class="text-right">{{ summary_stats.adults_count }}</td>
                         </tr>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; color: #374151;">Количество детей</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ summary_stats.children_count }}
+                        <tr>
+                            <td>Количество детей</td>
+                            <td class="text-right">{{ summary_stats.children_count }}</td>
+                        </tr>
+                        <tr class="summary-subhead">
+                            <td colspan="2">Количество КТ: <span class="font-medium">{{ summary_stats.kt_count }}</span>
                             </td>
                         </tr>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество КТ, в
-                                том
-                                числе:
-                            </td>
-                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{
-                                summary_stats.kt_count
-                                }}</td>
+                        <tr class="summary-indent">
+                            <td>Взрослых</td>
+                            <td class="text-right">{{ summary_stats.kt_adults }}</td>
                         </tr>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">
-                                Взрослых
-                            </td>
-                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_adults }}</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей
-                            </td>
-                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.kt_children }}</td>
+                        <tr class="summary-indent">
+                            <td>Детей</td>
+                            <td class="text-right">{{ summary_stats.kt_children }}</td>
                         </tr>
 
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">Количество ОПТГ, в
-                                том
-                                числе:</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151; font-weight: 500;">{{
-                                summary_stats.optg_count
-                                }}</td>
+                        <tr class="summary-subhead">
+                            <td colspan="2">Количество ОПТГ: <span class="font-medium">{{ summary_stats.optg_count
+                                    }}</span></td>
                         </tr>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">
-                                Взрослых
-                            </td>
-                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_adults }}</td>
+                        <tr class="summary-indent">
+                            <td>Взрослых</td>
+                            <td class="text-right">{{ summary_stats.optg_adults }}</td>
                         </tr>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.5rem 1rem 0.5rem 2.5rem; color: #4b5563; font-size: 0.95em;">Детей
-                            </td>
-                            <td style="padding: 0.5rem 1rem; color: #4b5563;">{{ summary_stats.optg_children }}</td>
+                        <tr class="summary-indent">
+                            <td>Детей</td>
+                            <td class="text-right">{{ summary_stats.optg_children }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -595,21 +771,16 @@
         </div>
 
         <!-- Cashless Table -->
-        <div style="flex: 0 0 auto;">
-            <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">Безналичные</h3>
-            <div style="overflow-x: auto;">
-                <table
-                    style="width: auto; min-width: 400px; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+        <div class="summary-card">
+            <h3 class="summary-title">Безналичные</h3>
+            <div class="summary-table-wrapper">
+                <table class="journal-table summary-table">
                     <thead>
-                        <tr style="background-color: #f3f4f6; text-align: left;">
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">п.п.
-                            </th>
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Клиника
-                            </th>
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">Фио
-                                пациента</th>
-                            <th style="padding: 0.75rem 1rem; border-bottom: 2px solid #e5e7eb; color: #374151;">сумма
-                                (Р)</th>
+                        <tr>
+                            <th>п.п.</th>
+                            <th>Клиника</th>
+                            <th>Фио пациента</th>
+                            <th class="text-right">Сумма (₽)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -618,24 +789,22 @@
                         {% if appt.payment_method and ('безнал' in appt.payment_method.name.lower()) %}
                         {% set ns.count = ns.count + 1 %}
                         {% set ns.total = ns.total + (appt.cost or 0) %}
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ ns.count }}</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ appt.clinic.name }}</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ appt.patient_name }}</td>
-                            <td style="padding: 0.75rem 1rem; color: #374151;">{{ "%.2f"|format(appt.cost or 0) }}</td>
+                        <tr>
+                            <td>{{ ns.count }}</td>
+                            <td>{{ appt.clinic.name }}</td>
+                            <td>{{ appt.patient_name }}</td>
+                            <td class="text-right">{{ "%.2f"|format(appt.cost or 0) }}</td>
                         </tr>
                         {% endif %}
                         {% endfor %}
                         {% if ns.count == 0 %}
                         <tr>
-                            <td colspan="4" style="padding: 0.75rem 1rem; color: #9ca3af; text-align: center;">Нет
-                                данных</td>
+                            <td colspan="4" class="text-center text-muted">Нет данных</td>
                         </tr>
                         {% else %}
-                        <tr style="border-top: 2px solid #e5e7eb; font-weight: 600;">
-                            <td colspan="3" style="padding: 0.75rem 1rem; text-align: right; color: #111827;">Итого:
-                            </td>
-                            <td style="padding: 0.75rem 1rem; color: #10b981;">{{ "%.2f"|format(ns.total) }}</td>
+                        <tr class="summary-row-total">
+                            <td colspan="3" class="text-right">Итого:</td>
+                            <td class="text-right text-success">{{ "%.2f"|format(ns.total) }}</td>
                         </tr>
                         {% endif %}
                     </tbody>
