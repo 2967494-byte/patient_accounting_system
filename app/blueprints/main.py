@@ -720,7 +720,24 @@ def get_patients_for_certificate():
                 'patient_name': apt.patient_name,
                 'center_name': apt.center.name if apt.center else '-',
                 'service': service_name or '-',
-                'cost': 0 if (apt.payment_method and 'б/п' in apt.payment_method.name.lower()) else (apt.amount_paid if (apt.amount_paid and apt.amount_paid > 0) else apt.cost),
+            })
+            
+            # --- DEBUG LOGIC FOR COST ---
+            final_cost = apt.cost
+            pm_name = apt.payment_method.name.lower() if apt.payment_method else "none"
+            is_free = 'б/п' in pm_name
+            
+            print(f"DEBUG CERT: ID={apt.id}, PM={pm_name}, Paid={apt.amount_paid}, Cost={apt.cost}, IsFree={is_free}")
+
+            if is_free:
+                final_cost = 0
+            elif apt.amount_paid and apt.amount_paid > 0:
+                final_cost = apt.amount_paid
+            
+            # Add to result
+            results[-1]['cost'] = final_cost
+            # properties
+            results[-1].update({
                 # hidden data for filing
                 'inn': apt.patient_record.inn if apt.patient_record and hasattr(apt.patient_record, 'inn') else '', # Model might not have INN yet, handled in frontend manual input
                 'birth_date': apt.patient_record.birth_date.strftime('%Y-%m-%d') if apt.patient_record and apt.patient_record.birth_date else ''
