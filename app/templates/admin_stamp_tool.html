@@ -15,6 +15,15 @@
                 <input type="month" id="filter-month" class="form-control" onchange="loadPatients()">
             </div>
 
+
+            <div class="form-group">
+                <label class="form-label">Форма справки:</label>
+                <select id="form-select" class="form-control" onchange="togglePayerFields()">
+                    <option value="knd1151156">Форма КНД 1151156 (Пациент = Плательщик)</option>
+                    <option value="knd1151156_op">Форма КНД 1151156 ОП (Иной плательщик)</option>
+                </select>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Поиск пациента:</label>
                 <div style="position: relative;">
@@ -26,37 +35,77 @@
                 <datalist id="patients-list"></datalist>
             </div>
 
-            <div id="patient-data" class="patient-card" style="display: none;">
-                <div class="patient-info">
-                    <span id="display-name" class="patient-name"></span>
-                    <span class="patient-amount"><span id="display-amount"></span> ₽</span>
+            <!-- Patient Data Block -->
+            <div class="data-block patient-block">
+                <div class="block-header">Данные пациента</div>
+
+                <div id="patient-data" class="patient-card" style="display: none;">
+                    <div class="patient-info">
+                        <span id="display-name" class="patient-name"></span>
+                        <span class="patient-amount"><span id="display-amount"></span> ₽</span>
+                    </div>
+                    <small id="display-date" class="patient-date"></small>
                 </div>
-                <small id="display-date" class="patient-date"></small>
+
+                <div class="inputs-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label">ИНН:</label>
+                        <input type="text" id="inn" class="form-control inn-field" placeholder="12 цифр" maxlength="12"
+                            inputmode="numeric">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Дата рождения:</label>
+                        <input type="date" id="birth-date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Серия:</label>
+                        <input type="text" id="doc-series" class="form-control" placeholder="4 цифры" maxlength="4"
+                            inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Номер:</label>
+                        <input type="text" id="doc-number" class="form-control" placeholder="6 цифр" maxlength="6"
+                            inputmode="numeric">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Дата выдачи паспорта:</label>
+                        <input type="date" id="doc-issue-date" class="form-control">
+                    </div>
+                </div>
             </div>
 
-            <div class="inputs-grid">
-                <div class="form-group full-width">
-                    <label class="form-label">ИНН:</label>
-                    <input type="text" id="inn" class="form-control inn-field" placeholder="12 цифр" maxlength="12"
-                        inputmode="numeric" pattern="[0-9]*">
-                </div>
-                <div class="form-group full-width">
-                    <label class="form-label">Дата рождения:</label>
-                    <input type="date" id="birth-date" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Серия:</label>
-                    <input type="text" id="doc-series" class="form-control" placeholder="4 цифры" maxlength="4"
-                        inputmode="numeric" pattern="[0-9]*">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Номер:</label>
-                    <input type="text" id="doc-number" class="form-control" placeholder="6 цифр" maxlength="6"
-                        inputmode="numeric" pattern="[0-9]*">
-                </div>
-                <div class="form-group full-width">
-                    <label class="form-label">Дата выдачи паспорта:</label>
-                    <input type="date" id="doc-issue-date" class="form-control">
+            <!-- Payer Data Block -->
+            <div id="payer-block" class="data-block payer-block block-disabled">
+                <div class="block-header">Данные плательщика</div>
+                <div class="inputs-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label">ФИО Плательщика:</label>
+                        <input type="text" id="payer-fio" class="form-control" placeholder="Иванов Иван Иванович"
+                            disabled>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">ИНН:</label>
+                        <input type="text" id="payer-inn" class="form-control inn-field" placeholder="12 цифр"
+                            maxlength="12" inputmode="numeric" disabled>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Дата рождения:</label>
+                        <input type="date" id="payer-birth-date" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Серия:</label>
+                        <input type="text" id="payer-doc-series" class="form-control" placeholder="4 цифры"
+                            maxlength="4" inputmode="numeric" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Номер:</label>
+                        <input type="text" id="payer-doc-number" class="form-control" placeholder="6 цифр" maxlength="6"
+                            inputmode="numeric" disabled>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Дата выдачи паспорта:</label>
+                        <input type="date" id="payer-doc-issue-date" class="form-control" disabled>
+                    </div>
                 </div>
             </div>
 
@@ -86,6 +135,7 @@
 </div>
 
 <script>
+    // currentCenterId is already defined in app_base.html
     let currentAppointmentId = null;
     let patientsData = [];
 
@@ -172,13 +222,21 @@
         const series = document.getElementById('doc-series').value;
         const number = document.getElementById('doc-number').value;
         const issue_date = document.getElementById('doc-issue-date').value;
+        const formType = document.getElementById('form-select').value;
 
         const params = new URLSearchParams({
             inn: inn,
             b_date: b_date,
             series: series,
             number: number,
-            issue_date: issue_date
+            form_type: formType,
+            // Payer data
+            payer_fio: document.getElementById('payer-fio').value,
+            payer_inn: document.getElementById('payer-inn').value,
+            payer_b_date: document.getElementById('payer-birth-date').value,
+            payer_series: document.getElementById('payer-doc-series').value,
+            payer_number: document.getElementById('payer-doc-number').value,
+            payer_issue_date: document.getElementById('payer-doc-issue-date').value
         });
 
         window.location.href = `/stamp-tool/certificate/edit/${currentAppointmentId}?${params.toString()}`;
@@ -242,6 +300,21 @@
             if (res.ok) loadCertificates();
             else alert('Ошибка удаления');
         } catch (e) { console.error(e); }
+    }
+    function togglePayerFields() {
+        const type = document.getElementById('form-select').value;
+        const payerBlock = document.getElementById('payer-block');
+        const payerInputs = payerBlock.querySelectorAll('input');
+
+        if (type === 'knd1151156_op') {
+            // Enable
+            payerBlock.classList.remove('block-disabled');
+            payerInputs.forEach(inp => inp.disabled = false);
+        } else {
+            // Disable
+            payerBlock.classList.add('block-disabled');
+            payerInputs.forEach(inp => inp.disabled = true);
+        }
     }
 </script>
 
@@ -520,6 +593,52 @@
 
     .btn-delete-cert:hover {
         background: rgba(239, 68, 68, 0.1);
+    }
+
+    .data-block {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .block-header {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .patient-block {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+    }
+
+    .patient-block .block-header {
+        color: #1e40af;
+    }
+
+    .payer-block {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+        transition: all 0.3s ease;
+    }
+
+    .payer-block .block-header {
+        color: #166534;
+    }
+
+    .block-disabled {
+        background: #f3f4f6;
+        border-color: #e5e7eb;
+        opacity: 0.7;
+        pointer-events: none;
+        /* Prevent clicks */
+    }
+
+    .block-disabled .block-header {
+        color: #6b7280;
     }
 
     @media (max-width: 768px) {

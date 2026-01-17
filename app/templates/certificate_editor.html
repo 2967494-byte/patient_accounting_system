@@ -5,7 +5,8 @@
     <div class="page-header"
         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <div>
-            <h2 style="margin: 0;">✍️ Редактор справки КНД 1151156</h2>
+            <h2 style="margin: 0;">✍️ Редактор справки {% if form_type == 'knd1151156_op' %}КНД 1151156 ОП{% else %}КНД
+                1151156{% endif %}</h2>
             <p style="color: #6b7280; margin: 0.25rem 0 0 0;">Заполните недостающие поля прямо на бланке и нажмите
                 "Сгенерировать"</p>
         </div>
@@ -19,15 +20,25 @@
 
     <!-- The Editor Container -->
     <div id="editor-container"
-        style="position: relative; width: 100%; height: 1600px; background: #f3f4f6; overflow: auto; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-        <div id="pdf-background"
-            style="position: relative; width: 1121px; height: 1585px; margin: 0 auto; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2);">
+        style="position: relative; width: 100%; height: 1600px; background: #f3f4f6; overflow: auto; border: 1px solid #d1d5db; border-radius: 0.5rem; display: flex; flex-direction: column; gap: 20px; align-items: center; padding: 20px 0;">
+
+        <!-- Page 1 -->
+        <div id="page-1" class="cert-page"
+            style="position: relative; width: 1121px; height: 1585px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); flex-shrink: 0;">
             <img src="{{ url_for('static', filename='uploads/certificate_bg.png') }}"
                 style="width: 100%; height: 100%; pointer-events: none;">
+            <div id="overlay-layer-1" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            <div style="position: absolute; top: 10px; left: -120px; font-weight: bold; color: #6b7280;">Страница 1
+            </div>
+        </div>
 
-            <!-- Overlay Inputs -->
-            <div id="overlay-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-                <!-- These will be added via JS -->
+        <!-- Page 2 (Hidden by default, shown for OP) -->
+        <div id="page-2" class="cert-page"
+            style="display: none; position: relative; width: 1121px; height: 1585px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); flex-shrink: 0;">
+            <img src="{{ url_for('static', filename='uploads/certificate_bg.png') }}"
+                style="width: 100%; height: 100%; pointer-events: none;">
+            <div id="overlay-layer-2" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            <div style="position: absolute; top: 10px; left: -120px; font-weight: bold; color: #6b7280;">Страница 2
             </div>
         </div>
     </div>
@@ -82,10 +93,14 @@
 </style>
 
 <script>
-    const appointmentId = JSON.parse('{{ appointment_id | tojson }}');
-    const patientData = JSON.parse('{{ patient_data | tojson }}');
+    const appointmentId = {{ appointment_id | tojson | safe }};
+    const patientData = {{ patient_data | tojson | safe }};
+    // Safe parse payerData if exists
+    const payerData = {{ payer_data | tojson | safe }} || {};
+    const formType = '{{ form_type }}';
 
-    const fields = [
+    // Base field config (positions)
+    const baseFields = [
         { id: 'top_inn', type: 'grid', count: 12, startX: 351, startY: 28.5, spacing: 26.7 },
         { id: 'top_kpp', type: 'grid', count: 9, startX: 351, startY: 68.5, spacing: 26.7 },
         { id: 'page_no', type: 'grid', count: 3, startX: 621, startY: 68.5, spacing: 26.7 },
@@ -96,18 +111,18 @@
         { id: 'org_l2', type: 'grid', count: 40, startX: 35, startY: 385.5, spacing: 26.7 },
         { id: 'org_l3', type: 'grid', count: 40, startX: 35, startY: 422.5, spacing: 26.7 },
         { id: 'org_l4', type: 'grid', count: 40, startX: 35, startY: 459.5, spacing: 26.7 },
-        { id: 'surname', type: 'grid', count: 40, startX: 139, startY: 575.5, spacing: 26.7, val: patientData.surname },
-        { id: 'name', type: 'grid', count: 40, startX: 139, startY: 621.0, spacing: 26.7, val: patientData.name },
-        { id: 'patronymic', type: 'grid', count: 40, startX: 139, startY: 666.5, spacing: 26.7, val: patientData.patronymic },
-        { id: 'p_inn', type: 'grid', count: 12, startX: 139, startY: 712.0, spacing: 26.7, val: patientData.inn },
-        { id: 'b_day', type: 'grid', count: 2, startX: 700, startY: 712.0, spacing: 26.7, val: patientData.b_day },
-        { id: 'b_month', type: 'grid', count: 2, startX: 781, startY: 712.0, spacing: 26.7, val: patientData.b_month },
-        { id: 'b_year', type: 'grid', count: 4, startX: 862, startY: 712.0, spacing: 26.7, val: patientData.b_year },
+        { id: 'surname', type: 'grid', count: 40, startX: 139, startY: 575.5, spacing: 26.7 },
+        { id: 'name', type: 'grid', count: 40, startX: 139, startY: 621.0, spacing: 26.7 },
+        { id: 'patronymic', type: 'grid', count: 40, startX: 139, startY: 666.5, spacing: 26.7 },
+        { id: 'p_inn', type: 'grid', count: 12, startX: 139, startY: 712.0, spacing: 26.7 },
+        { id: 'b_day', type: 'grid', count: 2, startX: 700, startY: 712.0, spacing: 26.7 },
+        { id: 'b_month', type: 'grid', count: 2, startX: 781, startY: 712.0, spacing: 26.7 },
+        { id: 'b_year', type: 'grid', count: 4, startX: 862, startY: 712.0, spacing: 26.7 },
         { id: 'doc_code', type: 'grid', count: 2, startX: 219, startY: 800.5, spacing: 26.7, val: '21' },
-        { id: 'doc_info', type: 'grid', count: 25, startX: 567.7, startY: 800.5, spacing: 26.7, val: patientData.doc_info },
-        { id: 'i_day', type: 'grid', count: 2, startX: 219, startY: 846.0, spacing: 26.7, val: patientData.i_day },
-        { id: 'i_month', type: 'grid', count: 2, startX: 300, startY: 846.0, spacing: 26.7, val: patientData.i_month },
-        { id: 'i_year', type: 'grid', count: 4, startX: 381, startY: 846.0, spacing: 26.7, val: patientData.i_year },
+        { id: 'doc_info', type: 'grid', count: 25, startX: 567.7, startY: 800.5, spacing: 26.7 },
+        { id: 'i_day', type: 'grid', count: 2, startX: 219, startY: 846.0, spacing: 26.7 },
+        { id: 'i_month', type: 'grid', count: 2, startX: 300, startY: 846.0, spacing: 26.7 },
+        { id: 'i_year', type: 'grid', count: 4, startX: 381, startY: 846.0, spacing: 26.7 },
         { id: 'amount', type: 'grid', count: 13, startX: 621.1, startY: 955.5, spacing: 26.7, val: patientData.amount },
         { id: 'amount_kop', type: 'grid', count: 2, startX: 994.9, startY: 955.5, spacing: 26.7, val: patientData.amount_kop },
         { id: 'c_day', type: 'grid', count: 2, startX: 307, startY: 1282.5, spacing: 26.7, val: patientData.c_day },
@@ -119,8 +134,19 @@
         { id: 'stamp', type: 'image', url: patientData.stamp_url, startX: 34, startY: 1210, width: 264 },
     ];
 
+    let activeFields = [];
+
     function initEditor() {
-        const overlay = document.getElementById('overlay-layer');
+        const overlay1 = document.getElementById('overlay-layer-1');
+        const overlay2 = document.getElementById('overlay-layer-2');
+        const page2 = document.getElementById('page-2');
+
+        console.log('InitEditor:', { formType, payerData, patientData });
+
+        if (formType === 'knd1151156_op' && !payerData.surname && !payerData.inn) {
+            // alert('Warning: OP Form selected but no Payer Data received!');
+        }
+
         // Save current values to restore them after re-init (if any)
         const currentVals = {};
         document.querySelectorAll('.char-box').forEach(inp => {
@@ -130,12 +156,74 @@
             currentVals[field][index] = inp.value;
         });
 
-        overlay.innerHTML = '';
+        overlay1.innerHTML = '';
+        overlay2.innerHTML = '';
+
+        // Determine data source for Page 1
+        let p1Data = patientData;
+        if (formType === 'knd1151156_op') {
+            p1Data = payerData;
+            page2.style.display = 'block'; // Show page 2
+        } else {
+            page2.style.display = 'none';
+        }
+
+        // Map values to fields for Page 1
+        // We clone baseFields and assign values
+        const page1Fields = baseFields.map(f => {
+            let newVal = f.val; // Default existing val
+            // Map main fields to p1Data
+            if (['surname', 'name', 'patronymic'].includes(f.id)) newVal = p1Data[f.id];
+            if (f.id === 'p_inn') newVal = p1Data.inn;
+            if (f.id === 'b_day') newVal = p1Data.b_day;
+            if (f.id === 'b_month') newVal = p1Data.b_month;
+            if (f.id === 'b_year') newVal = p1Data.b_year;
+            if (f.id === 'doc_info') newVal = p1Data.doc_info;
+            if (f.id === 'i_day') newVal = p1Data.i_day;
+            if (f.id === 'i_month') newVal = p1Data.i_month;
+            if (f.id === 'i_year') newVal = p1Data.i_year;
+
+            return { ...f, val: newVal, page: 1 };
+        });
+
+        activeFields = [...page1Fields];
+
+        // If OP, add Page 2 fields (Patient)
+        if (formType === 'knd1151156_op') {
+            // Logic for Page 2: what fields go there? 
+            // User said: "Patient data on second (additional)".
+            // Assuming same layout, we just reuse the fields but map to patientData
+            // But usually Page 2 of KND 1151156 is mostly empty or specific. 
+            // For now, I will REPEAT the same "Patient" block fields on Page 2
+
+            // Subset of fields relevant for Patient
+            const p2Ids = ['surname', 'name', 'patronymic', 'p_inn', 'b_day', 'b_month', 'b_year', 'doc_code', 'doc_info', 'i_day', 'i_month', 'i_year'];
+
+            const page2Fields = baseFields.filter(f => p2Ids.includes(f.id)).map(f => {
+                let newVal = f.val;
+                if (['surname', 'name', 'patronymic'].includes(f.id)) newVal = patientData[f.id];
+                if (f.id === 'p_inn') newVal = patientData.inn;
+                if (f.id === 'b_day') newVal = patientData.b_day;
+                if (f.id === 'b_month') newVal = patientData.b_month;
+                if (f.id === 'b_year') newVal = patientData.b_year;
+                if (f.id === 'doc_info') newVal = patientData.doc_info;
+                if (f.id === 'i_day') newVal = patientData.i_day;
+                if (f.id === 'i_month') newVal = patientData.i_month;
+                if (f.id === 'i_year') newVal = patientData.i_year;
+
+                // Adjust ID to be unique
+                return { ...f, id: f.id + '_p2', val: newVal, page: 2 };
+            });
+
+            activeFields = [...activeFields, ...page2Fields];
+        }
 
         const globalX = parseInt(localStorage.getItem('cert_x') || '0');
         const globalY = parseInt(localStorage.getItem('cert_y') || '0');
 
-        fields.forEach(f => {
+        activeFields.forEach(f => {
+            const container = f.page === 2 ? overlay2 : overlay1;
+
             if (f.type === 'grid') {
                 for (let i = 0; i < f.count; i++) {
                     const input = document.createElement('input');
@@ -163,9 +251,12 @@
                         }
                     };
 
-                    overlay.appendChild(input);
+
+                    container.appendChild(input);
                 }
             } else if (f.type === 'image') {
+                if (f.page === 2 && formType !== 'knd1151156_op') return;
+
                 const img = document.createElement('img');
                 img.src = f.url;
                 img.style.position = 'absolute';
@@ -174,7 +265,9 @@
                 img.style.width = f.width + 'px';
                 img.style.pointerEvents = 'none';
                 img.style.opacity = '0.7';
-                overlay.appendChild(img);
+
+                // Images only on Page 1 usually (stamp)
+                if (!f.page || f.page === 1) overlay1.appendChild(img);
             }
         });
     }
@@ -186,6 +279,13 @@
         const formData = {};
         inputs.forEach(inp => {
             const field = inp.dataset.field;
+            // Clean field ID if it has '_p2' suffix for correct mapping later or keep as is?
+            // Actually backend likely expects 'surname' etc.
+            // But if we have 2 pages of surnames (Payer and Patient), we need to distinguish them?
+            // Or backend logic should just receive the raw fields and map them to pages?
+            // The current backend generation just takes 'form_data' and stamps it.
+            // If we have 'surname' and 'surname_p2', we need to handle that in backend generation.
+
             if (!formData[field]) formData[field] = '';
             formData[field] += inp.value || ' ';
         });
@@ -195,11 +295,12 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
+                    'X-CSRFToken': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({
                     appointment_id: appointmentId,
                     form_data: formData,
+                    form_type: formType, // Send type
                     calibration: {
                         x: parseInt(localStorage.getItem('cert_x') || '0'),
                         y: parseInt(localStorage.getItem('cert_y') || '0')

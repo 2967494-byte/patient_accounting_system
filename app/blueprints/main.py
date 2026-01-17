@@ -747,9 +747,28 @@ def certificate_edit(appointment_id):
     q_series = request.args.get('series')
     q_number = request.args.get('number')
     q_issue_date = request.args.get('issue_date') # YYYY-MM-DD
+    q_form_type = request.args.get('form_type', 'knd1151156') # Default to original
     
-    # Process dates
+    # Payer specific args
+    q_payer_fio = request.args.get('payer_fio')
+    q_payer_inn = request.args.get('payer_inn')
+    q_payer_b_date = request.args.get('payer_b_date')
+    q_payer_series = request.args.get('payer_series')
+    q_payer_number = request.args.get('payer_number')
+    q_payer_issue_date = request.args.get('payer_issue_date')
+
+    # Process dates checking for both Patient and Payer
     b_day = b_month = b_year = ""
+    # Payer dates
+    payer_b_day = payer_b_month = payer_b_year = ""
+    if q_payer_b_date:
+        try:
+             pb = datetime.strptime(q_payer_b_date, '%Y-%m-%d')
+             payer_b_day = pb.strftime('%d')
+             payer_b_month = pb.strftime('%m')
+             payer_b_year = pb.strftime('%Y')
+        except: pass
+    
     if q_b_date:
         try:
             bd = datetime.strptime(q_b_date, '%Y-%m-%d')
@@ -769,6 +788,16 @@ def certificate_edit(appointment_id):
             i_day = idat.strftime('%d')
             i_month = idat.strftime('%m')
             i_year = idat.strftime('%Y')
+        except: pass
+
+    # Payer Issue Date
+    payer_i_day = payer_i_month = payer_i_year = ""
+    if q_payer_issue_date:
+        try:
+             pidat = datetime.strptime(q_payer_issue_date, '%Y-%m-%d')
+             payer_i_day = pidat.strftime('%d')
+             payer_i_month = pidat.strftime('%m')
+             payer_i_year = pidat.strftime('%Y')
         except: pass
 
     # Process document info
@@ -811,10 +840,36 @@ def certificate_edit(appointment_id):
         'stamp': '1',
         'stamp_url': url_for('static', filename=stamp_path, _external=True)
     }
+
+    # Split Payer Name
+    payer_surname = payer_name = payer_patronymic = ""
+    if q_payer_fio:
+        parts = q_payer_fio.split()
+        payer_surname = parts[0].upper() if len(parts) > 0 else ""
+        payer_name = parts[1].upper() if len(parts) > 1 else ""
+        payer_patronymic = parts[2].upper() if len(parts) > 2 else ""
+
+    payer_doc_info = (q_payer_series or "") + " " + (q_payer_number or "")
+
+    payer_data = {
+        'surname': payer_surname,
+        'name': payer_name,
+        'patronymic': payer_patronymic,
+        'inn': q_payer_inn or "",
+        'b_day': payer_b_day,
+        'b_month': payer_b_month,
+        'b_year': payer_b_year,
+        'i_day': payer_i_day,
+        'i_month': payer_i_month,
+        'i_year': payer_i_year,
+        'doc_info': payer_doc_info.strip()
+    }
     
     return render_template('certificate_editor.html', 
                           appointment_id=appointment_id, 
-                          patient_data=patient_data)
+                          patient_data=patient_data,
+                          payer_data=payer_data,
+                          form_type=q_form_type)
 
 
 @main.route('/stamp-tool/certificate/generate', methods=['POST'])
@@ -842,6 +897,7 @@ def generate_certificate():
         }
         
         # We need a tiny template strictly for Playwright to "Photograph"
+        render_data['form_type'] = data.get('form_type')
         html_to_screenshot = render_template('certificate_render.html', **render_data)
         
         # Save temp HTML
@@ -851,47 +907,107 @@ def generate_certificate():
         with open(temp_html_path, 'w', encoding='utf-8') as f:
             f.write(html_to_screenshot)
             
-        # Generate JPEG
+        # Prepare output paths
         cert_dir = os.path.join(current_app.static_folder, 'uploads', 'certificates')
         os.makedirs(cert_dir, exist_ok=True)
-        # Sanitize filename
-        safe_name = "".join([c for c in appointment.patient_name if c.isalnum() or c in (' ', '_')]).rstrip()
-        filename = f'cert_{safe_name}_{int(datetime.now().timestamp())}.jpg'
-        filepath = os.path.join(cert_dir, filename)
         
+        safe_name = "".join([c for c in appointment.patient_name if c.isalnum() or c in (' ', '_')]).rstrip()
+        timestamp = int(datetime.now().timestamp())
+        
+        is_op = (data.get('form_type') == 'knd1151156_op')
+        
+        final_filename = f'cert_{safe_name}_{timestamp}.pdf' if is_op else f'cert_{safe_name}_{timestamp}.jpg'
+        final_filepath = os.path.join(cert_dir, final_filename)
+        
+        captured_images = []
+
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            # Note: Viewport matches the 1121x1585 editor scale for now
-            page = browser.new_page(viewport={'width': 1121, 'height': 1585})
+            # Viewport height double if OP
+            v_height = 3170 if is_op else 1585
+            page = browser.new_page(viewport={'width': 1121, 'height': v_height})
             page.goto('file:///' + temp_html_path.replace('\\', '/'))
-            page.wait_for_load_state('networkidle') # Wait for bg AND stamp to load
-            page.screenshot(path=filepath, type='jpeg', quality=95)
+            page.wait_for_load_state('networkidle') 
+            
+            if is_op:
+                # Capture 2 pages separately
+                # Page 1
+                p1_path = os.path.join(temp_dir, f'p1_{timestamp}.jpg')
+                page.screenshot(path=p1_path, type='jpeg', quality=95, clip={'x':0, 'y':0, 'width':1121, 'height':1585})
+                captured_images.append(p1_path)
+                
+                # Page 2
+                p2_path = os.path.join(temp_dir, f'p2_{timestamp}.jpg')
+                page.screenshot(path=p2_path, type='jpeg', quality=95, clip={'x':0, 'y':1585, 'width':1121, 'height':1585})
+                captured_images.append(p2_path)
+            else:
+                # Single capture
+                p1_path = os.path.join(temp_dir, f'p1_{timestamp}.jpg')
+                page.screenshot(path=p1_path, type='jpeg', quality=95)
+                captured_images.append(p1_path)
+
             browser.close()
             
-        # Post-process image to look like a scan
-        try:
-            with Image.open(filepath) as img:
-                # 1. Subtle random rotation (-0.3 to 0.3 degrees)
-                angle = random.uniform(-0.3, 0.3)
-                img = img.rotate(angle, resample=Image.BICUBIC, expand=False, fillcolor='white')
-                
-                # 2. Enhance contrast slightly
-                enhancer = ImageEnhance.Contrast(img)
-                img = enhancer.enhance(1.1)
-                
-                # 3. Adjust brightness to scanner levels (whites slightly blown, blacks deep)
-                enhancer = ImageEnhance.Brightness(img)
-                img = enhancer.enhance(0.98)
-                
-                # 4. Final subtle softness
-                img = img.filter(ImageFilter.GaussianBlur(radius=0.1))
-                
-                # Overwrite the file
-                img.save(filepath, "JPEG", quality=90)
-        except Exception as img_err:
-            print(f"[WARN] Failed to post-process cert image: {img_err}")
+        # Post-process images
+        processed_pil_images = []
+        for img_path in captured_images:
+            try:
+                with Image.open(img_path) as img:
+                    img = img.convert('RGB')
+                    # 1. Subtle random rotation
+                    angle = random.uniform(-0.3, 0.3)
+                    img = img.rotate(angle, resample=Image.BICUBIC, expand=False, fillcolor='white')
+                    
+                    # 2. Enhance contrast
+                    enhancer = ImageEnhance.Contrast(img)
+                    img = enhancer.enhance(1.1)
+                    
+                    # 3. Adjust brightness
+                    enhancer = ImageEnhance.Brightness(img)
+                    img = enhancer.enhance(0.98)
+                    
+                    # 4. Filter
+                    img = img.filter(ImageFilter.GaussianBlur(radius=0.1))
+                    
+                    # Store in memory for PDF saving or save back
+                    # We need to copy it to keep it open in memory or save to temp
+                    # For PDF list we need open images
+                    processed_pil_images.append(img.copy())
+            except Exception as e:
+                print(f"Img process error: {e}")
+
+        # Save Final Metadata
+        new_cert = Certificate(
+            appointment_id=appointment.id,
+            file_path=f'uploads/certificates/{final_filename}',
+            generated_by=current_user.id
+        )
+        db.session.add(new_cert)
+        db.session.commit()
+
+        # Save File
+        if is_op:
+            # Save as PDF
+            if processed_pil_images:
+                first_img = processed_pil_images[0]
+                rest_imgs = processed_pil_images[1:]
+                first_img.save(final_filepath, "PDF", resolution=100.0, save_all=True, append_images=rest_imgs)
+        else:
+            # Save as JPG
+            if processed_pil_images:
+                processed_pil_images[0].save(final_filepath, "JPEG", quality=90)
             
+        # Cleanup temp
         os.remove(temp_html_path)
+        for p in captured_images:
+             if os.path.exists(p): os.remove(p)
+
+        return jsonify({'success': True, 'download_url': url_for('static', filename=f'uploads/certificates/{final_filename}')})
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
         
         # Prepare record
         cert = MedicalCertificate(
