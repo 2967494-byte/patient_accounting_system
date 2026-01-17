@@ -7,13 +7,66 @@
         <p class="subtitle">Выберите пациента и заполните данные для справки (Форма КНД 1151156)</p>
     </div>
 
+    <!-- Top Search Block (Full Width) -->
+    <!-- Top Search Block (Full Width) -->
+    <div class="search-section">
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <!-- Year fixed width -->
+            <div style="width: 120px;">
+                <label class="form-label">Год</label>
+                <select id="filter-year" class="form-control" onchange="runSearch()">
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                </select>
+            </div>
+            <!-- Search flexible -->
+            <div style="flex: 1; position: relative;">
+                <label class="form-label">Поиск пациента</label>
+                <input type="text" id="patient-search-input" class="form-control" placeholder="Начните вводить ФИО..."
+                    autocomplete="off" oninput="debounceSearch()" style="padding-left: 35px;">
+                <div style="position: absolute; left: 10px; top: 32px; color: #9ca3af;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
+                <button class="btn-clear" onclick="clearSearchInput()"
+                    style="display:none; position:absolute; right:10px; top:32px;">✕</button>
+            </div>
+        </div>
+
+        <!-- Results Table Container -->
+        <div id="search-results-container" style="display:none; border-top: 1px solid #f3f4f6; padding-top: 1rem;">
+            <table class="results-table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead style="background: #f9fafb;">
+                    <tr>
+                        <th style="padding: 10px; width: 40px;"><input type="checkbox" onchange="toggleAll(this)"></th>
+                        <th style="padding: 10px;">Дата</th>
+                        <th style="padding: 10px;">ФИО</th>
+                        <th style="padding: 10px;">Центр</th>
+                        <th style="padding: 10px;">Услуга</th>
+                        <th style="padding: 10px; text-align: right;">Сумма</th>
+                    </tr>
+                </thead>
+                <tbody id="results-tbody"></tbody>
+            </table>
+
+            <!-- Summary Footer in Search Block -->
+            <div id="selection-summary"
+                style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #e5e7eb; text-align: right;">
+                <span style="color: #6b7280; margin-right: 10px;">Итого к оплате:</span>
+                <span id="total-amount" style="font-size: 1.25rem; font-weight: 700; color: #059669;">0 ₽</span>
+            </div>
+        </div>
+    </div>
+
     <div class="main-grid">
         <!-- Left: Input Form -->
         <div class="form-section">
-            <div class="form-group">
-                <label class="form-label">Месяц:</label>
-                <input type="month" id="filter-month" class="form-control" onchange="loadPatients()">
-            </div>
+
+
 
 
             <div class="form-group">
@@ -24,16 +77,7 @@
                 </select>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Поиск пациента:</label>
-                <div style="position: relative;">
-                    <input type="text" id="patient-search" list="patients-list" class="form-control"
-                        placeholder="Введите ФИО..." autocomplete="off">
-                    <button id="clear-search" class="btn-clear" style="display: none;"
-                        onclick="clearSearch()">✕</button>
-                </div>
-                <datalist id="patients-list"></datalist>
-            </div>
+
 
             <!-- Patient Data Block -->
             <div class="data-block patient-block">
@@ -117,190 +161,136 @@
         <!-- Right: Recent Certificates Table -->
         <div class="certificates-section">
             <h4>Последние справки</h4>
-            <table class="certificates-table">
-                <thead>
-                    <tr>
-                        <th>ФИО</th>
-                        <th>Сумма</th>
-                        <th>Дата</th>
-                        <th>Время</th>
-                        <th>До удаления</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="certificates-list"></tbody>
-            </table>
+            <div class="certificates-scroll-container">
+                <table class="certificates-table">
+                    <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                        <tr>
+                            <th>ФИО</th>
+                            <th>Сумма</th>
+                            <th>Дата</th>
+                            <th>Время</th>
+                            <th>До удаления</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="certificates-list"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
     // currentCenterId is already defined in app_base.html
-    let currentAppointmentId = null;
-    let patientsData = [];
+    // Removed currentCenterId as it's global
+    let selectedAppointments = new Set();
+    let searchTimeout = null;
 
-    loadPatients();
-    loadCertificates();
+    // Load year
+    document.getElementById('filter-year').value = new Date().getFullYear();
 
-    async function loadPatients() {
-        try {
-            const centerId = currentCenterId;
-            const monthVal = document.getElementById('filter-month').value;
-
-            let url = '{{ url_for("main.get_patients_for_certificate") }}';
-            const params = new URLSearchParams();
-            if (centerId) params.append('center_id', centerId);
-            if (monthVal) {
-                const [year, month] = monthVal.split('-');
-                params.append('year', year);
-                params.append('month', month);
-            }
-
-            if (params.toString()) {
-                url += '?' + params.toString();
-            }
-
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (data.success) {
-                patientsData = data.patients;
-                const datalist = document.getElementById('patients-list');
-                datalist.innerHTML = '';
-
-                data.patients.forEach(patient => {
-                    const option = document.createElement('option');
-                    option.value = patient.patient_name;
-                    option.dataset.id = patient.id;
-                    datalist.appendChild(option);
-                });
-            }
-        } catch (e) {
-            console.error('Failed to load patients:', e);
-        }
+    function debounceSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(runSearch, 500);
     }
 
-    function clearSearch() {
-        const searchInput = document.getElementById('patient-search');
-        searchInput.value = '';
-        document.getElementById('patient-data').style.display = 'none';
-        document.getElementById('clear-search').style.display = 'none';
-        currentAppointmentId = null;
+    function clearSearchInput() {
+        document.getElementById('patient-search-input').value = '';
+        runSearch();
     }
 
-    document.getElementById('patient-search').addEventListener('input', function (e) {
-        document.getElementById('clear-search').style.display = e.target.value ? 'block' : 'none';
+    async function runSearch() {
+        const year = document.getElementById('filter-year').value;
+        const query = document.getElementById('patient-search-input').value;
 
-        // Instant match for better UX with datalist
-        const selectedName = e.target.value;
-        const patient = patientsData.find(p => p.patient_name === selectedName);
-        if (patient) selectPatient(patient);
-    });
+        // Show clear btn if query exists
+        // document.querySelector('.btn-clear').style.display = query ? 'block' : 'none';
 
-    function selectPatient(patient) {
-        currentAppointmentId = patient.id;
-        document.getElementById('display-name').textContent = patient.patient_name;
-        document.getElementById('display-amount').textContent = patient.cost || '0';
-        document.getElementById('display-date').textContent = new Date(patient.date).toLocaleDateString('ru-RU');
-        document.getElementById('patient-data').style.display = 'flex';
-    }
-
-    document.getElementById('patient-search').addEventListener('change', function (e) {
-        const selectedName = e.target.value;
-        const patient = patientsData.find(p => p.patient_name === selectedName);
-        if (patient) selectPatient(patient);
-    });
-
-    function openEditor() {
-        if (!currentAppointmentId) {
-            alert('Пожалуйста, выберите пациента');
+        if (query.length < 2) {
+            document.getElementById('search-results-container').style.display = 'none';
             return;
         }
 
-        const inn = document.getElementById('inn').value;
-        const b_date = document.getElementById('birth-date').value;
-        const series = document.getElementById('doc-series').value;
-        const number = document.getElementById('doc-number').value;
-        const issue_date = document.getElementById('doc-issue-date').value;
-        const formType = document.getElementById('form-select').value;
-
-        const params = new URLSearchParams({
-            inn: inn,
-            b_date: b_date,
-            series: series,
-            number: number,
-            form_type: formType,
-            // Payer data
-            payer_fio: document.getElementById('payer-fio').value,
-            payer_inn: document.getElementById('payer-inn').value,
-            payer_b_date: document.getElementById('payer-birth-date').value,
-            payer_series: document.getElementById('payer-doc-series').value,
-            payer_number: document.getElementById('payer-doc-number').value,
-            payer_issue_date: document.getElementById('payer-doc-issue-date').value
-        });
-
-        window.location.href = `/stamp-tool/certificate/edit/${currentAppointmentId}?${params.toString()}`;
-    }
-
-    async function loadCertificates() {
         try {
-            const response = await fetch('{{ url_for("main.list_certificates") }}');
-            const data = await response.json();
+            const res = await fetch(`{{ url_for('main.get_patients_for_certificate') }}?year=${year}&query=${encodeURIComponent(query)}`);
+            const data = await res.json();
 
             if (data.success) {
-                const tbody = document.getElementById('certificates-list');
-                tbody.innerHTML = '';
-
-                // Show only last 10
-                const certs = data.certificates.slice(0, 10);
-
-                certs.forEach(cert => {
-                    const dt = new Date(cert.generated_at);
-                    // Format date and time for Moscow (UTC+3)
-                    const dateStr = dt.toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow' });
-                    const timeStr = dt.toLocaleTimeString('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' });
-
-                    // Calculate days until auto-deletion (30 days from creation)
-                    const now = new Date();
-                    const daysPassed = Math.floor((now - dt) / (1000 * 60 * 60 * 24));
-                    const daysLeft = Math.max(0, 30 - daysPassed);
-                    const daysClass = daysLeft <= 5 ? 'cell-days danger' : daysLeft <= 10 ? 'cell-days warning' : 'cell-days';
-
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td class="cell-name">${cert.patient_name}</td>
-                        <td class="cell-amount">${cert.amount} ₽</td>
-                        <td class="cell-date">${dateStr}</td>
-                        <td class="cell-time">${timeStr}</td>
-                        <td class="${daysClass}">${daysLeft} дн.</td>
-                        <td class="cell-action">
-                            <a href="/stamp-tool/certificate/${cert.id}/download" title="Скачать">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            </a>
-                            <button onclick="deleteCert(${cert.id})" title="Удалить" class="btn-delete-cert">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+                renderResults(data.appointments);
             }
-        } catch (e) {
-            console.error('Failed to load certificates:', e);
+        } catch (e) { console.error(e); }
+    }
+
+    function renderResults(appointments) {
+        const container = document.getElementById('search-results-container');
+        const tbody = document.getElementById('results-tbody');
+        tbody.innerHTML = '';
+
+        if (appointments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding:10px; text-align:center;">Ничего не найдено</td></tr>';
+            container.style.display = 'block';
+            return;
+        }
+
+        appointments.forEach(appt => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #f3f4f6';
+
+            const isChecked = selectedAppointments.has(appt.id);
+
+            tr.innerHTML = `
+                <td style="padding: 8px;"><input type="checkbox" class="appt-checkbox" value="${appt.id}" data-cost="${appt.cost}" data-name="${appt.patient_name}" data-date="${appt.date}" ${isChecked ? 'checked' : ''} onchange="updateTotal()"></td>
+                <td style="padding: 8px;">${appt.date}</td>
+                <td style="padding: 8px;">${appt.patient_name}</td>
+                <td style="padding: 8px; font-size: 0.8em; color: #4b5563;">${appt.center_name}</td>
+                <td style="padding: 8px; font-size: 0.8em; color: #6b7280;">${appt.service}</td>
+                <td style="padding: 8px; text-align: right; font-weight: 600;">${appt.cost} ₽</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        container.style.display = 'block';
+    }
+
+    function updatePayerDisabled() {
+        // Logic is in togglePayerFields
+        togglePayerFields();
+    }
+
+    function toggleAll(source) {
+        const checkboxes = document.querySelectorAll('.appt-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = source.checked;
+        });
+        updateTotal();
+    }
+
+    function updateTotal() {
+        const checkboxes = document.querySelectorAll('.appt-checkbox:checked');
+        let total = 0;
+        selectedAppointments.clear();
+
+        // Also capture the FIRST selected patient name to pre-fill the name field?
+        // Or user selects multiple different patients? (Hope not)
+        // Assuming search query filtered specific person.
+
+        checkboxes.forEach(cb => {
+            total += parseFloat(cb.dataset.cost || 0);
+            selectedAppointments.add(parseInt(cb.value));
+        });
+
+        document.getElementById('total-amount').textContent = total.toFixed(2) + ' ₽';
+        document.getElementById('selection-summary').style.display = total > 0 ? 'block' : 'none';
+
+        // Auto-fill patient name/fields from first selection if empty? 
+        // Logic: if we have selection, we can assume patient data from the first checked item.
+        if (checkboxes.length > 0) {
+            // Find first
+            const firstId = checkboxes[0].value;
+            // We can pass this ID as main appointment ID for data pre-fill
         }
     }
 
-    async function deleteCert(id) {
-        if (!confirm('Удалить эту справку?')) return;
-        try {
-            const res = await fetch(`/stamp-tool/certificate/${id}/delete`, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
-            });
-            if (res.ok) loadCertificates();
-            else alert('Ошибка удаления');
-        } catch (e) { console.error(e); }
-    }
     function togglePayerFields() {
         const type = document.getElementById('form-select').value;
         const payerBlock = document.getElementById('payer-block');
@@ -316,6 +306,128 @@
             payerInputs.forEach(inp => inp.disabled = true);
         }
     }
+
+    function openEditor() {
+        const checkboxes = document.querySelectorAll('.appt-checkbox:checked');
+        if (checkboxes.length === 0) {
+            alert('Выберите хотя бы одну запись!');
+            return;
+        }
+
+        // Use the ID of the MOST RECENT appointment as the base (for details like phone, etc if needed)
+        // Or just use the first/last one.
+        // Let's sort by date? The backend sent them sorted. 
+        // We'll trust the first one in the list (or last) is fine, but visually in table top is most recent?
+        // Table renders order from backend (desc). So first row is newest.
+
+        const mainApptId = checkboxes[0].value; // Newest selected
+
+        // Calculate total
+        let total = 0;
+        checkboxes.forEach(cb => total += parseFloat(cb.dataset.cost || 0));
+
+        const inn = document.getElementById('inn').value;
+        const b_date = document.getElementById('birth-date').value;
+        const series = document.getElementById('doc-series').value;
+        const number = document.getElementById('doc-number').value;
+        const issue_date = document.getElementById('doc-issue-date').value;
+        const formType = document.getElementById('form-select').value;
+
+        const params = new URLSearchParams({
+            inn: inn,
+            b_date: b_date,
+            series: series,
+            number: number,
+            issue_date: issue_date,
+            form_type: formType,
+            total_amount: total, // PASS TOTAL
+            // Payer data
+            payer_fio: document.getElementById('payer-fio').value,
+            payer_inn: document.getElementById('payer-inn').value,
+            payer_b_date: document.getElementById('payer-birth-date').value,
+            payer_series: document.getElementById('payer-doc-series').value,
+            payer_number: document.getElementById('payer-doc-number').value,
+            payer_issue_date: document.getElementById('payer-doc-issue-date').value
+        });
+
+        // Pass IDs of all selected for reference?
+        params.append('appt_ids', Array.from(selectedAppointments).join(','));
+
+        window.location.href = `/stamp-tool/certificate/edit/${mainApptId}?${params.toString()}`;
+    }
+
+    async function loadCertificates() {
+        try {
+            const response = await fetch('{{ url_for("main.list_certificates") }}');
+            const data = await response.json();
+
+            if (data.success) {
+                const tbody = document.getElementById('certificates-list');
+                tbody.innerHTML = '';
+                const certs = data.certificates;
+
+                if (certs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="padding:10px; text-align:center; color:#9ca3af;">Нет созданных справок</td></tr>';
+                    return;
+                }
+
+                certs.forEach(cert => {
+                    const tr = document.createElement('tr');
+
+                    const dateObj = new Date(cert.generated_at);
+                    const dateStr = dateObj.toLocaleDateString('ru-RU');
+                    const timeStr = dateObj.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+                    const deleteDate = new Date(dateObj);
+                    deleteDate.setDate(deleteDate.getDate() + 30);
+                    const now = new Date();
+                    const diffTime = deleteDate - now;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    let daysClass = 'cell-days';
+                    let daysText = diffDays + ' дн.';
+                    if (diffDays < 0) { daysText = 'Удалено'; daysClass += ' danger'; }
+                    else if (diffDays < 5) { daysClass += ' warning'; }
+
+                    const delBtn = `<button class="btn-delete-cert" onclick="deleteCert(${cert.id})">🗑️</button>`;
+
+                    tr.innerHTML = `
+                        <td class="cell-name" title="${cert.patient_name || ''}">${cert.patient_name || 'Без имени'}</td>
+                        <td class="cell-amount">${cert.amount} ₽</td>
+                        <td class="cell-date">${dateStr}</td>
+                        <td class="cell-time">${timeStr}</td>
+                        <td class="${daysClass}">${daysText}</td>
+                        <td class="cell-action">
+                            <a href="/stamp-tool/certificate/${cert.id}/download" target="_blank">📥</a>
+                            ${delBtn}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (e) {
+            console.error('Error loading certs:', e);
+        }
+    }
+
+    async function deleteCert(id) {
+        if (!confirm('Вы действительно хотите удалить эту справку?')) return;
+
+        try {
+            const res = await fetch(`/stamp-tool/certificate/${id}/delete`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                loadCertificates();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Unknown'));
+            }
+        } catch (e) {
+            alert('Ошибка сети: ' + e);
+        }
+    }
+
+    loadCertificates();
 </script>
 
 <style>
@@ -323,6 +435,22 @@
         max-width: 900px;
         margin: 0 auto;
         padding: 1.5rem;
+    }
+
+    .stamp-tool-container * {
+        box-sizing: border-box;
+    }
+
+    /* Harmonized Card Style */
+    .search-section,
+    .form-section,
+    .certificates-section {
+        background: #fff;
+        padding: 1.25rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        /* Unified shadow */
     }
 
     .page-header {
@@ -347,15 +475,11 @@
         display: grid;
         grid-template-columns: 320px 1fr;
         gap: 2rem;
-        align-items: start;
+        align-items: stretch;
+        /* Stretch to match height */
     }
 
-    .form-section {
-        background: #fff;
-        padding: 1.25rem;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-    }
+    /* .form-section and .certificates-section styles merged above */
 
     .filters-row {
         display: grid;
@@ -491,6 +615,21 @@
         padding: 1.25rem;
         border: 1px solid #e5e7eb;
         border-radius: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        /* height: 100%; - let grid stretch handle it, but ensure content fills */
+    }
+
+    .certificates-scroll-container {
+        flex: 1;
+        overflow-y: auto;
+        /* minimal height to force scroll if needed */
+        min-height: 200px;
+        /* max-height depends on the left column, but with stretch it should just fill */
+        /* To make it scrollable, we might need a fixed or calc max-height if the parent doesn't constrain it. 
+           But in a grid with stretch, the cell height is fixed to the tallest sibling. 
+           If right col is shorter, it stretches. If it has flex children, they fill.
+           Overflow auto works if valid height. */
     }
 
     .certificates-section h4 {

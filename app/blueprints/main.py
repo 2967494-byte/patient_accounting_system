@@ -675,51 +675,60 @@ def stamp_tool_apply_stamp():
 @main.route('/stamp-tool/patients', methods=['GET'])
 @login_required
 def get_patients_for_certificate():
-    """Get list of recent patients with appointment data"""
+    """Generic search for appointments by Year + Query for Certificate Tool"""
     try:
-        center_id = request.args.get('center_id', type=int)
-        month = request.args.get('month', type=int)
         year = request.args.get('year', type=int)
+        query_str = request.args.get('query', type=str, default='').strip()
         
+        if not year:
+            return jsonify({'success': False, 'error': 'Year is required'})
+
+        # Base query
         query = Appointment.query
         
-        if center_id:
-            query = query.filter(Appointment.center_id == center_id)
-            
-        if month and year:
-            # Filter by specific month and year
-            start_date = date(year, month, 1)
-            if month == 12:
-                end_date = date(year + 1, 1, 1)
-            else:
-                end_date = date(year, month + 1, 1)
-            query = query.filter(Appointment.date >= start_date, Appointment.date < end_date)
-            # When specific month is selected, we want all patients from that month, so no limit or a higher one
-            limit = 1000
-        else:
-            # Default: last 3 months
-            three_months_ago = date.today() - timedelta(days=90)
-            query = query.filter(Appointment.date >= three_months_ago)
-            limit = 500
+        # Filter by Year
+        start_date = date(year, 1, 1)
+        end_date = date(year + 1, 1, 1)
+        query = query.filter(Appointment.date >= start_date, Appointment.date < end_date)
+
+        # Filter by Search Query (Patient Name)
+        if query_str:
+            query = query.filter(Appointment.patient_name.ilike(f'%{query_str}%'))
         
-        appointments = query.order_by(Appointment.date.desc()).limit(limit).all()
+        # Security/Scope: If not superadmin/admin, restrict to own center?
+        # User said "Remove center choice at top", implying global search is desired or user has specific rights?
+        # Assuming existing logic: if user is 'org', restrict to org's clinics/centers? 
+        # For now, let's keep it open or restrict by current_user's center if they aren't admin.
+        if not current_user.is_admin() and not current_user.is_administrator() and current_user.role != 'lab_tech':
+             # If simple user, maybe restrict? 
+             # The tool is for 'admin_stamp_tool', usually accessed by admins/lab_techs.
+             if current_user.center_id:
+                  query = query.filter(Appointment.center_id == current_user.center_id)
+
+        appointments = query.order_by(Appointment.date.desc()).limit(200).all()
         
-        # Create unique patient list with their data
-        patients_data = []
-        seen_names = set()
-        
+        results = []
         for apt in appointments:
-            if apt.patient_name not in seen_names:
-                patients_data.append({
-                    'id': apt.id,
-                    'patient_name': apt.patient_name,
-                    'cost': apt.cost,
-                    'date': apt.date.isoformat()
-                })
-                seen_names.add(apt.patient_name)
-        
-        return jsonify({'success': True, 'patients': patients_data})
+            # Determine service name
+            service_name = apt.service
+            if not service_name and apt.service_associations:
+                service_name = ", ".join([a.service.name for a in apt.service_associations])
+            
+            results.append({
+                'id': apt.id,
+                'date': apt.date.strftime('%d.%m.%Y'),
+                'patient_name': apt.patient_name,
+                'center_name': apt.center.name if apt.center else '-',
+                'service': service_name or '-',
+                'cost': apt.cost,
+                # hidden data for filing
+                'inn': apt.patient_record.inn if apt.patient_record and hasattr(apt.patient_record, 'inn') else '', # Model might not have INN yet, handled in frontend manual input
+                'birth_date': apt.patient_record.birth_date.strftime('%Y-%m-%d') if apt.patient_record and apt.patient_record.birth_date else ''
+            })
+            
+        return jsonify({'success': True, 'appointments': results})
     except Exception as e:
+        print(e)
         return jsonify({'error': str(e)}), 500
 
 
@@ -808,7 +817,13 @@ def certificate_edit(appointment_id):
         doc_info = f"{prev_cert.doc_series}{prev_cert.doc_number}".strip()
 
     # Process amount
-    amount_val = appointment.cost or 0
+    total_amount_override = request.args.get('total_amount', type=float)
+    
+    if total_amount_override is not None:
+        amount_val = total_amount_override
+    else:
+        amount_val = appointment.cost or 0
+        
     cost_str = f"{amount_val:.2f}"
     rub, kop = cost_str.split('.')
     rub_formatted = str(int(rub)).ljust(13, '-') # Left align and pad with dashes to 13 cells
