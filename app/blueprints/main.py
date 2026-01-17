@@ -356,8 +356,8 @@ def dashboard():
         time_slots.append(f"{hour:02d}:{minute:02d}")
         current_time += interval
 
-    # Restriction for 'org' role: Only show *:15 and *:45 slots
-    if current_user.role == 'org':
+    # Restriction for 'org' and 'doctor' roles: Only show *:15 and *:45 slots
+    if current_user.role in ['org', 'doctor']:
         time_slots = [t for t in time_slots if t.endswith(':15') or t.endswith(':45')]
 
     # Centers logic

@@ -536,19 +536,44 @@
 
 <script>
     // Action Menu Toggle
+    // Action Menu Toggle
     function toggleActionMenu(btn, event) {
         event.stopPropagation();
 
-        // Close all other menus
-        document.querySelectorAll('.action-dropdown-menu.show').forEach(menu => {
-            if (menu !== btn.nextElementSibling) {
-                menu.classList.remove('show');
-            }
+        const menu = btn.nextElementSibling;
+        const isAlreadyOpen = menu.classList.contains('show');
+
+        // Close all menus
+        document.querySelectorAll('.action-dropdown-menu.show').forEach(m => {
+            m.classList.remove('show');
+            // Reset inline styles
+            m.style.position = '';
+            m.style.top = '';
+            m.style.left = '';
+            m.style.right = '';
         });
 
-        const menu = btn.nextElementSibling;
-        menu.classList.toggle('show');
+        if (!isAlreadyOpen) {
+            menu.classList.add('show');
+            const rect = btn.getBoundingClientRect();
+
+            // Use Fixed Positioning to escape overflow
+            menu.style.position = 'fixed';
+            menu.style.top = (rect.bottom + 2) + 'px';
+            menu.style.right = 'auto';
+
+            const menuRect = menu.getBoundingClientRect();
+            menu.style.left = (rect.right - menuRect.width) + 'px';
+            menu.style.zIndex = '9999';
+        }
     }
+
+    // Close menus on scroll to avoid detached floating elements
+    document.addEventListener('scroll', function (event) {
+        document.querySelectorAll('.action-dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }, true);
 
     // Close menus when clicking outside
     document.addEventListener('click', function (event) {

@@ -44,7 +44,7 @@
             {% set is_weekend_restricted_base = (date.obj.weekday() >= 5) %}
             {% set is_org = current_user.role == 'org' %}
             {% set is_weekend_restricted = is_weekend_restricted_base and (
-            (is_org and time < "09:15" ) or (not is_org and time < "09:00" ) or time> "17:30"
+            (is_org and time < "09:15" ) or (not is_org and time < "09:00" ) or time> "17:45"
                 ) %}
                 <div class="time-slot-cell {{ 'special-slot' if is_special else '' }} {{ 'weekend-restricted' if is_weekend_restricted else '' }} {{ 'time-current' if time == current_time_slot else '' }}"
                     data-date="{{ date.iso_date }}" data-time="{{ time }}">

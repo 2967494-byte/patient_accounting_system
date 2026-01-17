@@ -580,8 +580,15 @@ def get_slots():
 
     # Generate all possible slots 08:00 - 19:30
     slots = []
-    start_minutes = 8 * 60
-    end_minutes = 19 * 60 + 30
+    # Determine working hours based on day of week
+    # Saturday (5) and Sunday (6): 09:00 - 18:00
+    if query_date.weekday() >= 5:
+        start_minutes = 9 * 60
+        end_minutes = 17 * 60 + 45
+    else:
+        # Weekdays: 08:00 - 19:30
+        start_minutes = 8 * 60
+        end_minutes = 19 * 60 + 30
     for m in range(start_minutes, end_minutes + 1, 15):
         hh = m // 60
         mm = m % 60
@@ -591,8 +598,8 @@ def get_slots():
         if hh == 13:
             continue
         
-        # Role restriction for 'org'
-        if current_user.role == 'org':
+        # Role restriction for 'org' and 'doctor'
+        if current_user.role in ['org', 'doctor']:
             if not (time_str.endswith(':15') or time_str.endswith(':45')):
                 continue
         
