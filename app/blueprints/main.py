@@ -695,6 +695,11 @@ def get_patients_for_certificate():
         if query_str:
             query = query.filter(Appointment.patient_name.ilike(f'%{query_str}%'))
         
+        # FILTER: Only show appointments that are creating "Journal entries"
+        # i.e., have a payment method selected (Paid or Free).
+        # Unregistered/Calendar-only appointments should not appear.
+        query = query.filter(Appointment.payment_method_id.isnot(None))
+
         # Security/Scope: If not superadmin/admin, restrict to own center?
         # User said "Remove center choice at top", implying global search is desired or user has specific rights?
         # Assuming existing logic: if user is 'org', restrict to org's clinics/centers? 
@@ -714,34 +719,32 @@ def get_patients_for_certificate():
             if not service_name and apt.service_associations:
                 service_name = ", ".join([a.service.name for a in apt.service_associations])
             
+            # Cost Calculation Logic:
+            # 1. If method is "Free" (Б/П) -> 0
+            # 2. If 'amount_paid' is recorded (>0) -> Use it
+            # 3. Fallback to 'cost' (price list)
+            
+            pm_name_lower = apt.payment_method.name.lower() if apt.payment_method else ""
+            
+            final_cost = apt.cost
+            if 'б/п' in pm_name_lower:
+                final_cost = 0
+            elif apt.amount_paid and apt.amount_paid > 0:
+                final_cost = apt.amount_paid
+            
             results.append({
                 'id': apt.id,
                 'date': apt.date.strftime('%d.%m.%Y'),
                 'patient_name': apt.patient_name,
                 'center_name': apt.center.name if apt.center else '-',
                 'service': service_name or '-',
-            })
-            
-            # --- DEBUG LOGIC FOR COST ---
-            final_cost = apt.cost
-            pm_name = apt.payment_method.name.lower() if apt.payment_method else "none"
-            is_free = 'б/п' in pm_name
-            
-            print(f"DEBUG CERT: ID={apt.id}, PM={pm_name}, Paid={apt.amount_paid}, Cost={apt.cost}, IsFree={is_free}")
-
-            if is_free:
-                final_cost = 0
-            elif apt.amount_paid and apt.amount_paid > 0:
-                final_cost = apt.amount_paid
-            
-            # Add to result
-            results[-1]['cost'] = final_cost
-            # properties
-            results[-1].update({
+                'cost': final_cost,
                 # hidden data for filing
                 'inn': apt.patient_record.inn if apt.patient_record and hasattr(apt.patient_record, 'inn') else '', # Model might not have INN yet, handled in frontend manual input
                 'birth_date': apt.patient_record.birth_date.strftime('%Y-%m-%d') if apt.patient_record and apt.patient_record.birth_date else ''
             })
+            
+        return jsonify({'success': True, 'appointments': results})
             
         return jsonify({'success': True, 'appointments': results})
     except Exception as e:
