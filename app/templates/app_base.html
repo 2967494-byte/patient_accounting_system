@@ -305,6 +305,7 @@
         {% endwith %}
 
         <!-- Center Tabs (Redesigned) -->
+        {% block center_nav %}
         {% if centers %}
         <div class="center-nav-container">
             <div class="center-chips-scroll">
@@ -318,6 +319,7 @@
             </div>
         </div>
         {% endif %}
+        {% endblock %}
 
         {% block content %}{% endblock %}
     </div>
