@@ -76,7 +76,7 @@
         </div>
         <div class="legend-popover">
             <div class="legend-popover-title">Статусы записей</div>
-            {% if current_user.role == 'org' %}
+            {% if current_user.role in ['org', 'doctor'] %}
             <!-- Legend for org users -->
             <div class="legend-popover-item"><span class="legend-dot status-org"></span> Записан
             </div>

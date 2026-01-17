@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, abort, current_app, send_file
 from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
-from app.models import Location, Organization, Doctor, Service, Appointment, AdditionalService, Clinic, PaymentMethod, GlobalSetting, MedicalCertificate
+from app.models import Location, Organization, Doctor, Service, Appointment, AdditionalService, Clinic, PaymentMethod, GlobalSetting, MedicalCertificate, NotificationStatus
 from app import db
 from app.extensions import csrf
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -188,11 +188,7 @@ def chat_dashboard():
         return redirect(url_for('main.dashboard'))
     return render_template('chat_dashboard.html')
 
-@main.context_processor
-def inject_chat_settings():
-    from app.models import GlobalSetting
-    s = GlobalSetting.query.get('chat_image')
-    return dict(chat_image=s.value if s else None)
+
 
     cities = Location.query.filter_by(type='city').all()
     return render_template('profile.html', cities=cities)
@@ -415,6 +411,8 @@ def dashboard():
         query = Appointment.query.options(joinedload(Appointment.author)).filter_by(center_id=current_center_id)\
                 .filter(Appointment.date >= start_of_week.date(), Appointment.date < end_of_week.date())
         
+
+        
         raw_appts = query.all()
         from app.utils.appointment_logic import get_appointments_with_status_logic
         initial_appts = get_appointments_with_status_logic(raw_appts, current_user.role, current_user.id)
@@ -439,7 +437,7 @@ def dashboard():
 @main.route('/journal')
 @login_required
 def journal():
-    if current_user.role in ['org', 'admin']:
+    if current_user.role in ['org', 'admin', 'doctor']:
         flash('Доступ к журналу запрещен для вашей роли.', 'error')
         return redirect(url_for('main.dashboard'))
 
@@ -506,7 +504,23 @@ def journal():
 
     summary_stats = calculate_stats(registered_appointments)
 
-    return render_template('journal.html', centers=centers, current_center_id=current_center_id, todays_appointments=unregistered_appointments, appointments=registered_appointments, current_date=current_date, services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats)
+    # Determine Lab Tech name from entries
+    lab_tech_name = None
+    if registered_appointments:
+        # Try to find the first non-empty lab_tech field
+        for appt in registered_appointments:
+            if appt.lab_tech:
+                lab_tech_name = appt.lab_tech
+                break
+        
+        # Fallback: if no lab_tech string, check if author is lab_tech
+        if not lab_tech_name:
+             for appt in registered_appointments:
+                 if appt.author and appt.author.role == 'lab_tech':
+                     lab_tech_name = appt.author.username
+                     break
+
+    return render_template('journal.html', centers=centers, current_center_id=current_center_id, todays_appointments=unregistered_appointments, appointments=registered_appointments, current_date=current_date, services=services, additional_services=additional_services, clinics=clinics, payment_methods=payment_methods, doctors=doctors, summary_stats=summary_stats, lab_tech_name=lab_tech_name)
 
 
 # ========== Stamp Tool Routes ==========
@@ -792,6 +806,7 @@ def certificate_edit(appointment_id):
         'c_day': c_date.strftime('%d'),
         'c_month': c_date.strftime('%m'),
         'c_year': c_date.strftime('%Y'),
+        'exam_year': str(appointment.date.year),
         'contract_no': appointment.contract_number or "",
         'stamp': '1',
         'stamp_url': url_for('static', filename=stamp_path, _external=True)
@@ -946,3 +961,13 @@ def delete_certificate(cert_id):
     db.session.commit()
     
     return jsonify({'success': True})
+@main.route('/notifications/read/<int:status_id>', methods=['POST'])
+@login_required
+def read_notification(status_id):
+    status = NotificationStatus.query.get(status_id)
+    if status and status.user_id == current_user.id:
+        status.is_read = True
+        status.read_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 403

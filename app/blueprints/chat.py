@@ -39,8 +39,8 @@ def get_history():
     
     view_user_id = request.args.get('user_id')
     
-    if current_user.role == 'org':
-        # Org sees only their conversation with Support
+    if current_user.role in ['org', 'doctor']:
+        # Org/Doctor sees only their conversation with Support
         # Messages where (sender=self AND recipient=None) OR (recipient=self)
         # Get last 100 messages (descending)
         messages_desc = Message.query.filter(
@@ -81,10 +81,10 @@ def get_history():
 @login_required
 def get_threads():
     # Only for Support
-    if current_user.role == 'org':
+    if current_user.role in ['org', 'doctor']:
         return jsonify({'error': 'Unauthorized'}), 403
 
-    # Get list of Users (Orgs) who have messaged Support
+    # Get list of Users (Orgs/Doctors) who have messaged Support
     # Or just all Orgs? Better to show only those with messages or all active.
     # Simple: All Users with role='org' AND (have messages).
     # For MVP: List all 'org' users, with last message preview.
@@ -93,8 +93,8 @@ def get_threads():
     
     search_query = request.args.get('search', '').lower()
     
-    # Base query for Org users
-    query = User.query.filter_by(role='org')
+    # Base query for Org and Doctor users
+    query = User.query.filter(User.role.in_(['org', 'doctor']))
     
     if search_query:
         # Search by username or organization name
@@ -127,7 +127,11 @@ def get_threads():
             is_read=False
         ).count()
         
-        org_name = org.organization.name if org.organization else org.username
+        if org.role == 'org' and org.organization:
+            org_name = org.organization.name
+        else:
+            org_name = "Врач" if org.role == 'doctor' else "Пользователь"
+            
         display_name = f"{org.username} - {org_name}"
         
         threads.append({
@@ -156,8 +160,8 @@ def mark_read():
     data = request.get_json()
     user_id = data.get('user_id') # The Org user ID whose messages we are reading
     
-    if current_user.role == 'org':
-        # Org reading Support messages
+    if current_user.role in ['org', 'doctor']:
+        # Org/Doctor reading Support messages
         # Update messages where recipient=current_user
         Message.query.filter_by(recipient_id=current_user.id, is_read=False).update({'is_read': True})
     else:

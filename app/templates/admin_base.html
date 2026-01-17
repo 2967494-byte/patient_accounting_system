@@ -138,6 +138,8 @@
                     Услуги</a>
                 <a href="{{ url_for('admin.additional') }}"
                     class="nav-link {% if request.endpoint == 'admin.additional' %}active{% endif %}">Дополнительно</a>
+                <a href="{{ url_for('admin.notifications') }}"
+                    class="nav-link {% if request.endpoint == 'admin.notifications' %}active{% endif %}">Уведомления</a>
                 <a href="{{ url_for('admin.monitoring') }}"
                     class="nav-link {% if request.endpoint == 'admin.monitoring' %}active{% endif %}">Мониторинг</a>
                 <a href="{{ url_for('admin.reports_bonuses_config_page') }}"

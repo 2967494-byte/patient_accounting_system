@@ -127,7 +127,7 @@
 
                 <a href="{{ url_for('main.dashboard') }}"
                     class="nav-tab {% if request.endpoint == 'main.dashboard' %}active{% endif %}">Календарь</a>
-                {% if current_user.role not in ['org', 'admin'] %}
+                {% if current_user.role not in ['org', 'admin', 'doctor'] %}
                 <a href="{{ url_for('main.journal') }}"
                     class="nav-tab {% if request.endpoint == 'main.journal' %}active{% endif %}">Журнал</a>
                 {% endif %}
@@ -147,7 +147,8 @@
             <div class="user-controls header-actions">
                 <!-- Statistics Icon -->
                 {% if current_user.role in ['superadmin', 'lab_tech'] %}
-                <a href="{{ url_for('main.statistics') }}" class="btn-icon" title="Статистика"
+                <a href="{{ url_for('main.statistics') }}"
+                    class="btn-icon {% if request.endpoint == 'main.statistics' %}active{% endif %}" title="Статистика"
                     style="margin-right: 1rem; color: #4b5563; text-decoration: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -173,11 +174,10 @@
                 {% endif %}
 
                 <!-- Reports Icon (Superadmin Only) -->
-
-                <!-- Reports Icon (Superadmin Only) -->
                 {% if current_user.role == 'superadmin' %}
-                <a href="{{ url_for('admin.reports_today') }}" class="btn-icon" title="Отчеты"
-                    style="margin-right: 1rem; color: #4b5563; text-decoration: none;">
+                <a href="{{ url_for('admin.reports_today') }}"
+                    class="btn-icon {% if request.endpoint and 'reports' in request.endpoint %}active{% endif %}"
+                    title="Отчеты" style="margin-right: 1rem; color: #4b5563; text-decoration: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -189,10 +189,59 @@
                 </a>
                 {% endif %}
 
+                <!-- Doctor Specific Icons -->
+                {% if current_user.role == 'doctor' %}
+                <a href="{{ url_for('doctor.dashboard') }}"
+                    class="btn-icon {% if request.endpoint == 'doctor.dashboard' %}active{% endif %}"
+                    title="Личный кабинет" style="color: #4b5563; margin-right: 1rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                </a>
+                <a href="{{ url_for('doctor.patients') }}"
+                    class="btn-icon {% if request.endpoint == 'doctor.patients' %}active{% endif %}" title="Пациенты"
+                    style="color: #4b5563; margin-right: 1rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </a>
+                <a href="{{ url_for('doctor.orders') }}"
+                    class="btn-icon {% if request.endpoint == 'doctor.orders' %}active{% endif %}" title="Заказы"
+                    style="color: #4b5563; margin-right: 1rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </a>
+                <a href="{{ url_for('main.dashboard') }}"
+                    class="btn-icon {% if request.endpoint == 'main.dashboard' %}active{% endif %}" title="Запись"
+                    style="color: #4b5563; margin-right: 1rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                        <line x1="12" y1="16" x2="12" y2="16"></line>
+                    </svg>
+                </a>
+                {% endif %}
+
                 <!-- Stamp Tool Icon (Superadmin, Admin & Lab Tech) -->
                 {% if current_user.role in ['superadmin', 'admin', 'lab_tech'] %}
-                <a href="{{ url_for('main.stamp_tool') }}" class="btn-icon" title="Печать справок"
-                    style="margin-right: 1rem; color: #4b5563; text-decoration: none;">
+                <a href="{{ url_for('main.stamp_tool') }}"
+                    class="btn-icon {% if request.endpoint == 'main.stamp_tool' %}active{% endif %}"
+                    title="Печать справок" style="margin-right: 1rem; color: #4b5563; text-decoration: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="6 9 6 2 18 2 18 9"></polyline>
@@ -203,7 +252,8 @@
                 {% endif %}
                 <!-- Messaging Icon -->
                 {% if current_user.role in ['superadmin', 'admin', 'lab_tech'] %}
-                <a href="{{ url_for('main.chat_dashboard') }}" id="chat-notification" class="btn-icon"
+                <a href="{{ url_for('main.chat_dashboard') }}" id="chat-notification"
+                    class="btn-icon {% if request.endpoint == 'main.chat_dashboard' %}active{% endif %}"
                     style="margin-right: 1rem; position: relative; color: #4b5563; display: none; text-decoration: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -224,8 +274,9 @@
                     </svg>
                 </button>
                 {% if current_user.role == 'superadmin' %}
-                <a href="{{ url_for('admin.index') }}" class="btn-icon" title="Админка"
-                    style="margin-right: 1rem; color: #4b5563;">
+                <a href="{{ url_for('admin.index') }}"
+                    class="btn-icon  {% if request.endpoint and 'admin' in request.endpoint and 'reports' not in request.endpoint %}active{% endif %}"
+                    title="Админка" style="margin-right: 1rem; color: #4b5563;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -299,8 +350,8 @@
 
 
 
-    <!-- Organization Chat Button (Floating) -->
-    {% if current_user.role == 'org' %}
+    <!-- Organization/Doctor Chat Button (Floating) -->
+    {% if current_user.role in ['org', 'doctor'] %}
     <div id="org-chat-btn" onclick="openChatModal()"
         style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; cursor: pointer; transition: transform 0.2s;">
         {% if chat_image %}
@@ -593,6 +644,49 @@
     {% endif %}
 
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <!-- Notification Modal -->
+    <!-- Notification Modal DISABLED as per request
+    {% if current_user.is_authenticated %}
+    {% set unread_notifs = current_user.notification_statuses | selectattr('is_read', 'equalto', False) | list %}
+    {% if unread_notifs %}
+    {% set ns = unread_notifs[0] %}
+    <div id="notification-modal"
+        style="position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
+        <div
+            style="background-color: #fff; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">📢</div>
+            <h2 style="margin-bottom: 0.8rem; color: #111827; font-size: 1.2rem; font-weight: 700;">{{
+                ns.notification.title }}</h2>
+            <p
+                style="color: #4b5563; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap;">
+                {{ ns.notification.message }}</p>
+            <button onclick="markNotificationRead({{ ns.id }})"
+                style="background-color: #3b82f6; color: white; border: none; padding: 0.75rem 2rem; border-radius: 9999px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                Ознакомлен
+            </button>
+        </div>
+    </div>
+    <script>
+        function markNotificationRead(id) {
+            fetch('/notifications/read/' + id, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('notification-modal').style.display = 'none';
+                        // Optional: Check for more notifications and show next? 
+                        // For now, refresh or wait for next navigation.
+                    }
+                });
+        }
+    </script>
+    {% endif %}
+    {% endif %}
+    -->
 </body>
 
 </html>

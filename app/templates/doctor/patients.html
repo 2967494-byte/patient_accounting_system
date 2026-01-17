@@ -1,0 +1,240 @@
+{% extends "app_base.html" %}
+
+{% block content %}
+<main class="main-content" style="padding: 2rem; max-width: 1400px; margin: 0 auto; overflow-y: auto;">
+    <div style="margin-bottom: 2rem;">
+        <h1 style="margin: 0; font-size: 1.5rem; font-weight: 600;">Мои пациенты</h1>
+    </div>
+
+    <!-- Actions Bar -->
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <input type="text" id="patient-search" placeholder="Поиск по ФИО"
+            style="width: 300px; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 6px; background: white; font-size: 1rem;">
+
+        <button onclick="openCreatePatientModal()"
+            style="padding: 0.5rem 1.5rem; background: transparent; color: #9333ea; border: 1px solid #9333ea; border-radius: 6px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-size: 0.875rem;"
+            onmouseover="this.style.background='#f3e8ff'" onmouseout="this.style.background='transparent'">
+            Создать нового
+        </button>
+    </div>
+
+    <!-- Patients Table Card -->
+    <div class="card"
+        style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 1px solid #e5e7eb; background: #f9fafb;">
+                    <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600; font-size: 0.875rem;">
+                        ФИО</th>
+                    <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600; font-size: 0.875rem;">
+                        Возраст</th>
+                    <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600; font-size: 0.875rem;">
+                        Дата последнего иссл.</th>
+                    <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600; font-size: 0.875rem;">
+                        Исследование</th>
+                    <th style="text-align: left; padding: 1rem; color: #6b7280; font-weight: 600; font-size: 0.875rem;">
+                        Комментарий</th>
+                </tr>
+            </thead>
+            <tbody id="patients-list">
+                {% for patient in patients %}
+                <tr style="border-bottom: 1px solid #f3f4f6; transition: background 0.2s; cursor: pointer;"
+                    onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'"
+                    onclick="window.location.href='{{ url_for('doctor.patient_details', patient_id=patient.id) }}'">
+                    <td style="padding: 1rem; color: #374151; font-weight: 500;">
+                        {{ patient.surname }} {{ patient.name }} {{ patient.patronymic or '' }}
+                    </td>
+                    <td style="padding: 1rem; color: #374151;">
+                        {{ patient.age }} {{ 'года' if patient.age and (patient.age % 10 in [2,3,4]) and (patient.age %
+                        100 not in [12,13,14]) else 'лет' if patient.age else '' }}
+                    </td>
+                    <td style="padding: 1rem; color: #374151;">
+                        -
+                    </td>
+                    <td style="padding: 1rem; color: #374151;">
+                        -
+                    </td>
+                    <td style="padding: 1rem; color: #374151;">
+                        {{ patient.comment or '' }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: #9ca3af;">
+                        Список пациентов пуст
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Create Patient Modal -->
+    <div id="create-patient-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 800px; width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0;">Создание нового пациента</h2>
+                <span onclick="closeCreatePatientModal()"
+                    style="font-size: 1.5rem; cursor: pointer; color: #9ca3af;">&times;</span>
+            </div>
+
+            <form id="create-patient-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Фамилия</label>
+                        <input type="text" name="surname" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Имя</label>
+                        <input type="text" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Отчество</label>
+                        <input type="text" name="patronymic">
+                    </div>
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        <input type="tel" name="phone">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Пол</label>
+                        <select name="gender">
+                            <option value="">Не указан</option>
+                            <option value="male">Мужской</option>
+                            <option value="female">Женский</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Дата рождения</label>
+                        <input type="date" name="birth_date">
+                    </div>
+                    <div class="form-group">
+                        <label>Комментарий</label>
+                        <input type="text" name="comment">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="closeCreatePatientModal()" class="btn-cancel">Отмена</button>
+                    <button type="submit" class="btn-save">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script>
+    function openCreatePatientModal() {
+        const modal = document.getElementById('create-patient-modal');
+        modal.classList.remove('hidden');
+        // modal.style.display = 'flex'; // Handled by CSS class usually, but keeping flex for centering if needed
+    }
+
+    function closeCreatePatientModal() {
+        const modal = document.getElementById('create-patient-modal');
+        modal.classList.add('hidden');
+        // modal.style.display = 'none';
+        document.getElementById('create-patient-form').reset();
+    }
+
+    // Modal submit handler
+    document.getElementById('create-patient-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch('/doctor/api/patients/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}" // Ensure CSRF if enabled
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Determine age string
+                let ageStr = '';
+                if (result.patient.age) {
+                    const lastDigit = result.patient.age % 10;
+                    const lastTwo = result.patient.age % 100;
+                    if ([11, 12, 13, 14].includes(lastTwo)) ageStr = 'лет';
+                    else if (lastDigit === 1) ageStr = 'год';
+                    else if ([2, 3, 4].includes(lastDigit)) ageStr = 'года';
+                    else ageStr = 'лет';
+                    ageStr = ` ${result.patient.age} ${ageStr}`;
+                }
+
+                // Add to table (simplified append without full reload)
+                const tbody = document.getElementById('patients-list');
+
+                // Remove "empty" row if exists
+                if (tbody.querySelector('td[colspan="5"]')) {
+                    tbody.innerHTML = '';
+                }
+
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #f3f4f6';
+                tr.style.cursor = 'pointer';
+                tr.onclick = function () { window.location.href = `/doctor/patients/${result.patient.id}`; };
+
+                // Use cell styling matching the HTML above
+                tr.innerHTML = `
+                    <td style="padding: 1rem; color: #374151; font-weight: 500;">
+                        ${result.patient.full_name}
+                    </td>
+                    <td style="padding: 1rem; color: #374151;">
+                        ${ageStr}
+                    </td>
+                    <td style="padding: 1rem; color: #374151;">-</td>
+                    <td style="padding: 1rem; color: #374151;">-</td>
+                    <td style="padding: 1rem; color: #374151;">
+                        ${result.patient.comment || ''}
+                    </td>
+                `;
+                tbody.prepend(tr);
+
+                closeCreatePatientModal();
+            } else {
+                alert('Ошибка: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Ошибка создания пациента');
+        }
+    });
+
+    // Simple Search Filter
+    document.getElementById('patient-search').addEventListener('input', function (e) {
+        const term = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#patients-list tr');
+
+        rows.forEach(row => {
+            if (row.querySelector('td[colspan="5"]')) return;
+
+            const text = row.textContent.toLowerCase();
+            if (text.includes(term)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Close modal on outside click
+    document.getElementById('create-patient-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeCreatePatientModal();
+    });
+</script>
+{% endblock %}

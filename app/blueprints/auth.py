@@ -34,8 +34,19 @@ def login():
             
             login_user(user, remember=form.remember_me.data)
             session.permanent = True
+            
+            # Role-based redirection
+            if user.role == 'doctor':
+                redirect_url = url_for('doctor.dashboard')
+            elif user.role == 'admin' or user.role == 'superadmin':
+                redirect_url = url_for('admin.users')  # Default admin page
+            else:
+                redirect_url = url_for('main.index')
+                
             next_page = request.args.get('next')
-            redirect_url = next_page if next_page else url_for('main.index')
+            if next_page: 
+                redirect_url = next_page
+                
             return jsonify({'success': True, 'redirect': redirect_url})
         else:
             return jsonify({'success': False, 'errors': {'password': ['Неверное имя пользователя или пароль']}}), 401

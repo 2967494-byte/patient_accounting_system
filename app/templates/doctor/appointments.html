@@ -1,0 +1,125 @@
+{% extends "doctor_base.html" %}
+
+{% block content %}
+<main class="calendar-container"
+    style="border: 2px solid var(--theme-color, #e5e7eb); background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
+    data-start-date="{{ dates[0].iso_date if dates else '' }}"
+    data-end-date="{{ dates[-1].iso_date if dates else '' }}">
+    <div class="calendar-header"
+        style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div class="time-header-spacer" style="width: 60px;"></div> <!-- Spacer for time column -->
+        <div class="nav-button prev-week nav-button-wrapper">
+            <a href="{{ url_for('doctor.appointments', start_date=prev_week, center_id=current_center_id) }}"
+                class="nav-arrow" style="text-decoration: none; font-size: 1.5rem; color: var(--text-gray);">&larr;</a>
+        </div>
+        {% for date in dates %}
+        <div class="day-header {{ 'today-current' if date.iso_date == today_iso else '' }}"
+            style="flex: 1; text-align: center;">
+            <div class="day-name" style="font-weight: 500; font-size: 0.9rem; color: var(--text-gray);">{{ date.name }}
+            </div>
+            <div class="day-date" style="font-weight: 700; font-size: 1.1rem; color: var(--text-dark);">{{
+                date.display_date }}</div>
+            {% if date.iso_date == today_iso %}
+            <div style="height: 4px; width: 4px; background: var(--primary); border-radius: 50%; margin: 4px auto 0;">
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="nav-button next-week nav-button-wrapper">
+            <a href="{{ url_for('doctor.appointments', start_date=next_week, center_id=current_center_id) }}"
+                class="nav-arrow" style="text-decoration: none; font-size: 1.5rem; color: var(--text-gray);">&rarr;</a>
+        </div>
+        <div class="time-header-spacer" style="width: 60px;"></div> <!-- Spacer for right time column -->
+    </div>
+
+    <div class="calendar-grid" style="display: flex;">
+        <!-- Time column -->
+        <div class="time-column" style="width: 60px; flex-shrink: 0; border-right: 1px solid var(--border-color);">
+            {% for time in time_slots %}
+            <div class="time-slot-label {{ 'time-current' if time == current_time_slot else '' }}"
+                style="height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--text-gray); border-bottom: 1px solid var(--border-color);">
+                {{ time }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Days columns -->
+        {% for date in dates %}
+        <div class="day-column {{ 'today-current' if date.iso_date == today_iso else '' }}"
+            style="flex: 1; border-right: 1px solid var(--border-color);">
+            {% for time in time_slots %}
+            {% set is_special = (current_user.role in ['admin', 'lab_tech']) and (time.endswith(':15') or
+            time.endswith(':45')) %}
+            {% set is_weekend_restricted_base = (date.obj.weekday() >= 5) %}
+            {% set is_org = current_user.role == 'org' %}
+            {% set is_weekend_restricted = is_weekend_restricted_base and (
+            (is_org and time < "09:15" ) or (not is_org and time < "09:00" ) or time> "17:30"
+                ) %}
+                <div class="time-slot-cell {{ 'special-slot' if is_special else '' }} {{ 'weekend-restricted' if is_weekend_restricted else '' }} {{ 'time-current' if time == current_time_slot else '' }}"
+                    style="height: 40px; border-bottom: 1px solid var(--border-color); cursor: pointer; position: relative;"
+                    data-date="{{ date.iso_date }}" data-time="{{ time }}">
+                </div>
+                {% endfor %}
+        </div>
+        {% endfor %}
+
+        <!-- Time column (Right) -->
+        <div class="time-column" style="width: 60px; flex-shrink: 0;">
+            {% for time in time_slots %}
+            <div class="time-slot-label {{ 'time-current' if time == current_time_slot else '' }}"
+                style="height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--text-gray); border-bottom: 1px solid var(--border-color);">
+                {{ time }}
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <!-- Static Legend Trigger (Reused logic, simplified styles inline to ensure it works without external css dependency if needed) -->
+    <div class="legend-popover-wrapper grid-legend" style="position: absolute; top: 1rem; right: 1rem;">
+        <div class="legend-trigger-btn" title="Легенда статусов" style="cursor: pointer; color: var(--text-gray);">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <!-- Tooltip/Popover implementation can be added specifically or rely on shared CSS -->
+    </div>
+</main>
+
+<!-- Appointment Modal -->
+{% include 'partials/appointment_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const initialAppointments = {{ initial_appointments | safe }};
+    const currentCenterId = {{ current_center_id | tojson }};
+    window.initialAppointments = initialAppointments;
+    window.currentCenterId = currentCenterId;
+
+    // Replicate basic calendar interactions if not in a shared js file
+    // Ideally dashboard.js should be included if it exists, or logic inline.
+    // Dashboard logic seems to be largely in dashboard.js or similar?
+    // Checking previous file views, I saw `dashboard.css`. I should check for `dashboard.js` or inline scripts in `app_base` or `dashboard.html`.
+    // `dashboard.html` had only a small inline script for phone input.
+    // This implies there is a `dashboard.js` or `main.js` handling the calendar clicks.
+    // I need to find where the calendar JS logic resides.
+</script>
+
+<!-- If dashboard.js exists, include it. -->
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const phoneInput = document.getElementById('patient-phone');
+        if (phoneInput) {
+            phoneInput.addEventListener('input', function (e) {
+                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+                if (!x[2]) {
+                    e.target.value = x[1] ? '+7' : '';
+                } else {
+                    e.target.value = '+7 (' + x[2] + (x[3] ? ') ' + x[3] : '') + (x[4] ? ' - ' + x[4] : '') + (x[5] ? ' - ' + x[5] : '');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

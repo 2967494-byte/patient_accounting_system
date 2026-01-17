@@ -12,7 +12,7 @@ from app.models import (
 
     AppointmentHistory, AppointmentAdditionalService, AppointmentService, BonusValue, SystemMetrics,
     
-    MedicalCertificate
+    MedicalCertificate, Notification, NotificationStatus
 
 )
 
@@ -1316,6 +1316,22 @@ def update_chat_settings():
     return redirect(url_for('admin.additional'))
 
 
+@admin.route('/viewer/settings', methods=['POST'])
+@login_required
+def update_viewer_settings():
+    guac_url = request.form.get('guacamole_base_url')
+    if guac_url:
+        setting = GlobalSetting.query.get('guacamole_base_url')
+        if not setting:
+            setting = GlobalSetting(key='guacamole_base_url')
+            db.session.add(setting)
+        setting.value = guac_url
+        db.session.commit()
+        flash('Настройки просмотрщика обновлены', 'success')
+    return redirect(url_for('admin.additional'))
+
+
+
 @admin.route('/stamp/upload', methods=['POST'])
 
 @login_required
@@ -1809,7 +1825,8 @@ def add_user():
     city_id = request.form.get('city_id')
 
     center_id = request.form.get('center_id')
-
+    clinic_id = request.form.get('clinic_id')
+    doctor_id = request.form.get('doctor_id')
 
 
     if User.query.filter_by(username=username).first():
@@ -1841,6 +1858,10 @@ def add_user():
         new_user.city_id = int(city_id)
     if center_id:
         new_user.center_id = int(center_id)
+    if clinic_id:
+        new_user.clinic_id = int(clinic_id)
+    if doctor_id:
+        new_user.doctor_id = int(doctor_id)
 
     db.session.add(new_user)
     db.session.commit()
@@ -1850,7 +1871,7 @@ def add_user():
         from app.extensions import mail
         from flask_mail import Message
         from itsdangerous import URLSafeTimedSerializer
-        from flask import current_app, url_for
+
 
         ts = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
         token = ts.dumps(email, salt='email-confirm-key')
@@ -1888,6 +1909,8 @@ def edit_user(user_id):
     organization_id = request.form.get('organization_id')
     city_id = request.form.get('city_id')
     center_id = request.form.get('center_id')
+    clinic_id = request.form.get('clinic_id')
+    doctor_id = request.form.get('doctor_id')
 
     # Update fields
     if username: user.username = username
@@ -1908,6 +1931,12 @@ def edit_user(user_id):
         
     if center_id: user.center_id = int(center_id)
     else: user.center_id = None
+
+    if clinic_id: user.clinic_id = int(clinic_id)
+    else: user.clinic_id = None
+
+    if doctor_id: user.doctor_id = int(doctor_id)
+    else: user.doctor_id = None
 
     try:
         db.session.commit()
@@ -1947,8 +1976,12 @@ def users():
     cities = Location.query.filter_by(type='city').all()
 
     organizations = Organization.query.all()
+    
+    clinics = Clinic.query.order_by(Clinic.name).all()
 
-    return render_template('admin_users.html', users=users, centers=centers, cities=cities, organizations=organizations, current_role=role_filter)
+    doctors = Doctor.query.order_by(Doctor.name).all()
+
+    return render_template('admin_users.html', users=users, centers=centers, cities=cities, organizations=organizations, clinics=clinics, doctors=doctors, current_role=role_filter)
 
 
 
@@ -1963,21 +1996,15 @@ def update_user_role(user_id):
     
 
     role_map = {
-
         'superadmin': 'Суперадмин',
-
         'admin': 'Админ',
-
         'org': 'Организация',
-
-        'lab_tech': 'Лаборант'
-
+        'lab_tech': 'Лаборант',
+        'doctor': 'Врач'
     }
 
     
-
-    if new_role not in ['superadmin', 'admin', 'org', 'lab_tech']:
-
+    if new_role not in ['superadmin', 'admin', 'org', 'lab_tech', 'doctor']:
         flash('Недопустимая роль', 'error')
 
     else:
@@ -4740,3 +4767,80 @@ def api_bonuses_config():
             import traceback
             traceback.print_exc()
             return jsonify({'error': str(e)}), 500
+
+@admin.route('/notifications', methods=['GET', 'POST'])
+@login_required
+def notifications():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        message = request.form.get('message')
+        
+        target_type = request.form.get('target_type')  # 'all', 'role', 'user'
+        target_role = request.form.get('target_role')
+        target_user_id = request.form.get('target_user_id')
+
+        if not title or not message:
+            flash('Заполните все поля', 'error')
+            return redirect(url_for('admin.notifications'))
+
+        # Create Notification
+        notif = Notification(
+            title=title,
+            message=message,
+            target_type=target_type,
+            target_value=target_role if target_type == 'role' else (target_user_id if target_type == 'user' else None),
+            author_id=current_user.id
+        )
+        db.session.add(notif)
+        db.session.flush()
+
+        # Determine Recipients
+        recipients = []
+        if target_type == 'all':
+            recipients = User.query.filter_by(is_blocked=False).all()
+        elif target_type == 'role':
+            if target_role:
+                recipients = User.query.filter_by(role=target_role, is_blocked=False).all()
+        elif target_type == 'user':
+            if target_user_id:
+                recipients = User.query.filter_by(id=target_user_id).all()
+
+        # Create Statuses
+        count = 0
+        for user in recipients:
+            status = NotificationStatus(
+                notification_id=notif.id,
+                user_id=user.id
+            )
+            db.session.add(status)
+            count += 1
+        
+        try:
+            db.session.commit()
+            flash(f'Уведомление отправлено {count} пользователям!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Ошибка отправки: {str(e)}', 'error')
+
+        return redirect(url_for('admin.notifications'))
+    
+    # GET: Prepare data
+    users = User.query.filter_by(is_blocked=False).order_by(User.username).all()
+    roles = ['superadmin', 'admin', 'org', 'lab_tech', 'doctor'] # Fixed list or derived? Existing roles.
+    
+    # History (Last 20)
+    history = Notification.query.order_by(Notification.created_at.desc()).limit(20).all()
+    
+    # Enrich history with stats
+    history_data = []
+    for n in history:
+        total = NotificationStatus.query.filter_by(notification_id=n.id).count()
+        read = NotificationStatus.query.filter_by(notification_id=n.id, is_read=True).count()
+        history_data.append({
+            'notif': n,
+            'total': total,
+            'read': read,
+            'percent': int((read/total)*100) if total > 0 else 0
+        })
+
+    return render_template('admin_notifications.html', users=users, roles=roles, history=history_data)

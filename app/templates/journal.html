@@ -398,6 +398,52 @@
     .text-muted {
         color: var(--text-secondary);
     }
+
+    /* Action Dropdown Styles */
+    .action-dropdown-menu {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        box-shadow: var(--shadow-md);
+        z-index: 50;
+        min-width: 150px;
+        display: none;
+        padding: 0.25rem 0;
+    }
+
+    .action-dropdown-menu.show {
+        display: block;
+    }
+
+    .action-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: none;
+        cursor: pointer;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: background 0.2s;
+    }
+
+    .action-dropdown-item:hover {
+        background-color: #f3f4f6;
+    }
+
+    .action-dropdown-item.delete {
+        color: var(--danger-color);
+    }
+
+    .action-dropdown-item.delete:hover {
+        background-color: #fee2e2;
+    }
 </style>
 {% endblock %}
 
@@ -415,7 +461,14 @@
 
     function setJournalDate(relativeDays) {
         const dateInput = document.getElementById('journal-date');
-        const date = new Date();
+        let date;
+
+        if (dateInput.value) {
+            date = new Date(dateInput.value);
+        } else {
+            date = new Date();
+        }
+
         date.setDate(date.getDate() + relativeDays);
 
         const yyyy = date.getFullYear();
@@ -423,7 +476,7 @@
         const dd = String(date.getDate()).padStart(2, '0');
 
         dateInput.value = `${yyyy}-${mm}-${dd}`;
-        dateInput.onchange();
+        dateInput.onchange(); // Trigger the reload
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -481,6 +534,40 @@
     });
 </script>
 
+<script>
+    // Action Menu Toggle
+    function toggleActionMenu(btn, event) {
+        event.stopPropagation();
+
+        // Close all other menus
+        document.querySelectorAll('.action-dropdown-menu.show').forEach(menu => {
+            if (menu !== btn.nextElementSibling) {
+                menu.classList.remove('show');
+            }
+        });
+
+        const menu = btn.nextElementSibling;
+        menu.classList.toggle('show');
+    }
+
+    // Close menus when clicking outside
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.action-dropdown-menu') && !event.target.closest('.btn-icon')) {
+            document.querySelectorAll('.action-dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    });
+
+    // Close menu when an item is clicked
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('.action-dropdown-item')) {
+            const menu = event.target.closest('.action-dropdown-menu');
+            if (menu) menu.classList.remove('show');
+        }
+    });
+</script>
+
 <div class="journal-container"
     style="padding: 1rem; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; flex: 1; overflow: hidden; height: 100%;">
     <!-- Filters -->
@@ -497,6 +584,15 @@
                 <input type="date" id="journal-date" class="filter-input" value="{{ current_date }}"
                     onchange="window.location.href = `{{ url_for('main.journal') }}?center_id={{ current_center_id }}&date=${this.value}`">
             </div>
+            <div style="display: flex; gap: 0.25rem;">
+                <button type="button" onclick="setJournalDate(1)" class="btn-date-shortcut" title="Завтра">+1
+                    »</button>
+                <button type="button" onclick="setJournalDate(2)" class="btn-date-shortcut" title="Послезавтра">+2
+                    »</button>
+            </div>
+            {% if lab_tech_name %}
+            <span style="font-size: 0.9rem; color: #9ca3af; margin-left: 1rem;">Лаборант: {{ lab_tech_name }}</span>
+            {% endif %}
         </div>
 
         <div class="filter-group">
@@ -595,8 +691,7 @@
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Скидка</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Сумма</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Комментарий</th>
-                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Лаборант</th>
-                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Действия</th>
+                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb; text-align: center;">⚙️</th>
                 </tr>
             </thead>
             <tbody id="journal-body">
@@ -670,13 +765,22 @@
                     </td>
                     <td style="padding: 0.25rem 0.5rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"
                         title="{{ appointment.comment or '' }}">{{ appointment.comment or '' }}</td>
-                    <td style="padding: 0.75rem 0.5rem;">{{ appointment.lab_tech or (appointment.author.username if
-                        appointment.author else '-') }}</td>
-                    <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap;">
-                        <button class="btn-icon" onclick="openEditJournalModal({{ appointment.id }})"
-                            title="Редактировать">✎</button>
-                        <button class="btn-icon" onclick="deleteEntry(this)" title="Удалить"
-                            style="color: #ef4444;">🗑️</button>
+                    <td class="actions-cell"
+                        style="padding: 0.5rem; text-align: center; white-space: nowrap; overflow: visible;">
+                        <div style="position: relative; display: inline-block;">
+                            <button class="btn-icon" onclick="toggleActionMenu(this, event)" title="Действия"
+                                style="font-size: 1.2rem; padding: 0.25rem 0.5rem;">⋮</button>
+                            <div class="action-dropdown-menu">
+                                <button class="action-dropdown-item"
+                                    onclick="openEditJournalModal({{ appointment.id }})">
+                                    <span>✎</span> Редактировать
+                                </button>
+                                <button class="action-dropdown-item delete"
+                                    onclick="deleteEntry(this, {{ appointment.id }})">
+                                    <span>🗑️</span> Удалить
+                                </button>
+                            </div>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -1570,9 +1674,19 @@
             <td style="padding: 0.75rem 0.5rem;"><input type="number" value="${cost}" class="journal-input-readonly" readonly></td>
             <td style="padding: 0.25rem 0.5rem;"><input type="text" value="${comment}" class="journal-input" disabled></td>
             <td style="padding: 0.75rem 0.5rem;">{{ current_user.username }}</td>
-            <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap;">
-                 <button class="btn-icon" onclick="toggleEdit(this)" title="Редактировать">✎</button>
-                 <button class="btn-icon" onclick="deleteEntry(this)" title="Удалить" style="color: #ef4444;">🗑️</button>
+            <td class="actions-cell" style="padding: 0.5rem; text-align: center; white-space: nowrap; overflow: visible;">
+                <div style="position: relative; display: inline-block;">
+                    <button class="btn-icon" onclick="toggleActionMenu(this, event)" title="Действия"
+                        style="font-size: 1.2rem; padding: 0.25rem 0.5rem;">⋮</button>
+                    <div class="action-dropdown-menu">
+                        <button class="action-dropdown-item" onclick="openEditJournalModal(${data.id})">
+                            <span>✎</span> Редактировать
+                        </button>
+                        <button class="action-dropdown-item delete" onclick="deleteEntry(this, ${data.id})">
+                            <span>🗑️</span> Удалить
+                        </button>
+                    </div>
+                </div>
             </td>
         `;
 
@@ -1954,15 +2068,41 @@
             const form = document.getElementById('entryForm');
             if (!form) return;
 
+            if (appt.contract_number) {
+                const contractInput = form.querySelector('input[name="contract_number"]');
+                if (contractInput) contractInput.value = appt.contract_number;
+            }
+
+            if (appt.is_child) {
+                const isChildInput = form.querySelector('input[name="is_child"]');
+                if (isChildInput) isChildInput.checked = true;
+            }
+
             if (appt.patient_name) {
                 const nameInput = form.querySelector('input[name="patient_name"]');
                 if (nameInput) nameInput.value = appt.patient_name;
             }
 
+            if (appt.clinic_id) {
+                const clinicSelect = form.querySelector('select[name="clinic_id"]');
+                if (clinicSelect) {
+                    $(clinicSelect).val(appt.clinic_id).trigger('change.select2');
+
+                    // Fallback if not using select2 or plain set
+                    if (clinicSelect.value !== appt.clinic_id.toString()) {
+                        clinicSelect.value = appt.clinic_id;
+                    }
+                }
+            }
+
             if (appt.doctor_id) {
                 const docSelect = form.querySelector('select[name="doctor_id"]');
                 if (docSelect) {
-                    docSelect.value = appt.doctor_id;
+                    $(docSelect).val(appt.doctor_id).trigger('change.select2');
+                    // Fallback
+                    if (docSelect.value !== appt.doctor_id.toString()) {
+                        docSelect.value = appt.doctor_id;
+                    }
                     if (typeof updateManager === 'function') updateManager(docSelect);
                 }
             }

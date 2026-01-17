@@ -1,0 +1,141 @@
+{% extends "app_base.html" %}
+
+{% block head %}
+<style>
+    .viewer-page-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 70px);
+        /* Вычитаем высоту хедера */
+        overflow: hidden;
+        background: #111827;
+    }
+
+    .viewer-header {
+        background: #1f2937;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 10;
+        border-bottom: 1px solid #374151;
+    }
+
+    .viewer-frame-wrapper {
+        flex: 1;
+        position: relative;
+        background: #000;
+    }
+
+    .viewer-frame {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    .btn-close-viewer {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+
+    .btn-close-viewer:hover {
+        background: #dc2626;
+        transform: translateY(-1px);
+    }
+
+    .status-badge {
+        font-size: 0.75rem;
+        background: #374151;
+        padding: 3px 10px;
+        border-radius: 6px;
+        color: #9ca3af;
+        border: 1px solid #4b5563;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="viewer-page-container">
+    <div class="viewer-header">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 600; font-size: 1.05rem;">Просмотр снимка</span>
+                <span style="font-size: 0.85rem; color: #9ca3af;">{{ session.appointment.patient_name }}</span>
+            </div>
+            <div class="status-badge">
+                ID: {{ vm.name or vm.id }} | {{ vm.status }}
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <span style="font-size: 0.8rem; color: #6b7280;">Нажмите F11 для во весь экран</span>
+            <button class="btn-close-viewer" onclick="closeViewer()">Завершить сеанс</button>
+        </div>
+    </div>
+    <div class="viewer-frame-wrapper">
+        <!-- Apache Guacamole Iframe -->
+        {% if vm.status == 'active' %}
+        <iframe id="guac-iframe"
+            src="{{ guacamole_base_url }}/#/client/c/{{ vm.external_id or vm.id }}?signature={{ guac_signature }}&timestamp={{ guac_timestamp }}"
+            allow="clipboard-read; clipboard-write; fullscreen" class="viewer-frame">
+        </iframe>
+        {% else %}
+        <div
+            style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; gap: 1rem;">
+            <div class="loader-spinner"
+                style="width: 40px; height: 40px; border: 4px solid #374151; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;">
+            </div>
+            <span>Подключение к удаленной станции...</span>
+        </div>
+        <style>
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+        <script>
+            // Авто-обновление если ВМ в процессе запуска
+            setTimeout(() => window.location.reload(), 5000);
+        </script>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function closeViewer() {
+        if (confirm('Вы уверены, что хотите завершить сессию просмотра? Рабочая станция будет освобождена.')) {
+            fetch("{{ url_for('viewer.close_session', session_id=session.id) }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = "{{ url_for('doctor.patient_details', patient_id=session.appointment.patient_id) }}";
+                }
+            });
+        }
+    }
+
+    // Fullscreen support helper
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F11' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+            const iframe = document.getElementById('guac-iframe');
+            if (iframe) {
+                if (iframe.requestFullscreen) {
+                    iframe.requestFullscreen();
+                    e.preventDefault();
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

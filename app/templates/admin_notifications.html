@@ -1,0 +1,138 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div style="padding: 2rem; max-width: 800px; margin: 0 auto;">
+    <div style="background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 2rem;">
+        <div
+            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 600; color: #111827; margin: 0;">📢 Уведомления</h2>
+        </div>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div style="margin-bottom: 1.5rem;">
+                <label
+                    style="display: block; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Заголовок</label>
+                <input type="text" name="title" required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.95rem; outline: none;"
+                    placeholder="Важное сообщение...">
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Текст
+                    сообщения</label>
+                <textarea name="message" required rows="5"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.95rem; outline: none; font-family: inherit;"
+                    placeholder="Введите текст уведомления..."></textarea>
+            </div>
+
+            <div style="margin-bottom: 2rem;">
+                <label
+                    style="display: block; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Получатели</label>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="target_type" value="all" checked onchange="toggleTargets()">
+                        <span>Все</span>
+                    </label>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="target_type" value="role" onchange="toggleTargets()">
+                        <span>Роль</span>
+                    </label>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="radio" name="target_type" value="user" onchange="toggleTargets()">
+                        <span>Пользователь</span>
+                    </label>
+                </div>
+
+                <div id="target-role-container" style="display: none; margin-bottom: 1rem;">
+                    <select name="target_role" class="journal-select" style="width: 100%; padding: 0.5rem;">
+                        <option value="">-- Выберите роль --</option>
+                        {% for r in roles %}
+                        <option value="{{ r }}">{{ r }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="target-user-container" style="display: none; margin-bottom: 1rem;">
+                    <select name="target_user_id" class="journal-select select2-enable"
+                        style="width: 100%; padding: 0.5rem;">
+                        <option value="">-- Выберите пользователя --</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.username }} ({{ u.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="text-align: right;">
+                <button type="submit"
+                    style="background-color: #3b82f6; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 500; border: none; cursor: pointer;">
+                    Отправить уведомление
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- History -->
+    <div
+        style="margin-top: 2rem; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 2rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 600; color: #374151; margin-bottom: 1rem;">История отправленных</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 1px solid #e5e7eb;">
+                    <th style="padding: 0.75rem 0; color: #6b7280; font-weight: 500; font-size: 0.9rem;">Дата</th>
+                    <th style="padding: 0.75rem 0; color: #6b7280; font-weight: 500; font-size: 0.9rem;">Заголовок</th>
+                    <th style="padding: 0.75rem 0; color: #6b7280; font-weight: 500; font-size: 0.9rem;">Цель</th>
+                    <th style="padding: 0.75rem 0; color: #6b7280; font-weight: 500; font-size: 0.9rem;">Прочитано</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if history %}
+                {% for item in history %}
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                    <td style="padding: 1rem 0; color: #374151;">{{ item.notif.created_at.strftime('%d.%m.%Y %H:%M') }}
+                    </td>
+                    <td style="padding: 1rem 0; font-weight: 500;">{{ item.notif.title }}</td>
+                    <td style="padding: 1rem 0; color: #6b7280;">
+                        {% if item.notif.target_type == 'all' %} Все
+                        {% elif item.notif.target_type == 'role' %} Роль: {{ item.notif.target_value }}
+                        {% elif item.notif.target_type == 'user' %} User ID: {{ item.notif.target_value }}
+                        {% endif %}
+                    </td>
+                    <td style="padding: 1rem 0;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div
+                                style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; max-width: 100px;">
+                                <div
+                                    style="width: {{ item.percent }}%; height: 100%; background: #10b981; border-radius: 3px;">
+                                </div>
+                            </div>
+                            <span style="font-size: 0.85rem; color: #374151;">{{ item.read }} / {{ item.total }}</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="4" style="padding: 1rem 0; text-align: center; color: #9ca3af;">История пуста</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function toggleTargets() {
+        const type = document.querySelector('input[name="target_type"]:checked').value;
+        document.getElementById('target-role-container').style.display = type === 'role' ? 'block' : 'none';
+        document.getElementById('target-user-container').style.display = type === 'user' ? 'block' : 'none';
+    }
+
+    $(document).ready(function () {
+        $('.select2-enable').select2();
+    });
+</script>
+{% endblock %}

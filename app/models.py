@@ -27,10 +27,14 @@ class User(UserMixin, db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True) # made nullable for existing users or flexible registration
     city_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
     center_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
+    clinic_id = db.Column(db.Integer, db.ForeignKey('clinics.id'), nullable=True) # New mapping
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     city = db.relationship('Location', foreign_keys=[city_id])
     center = db.relationship('Location', foreign_keys=[center_id])
+    clinic = db.relationship('Clinic', foreign_keys=[clinic_id]) # Relationship
+    doctor_details = db.relationship('Doctor', foreign_keys=[doctor_id], backref='user_account')
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -89,6 +93,52 @@ class AppointmentAdditionalService(db.Model):
     additional_service = db.relationship("AdditionalService")
     appointment = db.relationship("Appointment", back_populates="additional_service_associations")
 
+class Patient(db.Model):
+    __tablename__ = 'patients'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    surname = db.Column(db.String(64), nullable=False)
+    name = db.Column(db.String(64), nullable=False)
+    patronymic = db.Column(db.String(64), nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    gender = db.Column(db.String(10), nullable=True) # 'male', 'female'
+    birth_date = db.Column(db.Date, nullable=True)
+    comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    appointments = db.relationship('Appointment', backref='patient_record', lazy=True)
+
+    @property
+    def full_name(self):
+        parts = [self.surname, self.name]
+        if self.patronymic:
+            parts.append(self.patronymic)
+        return " ".join(parts)
+        
+    @property
+    def age(self):
+        if not self.birth_date:
+            return None
+        today = datetime.today()
+        return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'surname': self.surname,
+            'name': self.name,
+            'patronymic': self.patronymic,
+            'full_name': self.full_name,
+            'phone': self.phone,
+            'email': self.email,
+            'gender': self.gender,
+            'birth_date': self.birth_date.strftime('%d.%m.%Y') if self.birth_date else None,
+            'age': self.age,
+            'comment': self.comment
+        }
+
+
 class Appointment(db.Model):
     __tablename__ = 'appointments'
 
@@ -120,6 +170,7 @@ class Appointment(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # made nullable
     clinic_id = db.Column(db.Integer, db.ForeignKey('clinics.id'), nullable=True)
     center_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=True) # New Link
     
     contract_number = db.Column(db.String(50), nullable=True)
     quantity = db.Column(db.Integer, default=1) # Visit quantity (legacy)
@@ -177,6 +228,7 @@ class Appointment(db.Model):
             'id': self.id,
             'patient_name': self.patient_name,
             'patient_phone': self.patient_phone,
+            'patient_id': self.patient_id,
             'duration': self.duration,
             'doctor_id': self.doctor_id, # return ID for form pre-fill
             'doctor_name': self.doctor_rel.name if self.doctor_rel else (self.doctor or 'Unknown'),
@@ -188,46 +240,44 @@ class Appointment(db.Model):
                 'price': assoc.service.price,
                 'quantity': assoc.quantity
             } for assoc in self.service_associations],
+            # Services
             'additional_services': [{
-                'id': assoc.additional_service.id,
-                'name': assoc.additional_service.name,
-                'price': assoc.additional_service.price,
-                'quantity': assoc.quantity
+                 'id': assoc.additional_service.id,
+                 'name': assoc.additional_service.name,
+                 'price': assoc.additional_service.price,
+                 'quantity': assoc.quantity
             } for assoc in self.additional_service_associations],
-            'quantity': self.quantity, # Visit quantity (legacy/global)
+             
+            'date': self.date.strftime('%Y-%m-%d'),
+            'time': self.time,
+            'status': 'completed' if self.payment_method_id else 'pending', # Basic status for edit modal (not dashboard logic)
+            'payment_method_id': self.payment_method_id,
+            'center_id': self.center_id,
+            'amount_paid': self.amount_paid,
             'cost': self.cost,
             'discount': self.discount,
-            'amount_paid': self.amount_paid,
             'comment': self.comment,
-            'payment_method_id': self.payment_method_id,
-            'contract_number': self.contract_number,
-            'is_child': self.is_child,
-            'lab_tech': self.lab_tech,
-            'manager': self.doctor_rel.manager if self.doctor_rel else None, # Legacy manager from Doctor
-            'date': self.date.isoformat(),
-            'time': self.time,
-            'doctor': self.doctor, # Return raw doctor string too if needed
             'author_name': self.author.username if self.author else 'Unknown',
-            'author_role': self.author.role if self.author else None,
-            'center_id': self.center_id,
-            'center_name': self.center.name if self.center else 'Unknown',
-            'history': [{
-                'user': h.user.username if h.user else 'Unknown',
-                'action': h.action,
-                'timestamp': h.timestamp.isoformat() + 'Z'
-            } for h in self.history]
+            'author_role': self.author.role if self.author else 'Unknown', # For permission checks
+            'is_restricted': False, # Default, will be overridden by logic if needed
+            'is_child': self.is_child,
+             # Return history
+            'history': [h.to_dict() for h in self.history]
         }
 
     def to_dict_lite(self):
-        """Lighter version for dashboard grid to avoid N+1 queries"""
+        """Lighter dictionary for dashboard rendering to avoid N+1"""
         return {
             'id': self.id,
             'patient_name': self.patient_name,
+            'patient_phone': self.patient_phone,
             'date': self.date.isoformat(),
             'time': self.time,
-            'duration': self.duration,
-            'author_role': self.author.role if self.author else None,
+            'duration': self.duration or 15,
+            'service': self.service,
+            'doctor': self.doctor,
             'author_id': self.author_id,
+            'author_role': self.author.role if self.author else 'Unknown',
             'payment_method_id': self.payment_method_id,
             'center_id': self.center_id
         }
@@ -242,6 +292,13 @@ class AppointmentHistory(db.Model):
     action = db.Column(db.String(50), nullable=True) # e.g. 'created', 'updated'
     
     user = db.relationship('User')
+
+    def to_dict(self):
+        return {
+            'user': self.user.username if self.user else 'Unknown',
+            'action': self.action,
+            'timestamp': self.timestamp.isoformat() + 'Z'
+        }
 
 class Doctor(db.Model):
     __tablename__ = 'doctors'
@@ -529,6 +586,7 @@ class MedicalCertificate(db.Model):
     appointment = db.relationship('Appointment', backref='certificates')
     created_by = db.relationship('User', backref='created_certificates')
     
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -538,4 +596,70 @@ class MedicalCertificate(db.Model):
             'generated_at': self.generated_at.isoformat(),
             'created_by': self.created_by.username if self.created_by else None
         }
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    
+    # Target Logic
+    # 'all', 'role:role_name', 'user:user_id'
+    target_type = db.Column(db.String(50), nullable=False) 
+    target_value = db.Column(db.String(50), nullable=True) # e.g. 'admin' or '15' or NULL for all
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    statuses = db.relationship('NotificationStatus', backref='notification', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<Notification {self.title}>'
+
+class NotificationStatus(db.Model):
+    __tablename__ = 'notification_statuses'
+
+    id = db.Column(db.Integer, primary_key=True)
+    notification_id = db.Column(db.Integer, db.ForeignKey('notifications.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref='notification_statuses')
+
+
+class RemoteVM(db.Model):
+    __tablename__ = 'remote_vms'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    external_id = db.Column(db.String(128), unique=True) # Selectel UUID 또는 Identifier
+    name = db.Column(db.String(64))
+    ip_address = db.Column(db.String(45))
+    status = db.Column(db.String(20), default='suspended') # 'active', 'suspended', 'starting', 'error'
+    guacamole_connection_id = db.Column(db.String(128)) # Connection ID in Guacamole
+    last_active = db.Column(db.DateTime)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'status': self.status,
+            'ip_address': self.ip_address
+        }
+
+class VMSession(db.Model):
+    __tablename__ = 'vm_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    vm_id = db.Column(db.Integer, db.ForeignKey('remote_vms.id'), nullable=True)
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'), nullable=True)
+    start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    end_time = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    user = db.relationship('User', backref='vm_sessions')
+    vm = db.relationship('RemoteVM', backref='active_sessions')
+    appointment = db.relationship('Appointment')
 

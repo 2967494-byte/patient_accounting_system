@@ -143,6 +143,24 @@
                 {% endif %}
             </div>
         </div>
+
+        <div class="section-card media-card">
+            <div class="section-header">
+                <span class="section-icon">🖥️</span>
+                <h3>Настройки просмотрщика</h3>
+            </div>
+            <div class="media-content">
+                <form action="{{ url_for('admin.update_viewer_settings') }}" method="POST" class="upload-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <label style="font-size: 0.75rem; color: #6b7280;">Guacamole Base URL:</label>
+                    <input type="url" name="guacamole_base_url" value="{{ guacamole_base_url }}"
+                        placeholder="https://guacamole.example.com" required
+                        style="padding: 0.4rem; border: 1px solid #e5e7eb; border-radius: 0.375rem; font-size: 0.8rem;">
+                    <button type="submit" class="btn-upload">Сохранить</button>
+                </form>
+            </div>
+        </div>
+
     </div>
 
     <!-- Row 3: Data Operations -->

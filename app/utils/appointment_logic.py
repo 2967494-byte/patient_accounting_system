@@ -25,7 +25,7 @@ def get_appointments_with_status_logic(appointments, user_role, user_id):
         data = appt.to_dict_lite()
         
         # Org restriction check
-        if user_role == 'org' and appt.author_id != user_id:
+        if user_role in ['org', 'doctor'] and appt.author_id != user_id:
             data['patient_name'] = ""
             data['patient_phone'] = ""
             # doctor and service are NOT in to_dict_lite, so we skip clearing them or add them if needed.

@@ -47,6 +47,7 @@
                     <option value="superadmin" {% if current_role=='superadmin' %}selected{% endif %}>Суперадмин
                     </option>
                     <option value="admin" {% if current_role=='admin' %}selected{% endif %}>Администратор</option>
+                    <option value="doctor" {% if current_role=='doctor' %}selected{% endif %}>Врач</option>
                     <option value="org" {% if current_role=='org' %}selected{% endif %}>Организация</option>
                     <option value="lab_tech" {% if current_role=='lab_tech' %}selected{% endif %}>Лаборант</option>
                 </select>
@@ -62,6 +63,8 @@
                 <th>Email</th>
                 <th>Город</th>
                 <th>Центр</th>
+                <th>Клиника</th>
+                <th>Врач</th>
                 <th>Роль</th>
                 <th>Статус</th>
                 <th>Действия</th>
@@ -89,6 +92,8 @@
                         </select>
                     </form>
                 </td>
+                <td>{{ user.clinic.name if user.clinic else '--' }}</td>
+                <td>{{ user.doctor_details.name if user.doctor_details else '--' }}</td>
                 <td>
                     <form action="{{ url_for('admin.update_user_role', user_id=user.id) }}" method="POST"
                         style="margin: 0;">
@@ -98,6 +103,7 @@
                             <option value="superadmin" {% if user.role=='superadmin' %}selected{% endif %}>Суперадмин
                             </option>
                             <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Администратор</option>
+                            <option value="doctor" {% if user.role=='doctor' %}selected{% endif %}>Врач</option>
                             <option value="org" {% if user.role=='org' %}selected{% endif %}>Организация</option>
                             <option value="lab_tech" {% if user.role=='lab_tech' %}selected{% endif %}>Лаборант</option>
                         </select>
@@ -154,7 +160,9 @@
                                 "role": "{{ user.role }}",
                                 "organization_id": "{{ user.organization_id or "" }}",
                                 "city_id": "{{ user.city_id or "" }}",
-                                "center_id": "{{ user.center_id or "" }}"
+                                "center_id": "{{ user.center_id or "" }}",
+                                "clinic_id": "{{ user.clinic_id or "" }}",
+                                "doctor_id": "{{ user.doctor_id or "" }}"
                             })'
                             style="background: none; border: none; cursor: pointer; color: #f59e0b; font-size: 1.2rem;">
                             ✏️
@@ -175,137 +183,244 @@
     </table>
 </div>
 
-<!-- Add User Modal -->
 <div id="addUserModal" class="modal"
-    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
+    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px);">
     <div class="modal-content"
-        style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 50%; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>Добавить пользователя</h2>
+        style="background-color: #ffffff; margin: 5% auto; padding: 0; border: none; width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+        <div
+            style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Новый пользователь</h2>
             <span onclick="document.getElementById('addUserModal').style.display='none'"
-                style="cursor: pointer; font-size: 24px;">&times;</span>
+                style="cursor: pointer; font-size: 24px; line-height: 1; color: #6b7280; transition: color 0.2s;">&times;</span>
         </div>
-        <form action="{{ url_for('admin.add_user') }}" method="POST">
+        <form action="{{ url_for('admin.add_user') }}" method="POST" style="padding: 1.5rem;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div style="margin-bottom: 15px;">
-                <label>Имя пользователя:</label>
-                <input type="text" name="username" required placeholder="ИвановИИ"
-                    style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Имя
+                        пользователя</label>
+                    <input type="text" name="username" required placeholder="ИвановИИ"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Email</label>
+                    <input type="email" name="email" required placeholder="example@mail.ru"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box;">
+                </div>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Email:</label>
-                <input type="email" name="email" required style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="margin-bottom: 1rem;">
+                <label
+                    style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Пароль</label>
+                <input type="password" name="password" required
+                    style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box;">
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Пароль:</label>
-                <input type="password" name="password" required style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Роль</label>
+                    <select name="role" required
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
+                        <option value="org">Организация</option>
+                        <option value="lab_tech">Лаборант</option>
+                        <option value="admin">Администратор</option>
+                        <option value="doctor">Врач</option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Город</label>
+                    <select name="city_id"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
+                        <option value="">-- Нет --</option>
+                        {% for city in cities %}
+                        <option value="{{ city.id }}">{{ city.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Роль:</label>
-                <select name="role" required style="width: 100%; padding: 8px; margin-top: 5px;">
-                    <option value="org">Организация</option>
-                    <option value="lab_tech">Лаборант</option>
-                    <option value="admin">Администратор</option>
-                </select>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <label>Организация:</label>
-                <select name="organization_id" style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="margin-bottom: 1rem;">
+                <label
+                    style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Организация</label>
+                <select name="organization_id"
+                    style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
                     <option value="">-- Нет --</option>
                     {% for org in organizations %}
                     <option value="{{ org.id }}">{{ org.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Город (для лаборантов/орг):</label>
-                <select name="city_id" style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Центр</label>
+                    <select name="center_id"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
+                        <option value="">-- Нет --</option>
+                        {% for center in centers %}
+                        <option value="{{ center.id }}">{{ center.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Клиника</label>
+                    <select name="clinic_id"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
+                        <option value="">-- Нет --</option>
+                        {% for clinic in clinics %}
+                        <option value="{{ clinic.id }}">{{ clinic.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label
+                    style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Врач</label>
+                <select name="doctor_id"
+                    style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
                     <option value="">-- Нет --</option>
-                    {% for city in cities %}
-                    <option value="{{ city.id }}">{{ city.name }}</option>
+                    {% for doctor in doctors %}
+                    <option value="{{ doctor.id }}">{{ doctor.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Центр (для лаборантов):</label>
-                <select name="center_id" style="width: 100%; padding: 8px; margin-top: 5px;">
-                    <option value="">-- Нет --</option>
-                    {% for center in centers %}
-                    <option value="{{ center.id }}">{{ center.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Создать</button>
+
+            <button type="submit" class="btn btn-primary"
+                style="width: 100%; padding: 0.75rem; border-radius: 0.375rem; font-weight: 500; transition: background-color 0.2s;">Создать
+                пользователя</button>
         </form>
     </div>
 </div>
 </div>
 
-<!-- Edit User Modal -->
 <div id="editUserModal" class="modal"
-    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
+    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px);">
     <div class="modal-content"
-        style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 50%; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>Редактировать пользователя</h2>
+        style="background-color: #ffffff; margin: 5% auto; padding: 0; border: none; width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+        <div
+            style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Редактирование пользователя
+            </h2>
             <span onclick="document.getElementById('editUserModal').style.display='none'"
-                style="cursor: pointer; font-size: 24px;">&times;</span>
+                style="cursor: pointer; font-size: 24px; line-height: 1; color: #6b7280; transition: color 0.2s;">&times;</span>
         </div>
-        <form id="editUserForm" method="POST">
+        <form id="editUserForm" method="POST" style="padding: 1.5rem;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div style="margin-bottom: 15px;">
-                <label>Имя пользователя:</label>
-                <input type="text" name="username" id="edit_username" required
-                    style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Имя
+                        пользователя</label>
+                    <input type="text" name="username" id="edit_username" required
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Email</label>
+                    <input type="email" name="email" id="edit_email" required
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box;">
+                </div>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Email:</label>
-                <input type="email" name="email" id="edit_email" required
-                    style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="margin-bottom: 1rem;">
+                <label
+                    style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Новый
+                    пароль <span style="font-weight: 400; color: #6b7280;">(оставьте пустым, если не
+                        меняете)</span></label>
+                <input type="password" name="password" autocomplete="new-password" placeholder="••••••••"
+                    style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box;">
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Новый пароль (оставьте пустым, если не меняете):</label>
-                <input type="password" name="password" autocomplete="new-password"
-                    style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Роль</label>
+                    <select name="role" id="edit_role" required
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
+                        <option value="superadmin">Суперадмин</option>
+                        <option value="admin">Администратор</option>
+                        <option value="doctor">Врач</option>
+                        <option value="org">Организация</option>
+                        <option value="lab_tech">Лаборант</option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Город</label>
+                    <select name="city_id" id="edit_city_id"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
+                        <option value="">-- Нет --</option>
+                        {% for city in cities %}
+                        <option value="{{ city.id }}">{{ city.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Роль:</label>
-                <select name="role" id="edit_role" required style="width: 100%; padding: 8px; margin-top: 5px;">
-                    <option value="org">Организация</option>
-                    <option value="lab_tech">Лаборант</option>
-                    <option value="admin">Администратор</option>
-                    <option value="superadmin">Суперадмин</option>
-                </select>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <label>Организация:</label>
+
+            <div style="margin-bottom: 1rem;">
+                <label
+                    style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Организация</label>
                 <select name="organization_id" id="edit_organization_id"
-                    style="width: 100%; padding: 8px; margin-top: 5px;">
+                    style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
                     <option value="">-- Нет --</option>
                     {% for org in organizations %}
                     <option value="{{ org.id }}">{{ org.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Город:</label>
-                <select name="city_id" id="edit_city_id" style="width: 100%; padding: 8px; margin-top: 5px;">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Центр</label>
+                    <select name="center_id" id="edit_center_id"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
+                        <option value="">-- Нет --</option>
+                        {% for center in centers %}
+                        <option value="{{ center.id }}">{{ center.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Клиника</label>
+                    <select name="clinic_id" id="edit_clinic_id"
+                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
+                        <option value="">-- Нет --</option>
+                        {% for clinic in clinics %}
+                        <option value="{{ clinic.id }}">{{ clinic.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label
+                    style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Врач</label>
+                <select name="doctor_id" id="edit_doctor_id"
+                    style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
                     <option value="">-- Нет --</option>
-                    {% for city in cities %}
-                    <option value="{{ city.id }}">{{ city.name }}</option>
+                    {% for doctor in doctors %}
+                    <option value="{{ doctor.id }}">{{ doctor.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label>Центр:</label>
-                <select name="center_id" id="edit_center_id" style="width: 100%; padding: 8px; margin-top: 5px;">
-                    <option value="">-- Нет --</option>
-                    {% for center in centers %}
-                    <option value="{{ center.id }}">{{ center.name }}</option>
-                    {% endfor %}
-                </select>
+
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" onclick="document.getElementById('editUserModal').style.display='none'"
+                    style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; background: #fff; color: #374151; border-radius: 0.375rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s;">Отмена</button>
+                <button type="submit" class="btn btn-primary"
+                    style="flex: 1; padding: 0.75rem; border-radius: 0.375rem; font-weight: 500; transition: background-color 0.2s;">Сохранить</button>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Сохранить</button>
         </form>
     </div>
 </div>
@@ -321,6 +436,8 @@
         document.getElementById('edit_organization_id').value = userData.organization_id || '';
         document.getElementById('edit_city_id').value = userData.city_id || '';
         document.getElementById('edit_center_id').value = userData.center_id || '';
+        document.getElementById('edit_clinic_id').value = userData.clinic_id || '';
+        document.getElementById('edit_doctor_id').value = userData.doctor_id || '';
 
         // Set Action URL
         document.getElementById('editUserForm').action = '/admin/users/edit/' + userData.id;

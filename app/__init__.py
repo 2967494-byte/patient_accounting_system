@@ -50,6 +50,17 @@ def create_app(test_config=None):
     except Exception as e:
         print(f"[ERROR] Upload folder creation failed: {e}")
 
+    # Global Context Processor
+    @app.context_processor
+    def inject_global_vars():
+        from app.models import GlobalSetting
+        chat_img = GlobalSetting.query.get('chat_image')
+        guac_url = GlobalSetting.query.get('guacamole_base_url')
+        return dict(
+            chat_image=chat_img.value if chat_img else None,
+            guacamole_base_url=guac_url.value if guac_url else 'https://guacamole.medical-system.ru'
+        )
+
     # Register blueprints 
     from app.blueprints.auth import auth
     app.register_blueprint(auth, url_prefix='/auth')
@@ -65,6 +76,12 @@ def create_app(test_config=None):
 
     from app.blueprints.chat import chat
     app.register_blueprint(chat, url_prefix='/api/chat')
+
+    from app.blueprints.doctor import doctor_bp
+    app.register_blueprint(doctor_bp)
+
+    from app.blueprints.viewer import viewer
+    app.register_blueprint(viewer)
 
 
 

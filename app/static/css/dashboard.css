@@ -316,6 +316,16 @@ body {
     color: var(--primary-color);
 }
 
+.btn-icon.active {
+    color: #9333ea;
+    background-color: var(--bg-color);
+}
+
+.btn-icon.active {
+    color: #9333ea;
+    background-color: var(--bg-color);
+}
+
 .btn-admin {
     margin-right: 1rem;
 }

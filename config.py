@@ -53,6 +53,14 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
     
+    # Selectel Cloud API (OpenStack)
+    SELECTEL_USERNAME = os.environ.get('SELECTEL_USERNAME')
+    SELECTEL_PASSWORD = os.environ.get('SELECTEL_PASSWORD')
+    SELECTEL_PROJECT_ID = os.environ.get('SELECTEL_PROJECT_ID')
+    SELECTEL_DOMAIN_NAME = os.environ.get('SELECTEL_DOMAIN_NAME', 'Default')
+    SELECTEL_AUTH_URL = os.environ.get('SELECTEL_AUTH_URL', 'https://api.selvpc.ru/identity/v3')
+    SELECTEL_REGION = os.environ.get('SELECTEL_REGION', 'ru-1')
+    
     # Создаем папку uploads если не существует
     if not os.path.exists(UPLOAD_FOLDER):
         try:

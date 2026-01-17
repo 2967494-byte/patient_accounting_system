@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const method = id ? 'PUT' : 'POST';
 
             const data = {
+                patient_id: document.getElementById('patient-id') ? document.getElementById('patient-id').value : null,
                 patient_name: document.getElementById('patient-name').value,
                 patient_phone: document.getElementById('patient-phone').value,
                 doctor_id: document.getElementById('doctor') ? document.getElementById('doctor').value : null,
@@ -194,6 +195,8 @@ async function openCreateModal(date, time) {
     $('#clinic').val(null).trigger('change');
 
     document.getElementById('appt-id').value = '';
+    const pidInput = document.getElementById('patient-id');
+    if (pidInput) pidInput.value = '';
     document.getElementById('appt-date').value = date;
 
     if (typeof currentCenterId !== 'undefined') {
@@ -211,7 +214,6 @@ async function openCreateModal(date, time) {
     const modal = document.getElementById('appointment-modal');
     modal.classList.remove('hidden');
 
-    // Hide delete button for new
     const btnDelete = document.getElementById('btn-delete');
     if (btnDelete) btnDelete.classList.add('hidden');
 }
@@ -226,6 +228,9 @@ async function openEditModal(id) {
         document.getElementById('modal-title').textContent = 'Редактирование записи';
         document.getElementById('appt-id').value = appt.id;
         document.getElementById('appt-date').value = appt.date;
+
+        const pidInput = document.getElementById('patient-id');
+        if (pidInput) pidInput.value = appt.patient_id || '';
 
         document.getElementById('patient-name').value = appt.patient_name;
         document.getElementById('patient-phone').value = appt.patient_phone || '';
@@ -251,7 +256,7 @@ async function openEditModal(id) {
             authorDiv.classList.remove('hidden');
         }
 
-        // Show Delete Button
+        // Show Delete and Viewer Buttons
         const btnDelete = document.getElementById('btn-delete');
         if (btnDelete) btnDelete.classList.remove('hidden');
 
@@ -320,6 +325,7 @@ async function openEditModal(id) {
 function closeModal() {
     document.getElementById('appointment-modal').classList.add('hidden');
 }
+
 
 async function deleteAppointment() {
     const id = document.getElementById('appt-id').value;
@@ -415,9 +421,12 @@ function renderAppointments(appointments) {
 
             let statusClass = ''; // Define in outer scope
 
+            let isRestricted = false;
+
             if (appt.is_restricted) {
                 cell.classList.add('restricted');
                 cell.title = "Занято (информация скрыта)";
+                isRestricted = true;
             } else {
                 if (appt.status === 'completed') statusClass = 'status-completed';
                 else if (appt.status === 'late') statusClass = 'status-late';
@@ -472,7 +481,14 @@ function renderAppointments(appointments) {
                     nextCell.classList.add('booked');
                     if (statusClass) nextCell.classList.add(statusClass); // Keep class on cell just in case
 
-                    nextCell.title = "Продолжение приема";
+                    // Propagate Restricted status 
+                    if (isRestricted) {
+                        nextCell.classList.add('restricted');
+                        nextCell.title = "Занято (информация скрыта)";
+                    } else {
+                        nextCell.title = "Продолжение приема";
+                    }
+
                     nextCell.dataset.id = appt.id;
 
                     // Styling for seamless merge

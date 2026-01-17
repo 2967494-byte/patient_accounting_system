@@ -1,71 +1,180 @@
 <!-- Appointment Modal -->
-<div id="appointment-modal" class="modal hidden">
-    <div class="modal-content">
-        <h2 id="modal-title">Новая запись</h2>
-        <form id="appointment-form">
-            <input type="hidden" id="appt-id">
+<div id="appointment-modal" class="modal hidden" style="background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px);">
+    <div class="modal-content"
+        style="border-radius: 12px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); max-width: 600px; width: 95%; position: relative;">
 
-            <div class="form-group">
-                <label>Центр</label>
-                <select id="appt-center" required>
+        <button type="button" onclick="closeModal()"
+            style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; color: #9ca3af; cursor: pointer; line-height: 1; padding: 0;">&times;</button>
+
+        <h2 id="modal-title"
+            style="margin-top: 0; margin-bottom: 20px; font-size: 1.25rem; font-weight: 600; color: #111827; padding-right: 20px;">
+            Новая запись</h2>
+
+        <form id="appointment-form" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" id="appt-id">
+            <input type="hidden" id="patient-id">
+
+            <!-- Center (Full Width) -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label
+                    style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 8px; display: block;">Центр</label>
+                <!-- Hidden Select for compatibility -->
+                <select id="appt-center" style="display:none;" required>
                     {% for center in centers %}
                     <option value="{{ center.id }}">{{ center.name }}</option>
                     {% endfor %}
                 </select>
+
+                <!-- Button Group -->
+                <div id="center-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+                    {% for center in centers %}
+                    <button type="button" class="center-btn" data-value="{{ center.id }}"
+                        data-color="{{ center.color or '#4f46e5' }}" onclick="selectCenter(this, '{{ center.id }}')"
+                        style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">
+                        {{ center.name }}
+                    </button>
+                    {% endfor %}
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Дата</label>
-                <input type="date" id="appt-date" required>
+            <script>
+                function selectCenter(btn, value) {
+                    const select = document.getElementById('appt-center');
+                    if (!select) return;
+
+                    select.value = value;
+                    // Trigger change for dashboard.js listener
+                    const event = new Event('change', { bubbles: true });
+                    select.dispatchEvent(event);
+
+                    updateCenterVisuals();
+                }
+
+                function updateCenterVisuals() {
+                    const select = document.getElementById('appt-center');
+                    if (!select) return;
+
+                    const val = select.value;
+                    const buttons = document.querySelectorAll('.center-btn');
+
+                    buttons.forEach(btn => {
+                        const color = btn.getAttribute('data-color');
+                        if (btn.getAttribute('data-value') == val) {
+                            btn.style.backgroundColor = color;
+                            btn.style.color = 'white';
+                            btn.style.borderColor = color;
+                        } else {
+                            btn.style.backgroundColor = 'white';
+                            btn.style.color = '#374151';
+                            btn.style.borderColor = '#d1d5db';
+                        }
+                    });
+                }
+
+                // Sync when modal opens (class changes)
+                document.addEventListener('DOMContentLoaded', () => {
+                    const modal = document.getElementById('appointment-modal');
+                    if (modal) {
+                        const observer = new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                                    if (!modal.classList.contains('hidden')) {
+                                        // Modal opened, sync buttons to current select value
+                                        setTimeout(updateCenterVisuals, 50);
+                                    }
+                                }
+                            });
+                        });
+                        observer.observe(modal, { attributes: true });
+                    }
+
+                    // Also sync initially just in case
+                    updateCenterVisuals();
+                });
+            </script>
+
+            <!-- Date & Time Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label
+                        style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Дата</label>
+                    <input type="date" id="appt-date" required
+                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label
+                        style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Время</label>
+                    <select id="appt-time" required
+                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; background-color: white;">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Время</label>
-                <select id="appt-time" required>
-                    <!-- Populated via JS -->
-                </select>
-            </div>
-
-            <div class="form-group checkbox-group" style="display:flex; align-items:center; gap:0.5rem;">
+            <!-- Double Time Checkbox -->
+            <div class="form-group checkbox-group"
+                style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0;">
                 <input type="checkbox" id="is-double-time"
-                    style="width: 16px; height: 16px; margin: 0 5px 0 0; padding: 0; cursor: pointer; display: inline-block; flex-shrink: 0; -webkit-appearance: checkbox; appearance: auto; border: initial; border-radius: initial; box-shadow: none;">
-                <label for="is-double-time" style="margin-bottom:0; font-weight:normal;">Доп. время (+15 мин)</label>
+                    style="width: 16px; height: 16px; cursor: pointer; border-radius: 4px; border: 1px solid #d1d5db;">
+                <label for="is-double-time"
+                    style="margin-bottom:0; font-size: 0.875rem; color: #4b5563; font-weight: normal; cursor: pointer; user-select: none;">Доп.
+                    время (+15 мин)</label>
             </div>
 
-            <div class="form-group">
-                <label>ФИО Пациента</label>
-                <input type="text" id="patient-name" required>
+            <!-- Patient Name (Full Width) -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label
+                    style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">ФИО
+                    Пациента</label>
+                <div style="position: relative;">
+                    <input type="text" id="patient-name" required autocomplete="off"
+                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box;">
+                    <div id="patient-suggestions" class="suggestions-list hidden"></div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Телефон</label>
-                <input type="tel" id="patient-phone" required placeholder="+7 (___) ___ - __ - __">
+
+            <!-- Phone (Full Width) -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label
+                    style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Телефон</label>
+                <input type="tel" id="patient-phone" required placeholder="+7 (___) ___ - __ - __"
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box;">
             </div>
-            {% if current_user.role != 'org' %}
-            <div class="form-group">
-                <label>Клиника</label>
-                <select id="clinic" class="select2-enable" style="width: 100%;">
-                    <option value="">-- Выберите --</option>
-                    {% for c in clinics %}
-                    <option value="{{ c.id }}">{{ c.name }}</option>
-                    {% endfor %}
-                </select>
+
+            <!-- Clinic & Doctor Row (Conditional) -->
+            {% if current_user.role not in ['org', 'doctor'] %}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label
+                        style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Клиника</label>
+                    <select id="clinic" class="select2-enable"
+                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem;">
+                        <option value="">-- Выберите --</option>
+                        {% for c in clinics %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label
+                        style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Врач</label>
+                    <select id="doctor" class="select2-enable"
+                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem;">
+                        <option value="">-- Выберите --</option>
+                        {% for doc in doctors %}
+                        <option value="{{ doc.id }}">{{ doc.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             {% endif %}
 
-            {% if current_user.role != 'org' %}
-            <div class="form-group">
-                <label>Врач</label>
-                <select id="doctor" class="select2-enable" style="width: 100%;">
-                    <option value="">-- Выберите --</option>
-                    {% for doc in doctors %}
-                    <option value="{{ doc.id }}">{{ doc.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            {% endif %}
-            <div class="form-group">
-                <label>Услуга</label>
-                <input type="text" id="service" list="services-list" placeholder="Выберите услугу (необязательно)">
+            <!-- Service (Full Width) -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label
+                    style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Услуга</label>
+                <input type="text" id="service" list="services-list" placeholder="Выберите услугу"
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box;">
                 <datalist id="services-list">
                     {% for service in services %}
                     <option value="{{ service.name }}">
@@ -73,125 +182,181 @@
                 </datalist>
             </div>
 
-            <!-- Additional Fields (Contract, Discount, Payment, Comment, etc) - Added to match Journal needs -->
-            <!-- Note: Dashboard modal was simpler. Journal needs MORE fields. 
-                 We should probably extend this modal to have all fields or show/hide them.
-                 The user asked to "open creation window with filled fields". 
-                 The creation window generally has minimal fields. 
-                 But for "Edit", we imply full editing.
-                 I should check if the Dashboard modal had all fields. 
-                 Looking at dashboard.html content I read earlier (Step 213), it missed Contract, Payment Method, Discount, Comment, Child check.
-                 I MUST add these to the modal for full editing. -->
-
-            <!-- Extra fields hidden/removed for Dashboard simplcity 
-            <div class="form-group checkbox-group"
-                style="display:flex; align-items:center; gap:0.5rem; margin-top:10px;">
-                <input type="checkbox" id="is-child">
-                <label for="is-child" style="margin-bottom:0;">Ребенок</label>
+            <!-- Info & History -->
+            <div class="form-item-info hidden" id="author-info"
+                style="font-size: 0.75rem; color: #6b7280; padding: 8px; background: #f9fafb; border-radius: 6px;">
             </div>
-
-            <div class="form-group">
-                <label>Договор №</label>
-                <input type="text" id="contract-number">
-            </div>
-
-            <div class="form-group">
-                <label>Способ оплаты</label>
-                <select id="payment-method">
-                    <option value="">-- Выберите --</option>
-                    {% for pm in payment_methods %}
-                    <option value="{{ pm.id }}">{{ pm.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Сумма / Стоимость (авторасчет)</label>
-                <input type="number" id="cost" step="0.01" readonly style="background:#f3f4f6;">
-            </div>
-
-            <div class="form-group">
-                <label>Скидка</label>
-                <input type="number" id="discount" step="0.01" value="0">
-            </div>
-
-            <div class="form-group">
-                <label>Комментарий</label>
-                <textarea id="comment" rows="2"></textarea>
-            </div>
-            -->
-
-            <div class="form-item-info hidden" id="author-info"></div>
 
             <div id="history-container" class="hidden"
-                style="margin-top: 1rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">
-                <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #374151;">История изменений</h4>
-                <div id="history-list" style="font-size: 0.8rem; color: #6b7280;"></div>
-            </div>
-
-
-
-            <div class="modal-actions">
-                <button type="button" id="btn-delete" class="btn-delete hidden"
-                    onclick="deleteAppointment()">Удалить</button>
-                <div class="right-actions">
-                    <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
-                    <button type="submit" class="btn-save">Сохранить</button>
+                style="margin-top: 0.5rem; border-top: 1px solid #e5e7eb; padding-top: 0.5rem;">
+                <h4 style="font-size: 0.875rem; margin: 0 0 0.25rem 0; color: #374151;">История</h4>
+                <div id="history-list" style="font-size: 0.75rem; color: #6b7280; max-height: 100px; overflow-y: auto;">
                 </div>
             </div>
-        </form>
+
+            <!-- Actions Footer -->
+            <div class="modal-actions"
+                style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 16px; border-top: 1px solid #f3f4f6;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" id="btn-delete" class="btn-delete hidden" onclick="deleteAppointment()"
+                        style="background-color: white; color: #ef4444; border: 1px solid #fecaca; padding: 8px 16px; border-radius: 8px; font-size: 0.875rem; cursor: pointer; transition: all 0.2s;">Удалить</button>
+                </div>
+            </div>
+            <div class="right-actions" style="display: flex; gap: 12px; margin-left: auto;">
+                <button type="button" class="btn-cancel" onclick="closeModal()"
+                    style="background-color: white; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s;">Отмена</button>
+                <button type="submit" class="btn-save"
+                    style="background-color: #4f46e5; color: white; border: none; padding: 8px 24px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s; box-shadow: 0 1px 2px 0 rgba(79, 70, 229, 0.5);">Сохранить</button>
+            </div>
     </div>
+    </form>
+</div>
 </div>
 
 <style>
-    .btn-delete {
-        background-color: #ef4444;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        margin-right: auto;
+    /* Hover effects */
+    .btn-cancel:hover {
+        background-color: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    .btn-save:hover {
+        background-color: #4338ca;
     }
 
     .btn-delete:hover {
-        background-color: #dc2626;
+        background-color: #fef2f2;
+        border-color: #ef4444;
     }
 
-    .modal-actions {
+    /* Focus states */
+    input:focus,
+    select:focus {
+        outline: none;
+        border-color: #4f46e5 !important;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .suggestions-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        z-index: 50;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .suggestion-item {
+        padding: 8px 12px;
+        cursor: pointer;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 1.5rem;
+        border-bottom: 1px solid #f3f4f6;
     }
 
-    .right-actions {
-        display: flex;
-        gap: 1rem;
+    .suggestion-item:last-child {
+        border-bottom: none;
     }
 
-    .hidden {
-        display: none !important;
+    .suggestion-item:hover {
+        background-color: #f9fafb;
     }
 
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.25rem;
+    .suggestion-name {
         font-weight: 500;
-        color: #374151;
+        color: #111827;
     }
 
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        box-sizing: border-box;
+    .suggestion-phone {
+        font-size: 0.75rem;
+        color: #6b7280;
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const nameInput = document.getElementById('patient-name');
+        const phoneInput = document.getElementById('patient-phone');
+        const suggestionsBox = document.getElementById('patient-suggestions');
+        let timeout = null;
+
+        nameInput.addEventListener('input', function () {
+            const query = this.value.trim();
+            // Clear patient-id on manual input to avoid linking to wrong person if name changed significantly
+            const pidInput = document.getElementById('patient-id');
+            if (pidInput) pidInput.value = '';
+
+            // Clear previous timeout
+            if (timeout) clearTimeout(timeout);
+
+            if (query.length < 2) {
+                suggestionsBox.classList.add('hidden');
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            // Debounce
+            timeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/patients/lookup?q=${encodeURIComponent(query)}`);
+                    if (!response.ok) return;
+
+                    const patients = await response.json();
+
+                    if (patients.length > 0) {
+                        suggestionsBox.innerHTML = '';
+                        patients.forEach(p => {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.innerHTML = `
+                                <div>
+                                    <div class="suggestion-name">${p.full_name}</div>
+                                    <div class="suggestion-phone">${p.birth_date ? p.birth_date : ''}</div>
+                                </div>
+                                <div class="suggestion-phone">${p.phone || ''}</div>
+                            `;
+                            div.onclick = () => {
+                                nameInput.value = p.full_name;
+                                const pidInput = document.getElementById('patient-id');
+                                if (pidInput) pidInput.value = p.id;
+
+                                if (p.phone) phoneInput.value = p.phone;
+
+                                // Robust hiding
+                                suggestionsBox.classList.add('hidden');
+                                suggestionsBox.style.display = 'none';
+                                suggestionsBox.innerHTML = '';
+
+                                // Reset validation state if any
+                                nameInput.style.borderColor = '#d1d5db';
+                            };
+                            suggestionsBox.appendChild(div);
+                        });
+                        suggestionsBox.classList.remove('hidden');
+                        suggestionsBox.style.display = 'block'; // Ensure it opens
+                    } else {
+                        suggestionsBox.classList.add('hidden');
+                        suggestionsBox.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.error('Search error:', e);
+                }
+            }, 300);
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!nameInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+                suggestionsBox.classList.add('hidden');
+                suggestionsBox.style.display = 'none';
+            }
+        });
+    });
+</script>

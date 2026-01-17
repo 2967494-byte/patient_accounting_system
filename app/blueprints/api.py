@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db, csrf
-from app.models import Appointment, Service, AdditionalService, AppointmentService, AppointmentAdditionalService, Doctor, Clinic, Message, User
+from app.models import Appointment, Service, AdditionalService, AppointmentService, AppointmentAdditionalService, Doctor, Clinic, Message, User, Patient
 from datetime import datetime, timedelta
 
 api = Blueprint('api', __name__)
@@ -119,8 +119,8 @@ def create_appointment():
             time=data.get('time', '09:00'),
             patient_name=data['patient_name'].strip().title() if data['patient_name'] else '',
             patient_phone=data.get('patient_phone', ''),
-            clinic_id=safe_int(data.get('clinic_id')),
-            doctor_id=safe_int(data.get('doctor_id')),
+            clinic_id=current_user.clinic_id if current_user.role == 'doctor' else safe_int(data.get('clinic_id')),
+            doctor_id=current_user.doctor_id if current_user.role == 'doctor' else safe_int(data.get('doctor_id')),
             service=primary_service_name, # joined names
             quantity=quantity,
             contract_number=data.get('contract_number'),
@@ -128,8 +128,10 @@ def create_appointment():
             discount=float(data.get('discount', 0) or 0),
             comment=data.get('comment'),
             is_child=data.get('is_child', False),
+
             duration=duration,
-            author_id=current_user.id
+            author_id=current_user.id,
+            patient_id=safe_int(data.get('patient_id'))
         )
 
         # ASSIGN RELATIONS DIRECTLY (Fixes "Not Saving" issue)
@@ -259,6 +261,8 @@ def get_appointments():
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
         query = query.filter(Appointment.date <= end_date)
 
+
+
     appointments = query.all()
     
     from app.utils.appointment_logic import get_appointments_with_status_logic
@@ -272,8 +276,8 @@ def get_appointment_detail(id):
     appt = Appointment.query.get_or_404(id)
     
     # Restriction check
-    # Org sees only own. Admin/Superadmin/LabTech sees all (LabTech logic handled elsewhere? need to check)
-    if current_user.role == 'org' and appt.author_id != current_user.id:
+    # Org sees only own. Doctor sees only own. Admin/Superadmin/LabTech sees all (LabTech logic handled elsewhere? need to check)
+    if current_user.role in ['org', 'doctor'] and appt.author_id != current_user.id:
         # Return limited or 403?
         # For editing, they likely shouldn't be able to fetch if they can't edit.
         return jsonify({'error': 'Unauthorized'}), 403
@@ -378,7 +382,8 @@ def update_appointment(id):
     
     if 'patient_name' in data: appointment.patient_name = data['patient_name'].strip().title()
     if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
-    if 'patient_phone' in data: appointment.patient_phone = data['patient_phone']
+    if 'patient_id' in data:
+        appointment.patient_id = safe_int(data['patient_id'])
     
     # Update doctor and clinic (IDs preferred)
     if 'doctor_id' in data: 
@@ -490,7 +495,7 @@ def delete_appointment(id):
     appointment = Appointment.query.get_or_404(id)
     
     # Ownership/Role check? (Assuming Org admins can delete their own orgs data, Admin everyone)
-    if current_user.role == 'org' and appointment.author_id != current_user.id:
+    if current_user.role in ['org', 'doctor'] and appointment.author_id != current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
@@ -516,7 +521,7 @@ def search_patients():
     results = []
     for appt in appointments:
          # Check restrictions
-        if current_user.role == 'org' and appt.author_id != current_user.id:
+        if current_user.role in ['org', 'doctor'] and appt.author_id != current_user.id:
             continue # Don't show results for other orgs if restricted
         
         data = appt.to_dict()
@@ -687,3 +692,51 @@ def create_referral_request():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@api.route('/patients/lookup', methods=['GET'])
+@login_required
+def lookup_patients():
+    query_str = request.args.get('q', '').strip()
+    if not query_str:
+        return jsonify([])
+
+    # Split query into parts to handle "Surname Name" search
+    parts = query_str.split()
+    
+    query = Patient.query
+    
+    if len(parts) == 1:
+        # Search in surname OR name OR patronymic OR phone
+        term = f"%{parts[0]}%"
+        query = query.filter(
+            db.or_(
+                Patient.surname.ilike(term),
+                Patient.name.ilike(term),
+                Patient.patronymic.ilike(term),
+                Patient.phone.ilike(term)
+            )
+        )
+    elif len(parts) >= 2:
+        # Search surname AND name
+        s_term = f"%{parts[0]}%"
+        n_term = f"%{parts[1]}%"
+        query = query.filter(
+            Patient.surname.ilike(s_term),
+            Patient.name.ilike(n_term)
+        )
+        
+    patients = query.order_by(Patient.surname, Patient.name).limit(20).all()
+    
+    results = []
+    for p in patients:
+        results.append({
+            'id': p.id,
+            'full_name': p.full_name,
+            'surname': p.surname,
+            'name': p.name,
+            'patronymic': p.patronymic,
+            'phone': p.phone,
+            'birth_date': p.birth_date.strftime('%Y-%m-%d') if p.birth_date else None
+        })
+        
+    return jsonify(results)
