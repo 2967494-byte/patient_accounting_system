@@ -29,10 +29,10 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    with op.batch_alter_table('messages', schema=None) as batch_op:
-        batch_op.drop_column('topic')
-        batch_op.drop_column('status')
-        batch_op.drop_column('attachment_path')
+    # with op.batch_alter_table('messages', schema=None) as batch_op:
+    #     batch_op.drop_column('topic')
+    #     batch_op.drop_column('status')
+    #     batch_op.drop_column('attachment_path')
 
     # ### end Alembic commands ###
 
