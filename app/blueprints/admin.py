@@ -12,7 +12,7 @@ from app.models import (
 
     AppointmentHistory, AppointmentAdditionalService, AppointmentService, BonusValue, SystemMetrics,
     
-    MedicalCertificate, Notification, NotificationStatus
+    MedicalCertificate, Notification, NotificationStatus, SupportTicket
 
 )
 
@@ -4844,3 +4844,35 @@ def notifications():
         })
 
     return render_template('admin_notifications.html', users=users, roles=roles, history=history_data)
+@admin.route('/support')
+@login_required
+def support():
+    status_filter = request.args.get('status')
+    type_filter = request.args.get('type')
+    
+    query = SupportTicket.query
+    
+    if status_filter:
+        query = query.filter(SupportTicket.status == status_filter)
+    
+    if type_filter:
+        query = query.filter(SupportTicket.type == type_filter)
+        
+    tickets = query.order_by(SupportTicket.created_at.desc()).all()
+    
+    return render_template('admin_support.html', tickets=tickets, current_status=status_filter, current_type=type_filter)
+
+@admin.route('/support/update_status/<int:ticket_id>', methods=['POST'])
+@login_required
+def support_update_status(ticket_id):
+    ticket = SupportTicket.query.get_or_404(ticket_id)
+    new_status = request.form.get('status')
+    
+    if new_status in ['new', 'viewed', 'in_progress', 'completed']:
+        ticket.status = new_status
+        db.session.commit()
+        flash('Статус обновлен', 'success')
+    else:
+        flash('Неверный статус', 'error')
+        
+    return redirect(url_for('admin.support'))

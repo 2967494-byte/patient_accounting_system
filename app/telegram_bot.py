@@ -19,16 +19,30 @@ class TelegramBot:
             self.base_url = f"https://api.telegram.org/bot{self.token}"
         logger.info(f"Telegram bot initialized: token={bool(self.token)}, chat_id={self.chat_id}")
     
-    def _send_async(self, url, json_payload):
+    def _send_async(self, url, json_payload=None, files=None, data=None):
         """Sends a request to Telegram in a separate thread to avoid blocking."""
         def request_task():
             try:
-                requests.post(url, json=json_payload, timeout=10)
+                # If files are present, we cannot use json parameter, we must use data
+                # And files dict needs to be opened files
+                if files:
+                    real_files = {}
+                    for key, path in files.items():
+                        real_files[key] = open(path, 'rb')
+                    
+                    try:
+                        requests.post(url, data=data, files=real_files, timeout=30)
+                    finally:
+                        for f in real_files.values():
+                            f.close()
+                else:
+                    requests.post(url, json=json_payload, timeout=10)
             except Exception as e:
                 logger.error(f"Failed to send async Telegram message: {e}")
 
         thread = threading.Thread(target=request_task)
         thread.start()
+
 
     def send_message(self, text, parse_mode='HTML', disable_web_page_preview=True):
         """Sends a message to Telegram."""
@@ -108,6 +122,61 @@ class TelegramBot:
     def send_shutdown_notification(self):
         """Sends a shutdown notification."""
         return self.send_message("🛑 <b>СИСТЕМА ОСТАНОВЛЕНА</b>\n\nПриложение завершает работу.")
+
+    def send_support_ticket(self, ticket, user):
+        """Sends a support ticket notification."""
+        if not ticket or not user:
+             return False
+
+        try:
+            status_map = {'new': 'Новая', 'viewed': 'Просмотрена', 'in_progress': 'В работе', 'completed': 'Выполнена'}
+            type_map = {'error': 'Ошибка', 'suggestion': 'Предложение', 'request': 'Запрос', 'other': 'Другое'}
+            
+            t_type = type_map.get(ticket.type, ticket.type)
+            
+            text = f"""
+🛠 <b>ТЕХ. ПОДДЕРЖКА</b>
+
+👤 <b>Пользователь:</b> {user.username} (ID: {user.id})
+🏢 <b>Организация:</b> {user.organization.name if user.organization else 'Нет'}
+📌 <b>Тип:</b> {t_type}
+📝 <b>Сообщение:</b>
+{ticket.message}
+
+📅 <b>Дата:</b> {ticket.created_at.strftime('%d.%m.%Y %H:%M')}
+            """
+            
+            if ticket.screenshot_filename:
+                # Send photo
+                url = f"{self.base_url}/sendPhoto"
+                import os
+                
+                # Check absolute path
+                file_path = None
+                if os.path.isabs(ticket.screenshot_filename):
+                     file_path = ticket.screenshot_filename
+                else:
+                     # Assume relative to app static? Or uploads?
+                     # We will save uploads to `app/static/uploads/support/...`
+                     file_path = os.path.join(current_app.static_folder, ticket.screenshot_filename)
+                
+                if os.path.exists(file_path):
+                     payload = {
+                         'chat_id': self.chat_id,
+                         'caption': text,
+                         'parse_mode': 'HTML'
+                     }
+                     files = {'photo': file_path}
+                     self._send_async(url, data=payload, files=files)
+                     return True
+            
+            # Fallback to text if no photo or photo not found
+            return self.send_message(text)
+            
+        except Exception as e:
+            logger.error(f"Error sending support ticket: {e}")
+            return False
+
 
 # Global instance
 telegram_bot = TelegramBot()

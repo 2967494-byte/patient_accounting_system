@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, abort, current_app, send_file
 from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
-from app.models import Location, Organization, Doctor, Service, Appointment, AdditionalService, Clinic, PaymentMethod, GlobalSetting, MedicalCertificate, NotificationStatus
+from app.models import Location, Organization, Doctor, Service, Appointment, AdditionalService, Clinic, PaymentMethod, GlobalSetting, MedicalCertificate, NotificationStatus, SupportTicket
 from app import db
 from app.extensions import csrf
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -1185,3 +1185,50 @@ def read_notification(status_id):
         db.session.commit()
         return jsonify({'success': True})
     return jsonify({'success': False}), 403
+@main.route('/support/create', methods=['POST'])
+@login_required
+def support_create():
+    try:
+        data = request.form
+        t_type = data.get('type')
+        message = data.get('message')
+        
+        if not t_type or not message:
+            return jsonify({'success': False, 'error': 'Заполните все поля'}), 400
+            
+        screenshot_filename = None
+        if 'screenshot' in request.files:
+            file = request.files['screenshot']
+            if file and file.filename != '':
+                import uuid
+                ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+                unique_name = f"support_{uuid.uuid4()}.{ext}"
+                
+                # Ensure directory exists
+                upload_dir = os.path.join(current_app.static_folder, 'uploads', 'support')
+                os.makedirs(upload_dir, exist_ok=True)
+                
+                # Save path relative to static
+                screenshot_filename = f"uploads/support/{unique_name}"
+                file.save(os.path.join(current_app.static_folder, screenshot_filename))
+        
+        ticket = SupportTicket(
+            user_id=current_user.id,
+            type=t_type,
+            message=message,
+            screenshot_filename=screenshot_filename,
+            status='new'
+        )
+        
+        db.session.add(ticket)
+        db.session.commit()
+        
+        # Notify Telegram
+        from app.telegram_bot import telegram_bot
+        telegram_bot.send_support_ticket(ticket, current_user)
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        print(f"Error creating support ticket: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -648,6 +648,7 @@ class RemoteVM(db.Model):
             'ip_address': self.ip_address
         }
 
+
 class VMSession(db.Model):
     __tablename__ = 'vm_sessions'
     
@@ -662,4 +663,29 @@ class VMSession(db.Model):
     user = db.relationship('User', backref='vm_sessions')
     vm = db.relationship('RemoteVM', backref='active_sessions')
     appointment = db.relationship('Appointment')
+
+class SupportTicket(db.Model):
+    __tablename__ = 'support_tickets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False) # 'error', 'suggestion', 'request', 'other'
+    message = db.Column(db.Text, nullable=False)
+    screenshot_filename = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(20), default='new') # 'new', 'viewed', 'in_progress', 'completed'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='support_tickets')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user': self.user.username,
+            'type': self.type,
+            'message': self.message,
+            'screenshot': self.screenshot_filename,
+            'status': self.status,
+            'created_at': self.created_at.strftime('%d.%m.%Y %H:%M')
+        }
+
 

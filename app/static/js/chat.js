@@ -188,12 +188,42 @@ function renderMessages(messages, role) {
             div.style.marginRight = 'auto'; // Float left
         }
 
+        let statusHtml = '';
+        if (isMe) {
+            // Determine check color: purple #9333ea if read, gray if not
+            const checkColor = msg.is_read ? '#9333ea' : '#9ca3af';
+
+            // Double check SVG
+            statusHtml = `
+                    <span style="display: inline-flex; margin-left: 4px; vertical-align: middle;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 12.6111L8.92308 17.5L20 6.5" stroke="${checkColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M4 12.6111L8.92308 17.5L20 6.5" stroke="${checkColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(-5, 0)" opacity="${msg.is_read ? '1' : '0'}" /> 
+                        </svg>
+                    </span>
+                `;
+
+            // Better SVG for double check logic
+            statusHtml = `
+                    <span style="display: inline-flex; margin-left: 4px; vertical-align: middle;" title="${msg.is_read ? 'Прочитано' : 'Доставлено'}">
+                        <svg width="16" height="11" viewBox="0 0 16 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- First check -->
+                            <path d="M1 6L4.5 9.5L11 3" stroke="${checkColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <!-- Second check (visible overlapping) -->
+                            <path d="M5 6L8.5 9.5L15 3" stroke="${checkColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                `;
+        }
+
         div.innerHTML = `
             <div>${msg.body}</div>
-            <div style="font-size: 10px; color: #999; text-align: right; margin-top: 4px;">
+            <div style="font-size: 10px; color: #999; text-align: right; margin-top: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
                 ${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                ${statusHtml}
             </div>
         `;
+
 
         container.appendChild(div);
     });

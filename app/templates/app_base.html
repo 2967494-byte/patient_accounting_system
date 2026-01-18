@@ -291,6 +291,12 @@
                     <img src="{{ url_for('static', filename='uploads/logout_icon.svg') }}" alt="Выйти"
                         style="width: 20px; height: 20px;">
                 </a>
+                <!-- Support Icon -->
+                <button onclick="openSupportModal()" class="btn-icon" title="Техподдержка"
+                    style="margin-left: 1rem; border: none; background: none; cursor: pointer;">
+                    <img src="{{ url_for('static', filename='support_icon.png') }}" alt="Support"
+                        style="width: 24px; height: 24px;">
+                </button>
             </div>
         </header>
 
@@ -343,7 +349,8 @@
 
     <script>
         const csrfToken = "{{ csrf_token() }}";
-        const currentCenterId = {{ current_center_id | tojson }};
+        const currentCenterId = {{ current_center_id | default (none) | tojson }};
+
     </script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ range(1, 10000) | random }}"></script>
     {% block scripts %}{% endblock %}
@@ -689,6 +696,209 @@
     {% endif %}
     {% endif %}
     -->
+    <!-- Support Modal -->
+    <div id="support-modal" class="modal hidden" style="z-index: 10000;">
+        <div class="modal-content" style="width: 500px; max-width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Техническая поддержка</h2>
+                <button onclick="closeSupportModal()"
+                    style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+
+            <form id="support-form">
+                <div class="mb-4" style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Тип обращения</label>
+                    <select name="type" required
+                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
+                        <option value="error">Ошибка</option>
+                        <option value="suggestion">Предложение</option>
+                        <option value="request">Запрос</option>
+                        <option value="other">Другое</option>
+                    </select>
+                </div>
+
+                <div class="mb-4" style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Описание</label>
+                    <textarea name="message" rows="4" required
+                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem;"
+                        placeholder="Опишите проблему или предложение..."></textarea>
+                </div>
+
+                <div class="mb-4" style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Скриншот или файл
+                        (Ctrl+V)</label>
+                    <div id="paste-area"
+                        style="border: 2px dashed #d1d5db; padding: 1rem; text-align: center; border-radius: 0.5rem; cursor: pointer; position: relative;"
+                        tabindex="0">
+                        <p style="margin: 0; color: #6b7280;">Нажмите здесь и вставьте скриншот (Ctrl+V) или кликните
+                            для выбора</p>
+                        <input type="file" name="screenshot" id="support-file-input" style="display: none;"
+                            accept="image/*">
+                        <img id="preview-image"
+                            style="max-width: 100%; max-height: 200px; margin-top: 1rem; display: none; border-radius: 0.5rem;">
+                        <button type="button" id="clear-image"
+                            style="display: none; position: absolute; top: 5px; right: 5px; background: red; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;">&times;</button>
+                    </div>
+
+                    <div
+                        style="margin-top: 0.75rem; padding: 0.75rem; background: #f9fafb; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+                        <div style="font-weight: 500; font-size: 0.9rem; margin-bottom: 0.5rem; color: #374151;">Как
+                            сделать скриншот:</div>
+                        <div
+                            style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: #4b5563;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z">
+                                    </path>
+                                    <path d="M9 22V2"></path>
+                                    <path d="M15 22V2"></path>
+                                </svg>
+                                <span>Windows: <kbd
+                                        style="background: white; border: 1px solid #d1d5db; padding: 0 4px; border-radius: 3px;">Win</kbd>
+                                    + <kbd
+                                        style="background: white; border: 1px solid #d1d5db; padding: 0 4px; border-radius: 3px;">Shift</kbd>
+                                    + <kbd
+                                        style="background: white; border: 1px solid #d1d5db; padding: 0 4px; border-radius: 3px;">S</kbd></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M12 2a10 10 0 1 0 10 10 10 10 0 0 0-10-10zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z">
+                                    </path>
+                                </svg>
+                                <span>MacOS: <kbd
+                                        style="background: white; border: 1px solid #d1d5db; padding: 0 4px; border-radius: 3px;">Cmd</kbd>
+                                    + <kbd
+                                        style="background: white; border: 1px solid #d1d5db; padding: 0 4px; border-radius: 3px;">Shift</kbd>
+                                    + <kbd
+                                        style="background: white; border: 1px solid #d1d5db; padding: 0 4px; border-radius: 3px;">4</kbd></span>
+                            </div>
+                            <div style="margin-top: 4px; font-size: 0.8em; color: #a0a0a0;">После снимка кликните поле
+                                выше и нажмите Ctrl+V</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit"
+                    style="width: 100%; padding: 0.75rem; background: #9333ea; color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">Отправить</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openSupportModal() {
+            document.getElementById('support-modal').classList.remove('hidden');
+            document.getElementById('support-modal').style.display = 'flex';
+        }
+
+        function closeSupportModal() {
+            document.getElementById('support-modal').classList.add('hidden');
+            document.getElementById('support-modal').style.display = 'none';
+        }
+
+        const pasteArea = document.getElementById('paste-area');
+        const fileInput = document.getElementById('support-file-input');
+        const previewImg = document.getElementById('preview-image');
+        const clearBtn = document.getElementById('clear-image');
+        let pastedFile = null;
+
+        pasteArea.addEventListener('click', (e) => {
+            if (e.target !== clearBtn) fileInput.click();
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files && fileInput.files[0]) {
+                showPreview(fileInput.files[0]);
+                pastedFile = null; // Clear pasted if manual selected
+            }
+        });
+
+        // Paste handler
+        document.addEventListener('paste', (e) => {
+            // Only if modal is open
+            if (document.getElementById('support-modal').classList.contains('hidden') && document.getElementById('support-modal').style.display !== 'flex') return;
+
+            if (e.clipboardData && e.clipboardData.items) {
+                for (let i = 0; i < e.clipboardData.items.length; i++) {
+                    const item = e.clipboardData.items[i];
+                    if (item.type.indexOf('image') !== -1) {
+                        const blob = item.getAsFile();
+                        pastedFile = blob;
+                        showPreview(blob);
+                        // Clear manual input
+                        fileInput.value = '';
+                        break;
+                    }
+                }
+            }
+        });
+
+        function showPreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                previewImg.style.display = 'block';
+                clearBtn.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            previewImg.src = '';
+            previewImg.style.display = 'none';
+            clearBtn.style.display = 'none';
+            fileInput.value = '';
+            pastedFile = null;
+        });
+
+        document.getElementById('support-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            if (pastedFile) {
+                formData.set('screenshot', pastedFile, 'screenshot.png');
+            }
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Отправка...';
+
+            try {
+                const res = await fetch('/support/create', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': "{{ csrf_token() }}"
+                    },
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('Ваше сообщение отправлено!');
+                    closeSupportModal();
+                    e.target.reset();
+                    clearBtn.click();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            } catch (err) {
+                alert('Ошибка отправки: ' + err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Отправить';
+            }
+        });
+
+        // Close on outside click
+        document.getElementById('support-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'support-modal') closeSupportModal();
+        });
+    </script>
 </body>
 
 </html>

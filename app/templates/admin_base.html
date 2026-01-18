@@ -142,6 +142,9 @@
                     class="nav-link {% if request.endpoint == 'admin.notifications' %}active{% endif %}">Уведомления</a>
                 <a href="{{ url_for('admin.monitoring') }}"
                     class="nav-link {% if request.endpoint == 'admin.monitoring' %}active{% endif %}">Мониторинг</a>
+                <a href="{{ url_for('admin.support') }}"
+                    class="nav-link {% if request.endpoint == 'admin.support' %}active{% endif %}">Тех. поддержка</a>
+
                 <a href="{{ url_for('admin.reports_bonuses_config_page') }}"
                     class="nav-link {% if request.endpoint == 'admin.reports_bonuses_config_page' %}active{% endif %}">Бонусы</a>
                 <span style="border-left: 1px solid rgba(255,255,255,0.2); margin: 0 0.5rem; height: auto;"></span>
