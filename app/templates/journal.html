@@ -1182,7 +1182,7 @@
         // date change logic is inline
     });
 
-    const CURRENT_CENTER_ID = "{{ current_center_id }}";
+    const CURRENT_CENTER_ID = {{ current_center_id | tojson }};
 
     function updateRowNumbers() {
         const rows = document.querySelectorAll('#journal-body tr');
@@ -1402,7 +1402,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         let centerId = urlParams.get('center_id');
         if (!centerId) centerId = CURRENT_CENTER_ID;
-        if (centerId && centerId !== 'None') commonData['center_id'] = centerId;
+        if (centerId) commonData['center_id'] = centerId;
 
         // Time: If editing, keep original? Modal has no Time field.
         // If New, use current time.

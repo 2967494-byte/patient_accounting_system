@@ -1159,14 +1159,17 @@ def delete_certificate(cert_id):
     """Delete a generated certificate"""
     cert = MedicalCertificate.query.get_or_404(cert_id)
     
-    # Delete file if exists
+    # Delete file(s) if exists
     if cert.filename:
-        filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', cert.filename)
-        if os.path.exists(filepath):
-            try:
-                os.remove(filepath)
-            except Exception as e:
-                print(f"[WARN] Could not delete cert file: {e}")
+        filenames = cert.filename.split('|')
+        for fname in filenames:
+            if not fname: continue
+            filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', fname)
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except Exception as e:
+                    print(f"[WARN] Could not delete cert file {fname}: {e}")
     
     db.session.delete(cert)
     db.session.commit()

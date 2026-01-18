@@ -2,186 +2,7 @@
 
 {% block center_nav %}{% endblock %}
 
-{% block content %}
-<div class="stamp-tool-container">
-    <div class="page-header">
-        <h2>🛠️ Инструмент создания справок</h2>
-        <p class="subtitle">Выберите пациента и заполните данные для справки (Форма КНД 1151156)</p>
-    </div>
-
-    <!-- Top Search Block (Full Width) -->
-    <!-- Top Search Block (Full Width) -->
-    <div class="search-section">
-        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-            <!-- Year fixed width -->
-            <div style="width: 120px;">
-                <label class="form-label">Год</label>
-                <select id="filter-year" class="form-control" onchange="runSearch()">
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                </select>
-            </div>
-            <!-- Search flexible -->
-            <div style="flex: 1; position: relative;">
-                <label class="form-label">Поиск пациента</label>
-                <input type="text" id="patient-search-input" class="form-control" placeholder="Начните вводить ФИО..."
-                    autocomplete="off" oninput="debounceSearch()" style="padding-left: 35px;">
-                <div style="position: absolute; left: 10px; top: 32px; color: #9ca3af;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                </div>
-                <button class="btn-clear" onclick="clearSearchInput()"
-                    style="display:none; position:absolute; right:10px; top:32px;">✕</button>
-            </div>
-        </div>
-
-        <!-- Results Table Container -->
-        <div id="search-results-container" style="display:none; border-top: 1px solid #f3f4f6; padding-top: 1rem;">
-            <table class="results-table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                <thead style="background: #f9fafb;">
-                    <tr>
-                        <th style="padding: 10px; width: 40px;"><input type="checkbox" onchange="toggleAll(this)"></th>
-                        <th style="padding: 10px;">Дата</th>
-                        <th style="padding: 10px;">ФИО</th>
-                        <th style="padding: 10px;">Центр</th>
-                        <th style="padding: 10px;">Услуга</th>
-                        <th style="padding: 10px; text-align: right;">Сумма</th>
-                    </tr>
-                </thead>
-                <tbody id="results-tbody"></tbody>
-            </table>
-
-            <!-- Summary Footer in Search Block -->
-            <div id="selection-summary"
-                style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #e5e7eb; text-align: right;">
-                <span style="color: #6b7280; margin-right: 10px;">Итого к оплате:</span>
-                <span id="total-amount" style="font-size: 1.25rem; font-weight: 700; color: #059669;">0 ₽</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="main-grid">
-        <!-- Left: Input Form -->
-        <div class="form-section">
-
-
-
-
-            <div class="form-group">
-                <label class="form-label">Форма справки:</label>
-                <select id="form-select" class="form-control" onchange="togglePayerFields()">
-                    <option value="knd1151156">Форма КНД 1151156 (Пациент = Плательщик)</option>
-                    <option value="knd1151156_op">Форма КНД 1151156 ОП (Иной плательщик)</option>
-                </select>
-            </div>
-
-
-
-            <!-- Patient Data Block -->
-            <div class="data-block patient-block">
-                <div class="block-header">Данные пациента</div>
-
-                <div id="patient-data" class="patient-card" style="display: none;">
-                    <div class="patient-info">
-                        <span id="display-name" class="patient-name"></span>
-                        <span class="patient-amount"><span id="display-amount"></span> ₽</span>
-                    </div>
-                    <small id="display-date" class="patient-date"></small>
-                </div>
-
-                <div class="inputs-grid">
-                    <div class="form-group full-width">
-                        <label class="form-label">ИНН:</label>
-                        <input type="text" id="inn" class="form-control inn-field" placeholder="12 цифр" maxlength="12"
-                            inputmode="numeric">
-                    </div>
-                    <div class="form-group full-width">
-                        <label class="form-label">Дата рождения:</label>
-                        <input type="date" id="birth-date" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Серия:</label>
-                        <input type="text" id="doc-series" class="form-control" placeholder="4 цифры" maxlength="4"
-                            inputmode="numeric">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Номер:</label>
-                        <input type="text" id="doc-number" class="form-control" placeholder="6 цифр" maxlength="6"
-                            inputmode="numeric">
-                    </div>
-                    <div class="form-group full-width">
-                        <label class="form-label">Дата выдачи паспорта:</label>
-                        <input type="date" id="doc-issue-date" class="form-control">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Payer Data Block -->
-            <div id="payer-block" class="data-block payer-block block-disabled">
-                <div class="block-header">Данные плательщика</div>
-                <div class="inputs-grid">
-                    <div class="form-group full-width">
-                        <label class="form-label">ФИО Плательщика:</label>
-                        <input type="text" id="payer-fio" class="form-control" placeholder="Иванов Иван Иванович"
-                            disabled>
-                    </div>
-                    <div class="form-group full-width">
-                        <label class="form-label">ИНН:</label>
-                        <input type="text" id="payer-inn" class="form-control inn-field" placeholder="12 цифр"
-                            maxlength="12" inputmode="numeric" disabled>
-                    </div>
-                    <div class="form-group full-width">
-                        <label class="form-label">Дата рождения:</label>
-                        <input type="date" id="payer-birth-date" class="form-control" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Серия:</label>
-                        <input type="text" id="payer-doc-series" class="form-control" placeholder="4 цифры"
-                            maxlength="4" inputmode="numeric" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Номер:</label>
-                        <input type="text" id="payer-doc-number" class="form-control" placeholder="6 цифр" maxlength="6"
-                            inputmode="numeric" disabled>
-                    </div>
-                    <div class="form-group full-width">
-                        <label class="form-label">Дата выдачи паспорта:</label>
-                        <input type="date" id="payer-doc-issue-date" class="form-control" disabled>
-                    </div>
-                </div>
-            </div>
-
-            <button onclick="openEditor()" class="btn-primary">
-                ✍️ Открыть редактор
-            </button>
-        </div>
-
-        <!-- Right: Recent Certificates Table -->
-        <div class="certificates-section">
-            <h4>Последние справки</h4>
-            <div class="certificates-scroll-container">
-                <table class="certificates-table">
-                    <thead style="position: sticky; top: 0; background: white; z-index: 1;">
-                        <tr>
-                            <th>ФИО</th>
-                            <th>Сумма</th>
-                            <th>Дата</th>
-                            <th>Время</th>
-                            <th>До удаления</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="certificates-list"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% block scripts %}
 <script>
     // currentCenterId is already defined in app_base.html
     // Removed currentCenterId as it's global
@@ -428,7 +249,12 @@
         if (!confirm('Вы действительно хотите удалить эту справку?')) return;
 
         try {
-            const res = await fetch(`/stamp-tool/certificate/${id}/delete`, { method: 'POST' });
+            const res = await fetch(`/stamp-tool/certificate/${id}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            });
             const data = await res.json();
 
             if (data.success) {
@@ -443,6 +269,188 @@
 
     loadCertificates();
 </script>
+{% endblock %}
+
+{% block content %}
+<div class="stamp-tool-container">
+    <div class="page-header">
+        <h2>🛠️ Инструмент создания справок</h2>
+        <p class="subtitle">Выберите пациента и заполните данные для справки (Форма КНД 1151156)</p>
+    </div>
+
+    <!-- Top Search Block (Full Width) -->
+    <!-- Top Search Block (Full Width) -->
+    <div class="search-section">
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <!-- Year fixed width -->
+            <div style="width: 120px;">
+                <label class="form-label">Год</label>
+                <select id="filter-year" class="form-control" onchange="runSearch()">
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                </select>
+            </div>
+            <!-- Search flexible -->
+            <div style="flex: 1; position: relative;">
+                <label class="form-label">Поиск пациента</label>
+                <input type="text" id="patient-search-input" class="form-control" placeholder="Начните вводить ФИО..."
+                    autocomplete="off" oninput="debounceSearch()" style="padding-left: 35px;">
+                <div style="position: absolute; left: 10px; top: 32px; color: #9ca3af;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
+                <button class="btn-clear" onclick="clearSearchInput()"
+                    style="display:none; position:absolute; right:10px; top:32px;">✕</button>
+            </div>
+        </div>
+
+        <!-- Results Table Container -->
+        <div id="search-results-container" style="display:none; border-top: 1px solid #f3f4f6; padding-top: 1rem;">
+            <table class="results-table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead style="background: #f9fafb;">
+                    <tr>
+                        <th style="padding: 10px; width: 40px;"><input type="checkbox" onchange="toggleAll(this)"></th>
+                        <th style="padding: 10px;">Дата</th>
+                        <th style="padding: 10px;">ФИО</th>
+                        <th style="padding: 10px;">Центр</th>
+                        <th style="padding: 10px;">Услуга</th>
+                        <th style="padding: 10px; text-align: right;">Сумма</th>
+                    </tr>
+                </thead>
+                <tbody id="results-tbody"></tbody>
+            </table>
+
+            <!-- Summary Footer in Search Block -->
+            <div id="selection-summary"
+                style="display:none; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #e5e7eb; text-align: right;">
+                <span style="color: #6b7280; margin-right: 10px;">Итого к оплате:</span>
+                <span id="total-amount" style="font-size: 1.25rem; font-weight: 700; color: #059669;">0 ₽</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <!-- Left: Input Form -->
+        <div class="form-section">
+
+
+
+
+            <div class="form-group">
+                <label class="form-label">Форма справки:</label>
+                <select id="form-select" class="form-control" onchange="togglePayerFields()">
+                    <option value="knd1151156">Форма КНД 1151156 (Пациент = Плательщик)</option>
+                    <option value="knd1151156_op">Форма КНД 1151156 ОП (Иной плательщик)</option>
+                </select>
+            </div>
+
+
+
+            <!-- Patient Data Block -->
+            <div class="data-block patient-block">
+                <div class="block-header">Данные пациента</div>
+
+                <div id="patient-data" class="patient-card" style="display: none;">
+                    <div class="patient-info">
+                        <span id="display-name" class="patient-name"></span>
+                        <span class="patient-amount"><span id="display-amount"></span> ₽</span>
+                    </div>
+                    <small id="display-date" class="patient-date"></small>
+                </div>
+
+                <div class="inputs-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label">ИНН:</label>
+                        <input type="text" id="inn" class="form-control inn-field" placeholder="12 цифр" maxlength="12"
+                            inputmode="numeric">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Дата рождения:</label>
+                        <input type="date" id="birth-date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Серия:</label>
+                        <input type="text" id="doc-series" class="form-control" placeholder="4 цифры" maxlength="4"
+                            inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Номер:</label>
+                        <input type="text" id="doc-number" class="form-control" placeholder="6 цифр" maxlength="6"
+                            inputmode="numeric">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Дата выдачи паспорта:</label>
+                        <input type="date" id="doc-issue-date" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payer Data Block -->
+            <div id="payer-block" class="data-block payer-block block-disabled">
+                <div class="block-header">Данные плательщика</div>
+                <div class="inputs-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label">ФИО Плательщика:</label>
+                        <input type="text" id="payer-fio" class="form-control" placeholder="Иванов Иван Иванович"
+                            disabled>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">ИНН:</label>
+                        <input type="text" id="payer-inn" class="form-control inn-field" placeholder="12 цифр"
+                            maxlength="12" inputmode="numeric" disabled>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Дата рождения:</label>
+                        <input type="date" id="payer-birth-date" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Серия:</label>
+                        <input type="text" id="payer-doc-series" class="form-control" placeholder="4 цифры"
+                            maxlength="4" inputmode="numeric" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Номер:</label>
+                        <input type="text" id="payer-doc-number" class="form-control" placeholder="6 цифр" maxlength="6"
+                            inputmode="numeric" disabled>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Дата выдачи паспорта:</label>
+                        <input type="date" id="payer-doc-issue-date" class="form-control" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="openEditor()" class="btn-primary">
+                ✍️ Открыть редактор
+            </button>
+        </div>
+
+        <!-- Right: Recent Certificates Table -->
+        <div class="certificates-section">
+            <h4>Последние справки</h4>
+            <div class="certificates-scroll-container">
+                <table class="certificates-table">
+                    <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                        <tr>
+                            <th>ФИО</th>
+                            <th>Сумма</th>
+                            <th>Дата</th>
+                            <th>Время</th>
+                            <th>До удаления</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="certificates-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <style>
     .stamp-tool-container {

@@ -90,7 +90,7 @@
 
 {% block scripts %}
 <script>
-    const initialAppointments = {{ initial_appointments | safe }};
+    const initialAppointments = {{ initial_appointments | safe }} || [];
     const currentCenterId = {{ current_center_id | tojson }};
     window.initialAppointments = initialAppointments;
     window.currentCenterId = currentCenterId;
