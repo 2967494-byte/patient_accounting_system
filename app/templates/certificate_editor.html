@@ -25,8 +25,7 @@
         <!-- Page 1 -->
         <div id="page-1" class="cert-page"
             style="position: relative; width: 1121px; height: 1585px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); flex-shrink: 0;">
-            <img src="{{ url_for('static', filename='uploads/certificate_bg.png') }}"
-                style="width: 100%; height: 100%; pointer-events: none;">
+            <img src="{{ bg_url }}" style="width: 100%; height: 100%; pointer-events: none;">
             <div id="overlay-layer-1" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
             <div style="position: absolute; top: 10px; left: -120px; font-weight: bold; color: #6b7280;">Страница 1
             </div>
@@ -35,8 +34,7 @@
         <!-- Page 2 (Hidden by default, shown for OP) -->
         <div id="page-2" class="cert-page"
             style="display: none; position: relative; width: 1121px; height: 1585px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); flex-shrink: 0;">
-            <img src="{{ url_for('static', filename='uploads/certificate_bg.png') }}"
-                style="width: 100%; height: 100%; pointer-events: none;">
+            <img src="{{ bg_url_p2 or bg_url }}" style="width: 100%; height: 100%; pointer-events: none;">
             <div id="overlay-layer-2" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
             <div style="position: absolute; top: 10px; left: -120px; font-weight: bold; color: #6b7280;">Страница 2
             </div>
@@ -211,11 +209,22 @@
                 if (f.id === 'i_month') newVal = patientData.i_month;
                 if (f.id === 'i_year') newVal = patientData.i_year;
 
-                // Adjust ID to be unique
-                return { ...f, id: f.id + '_p2', val: newVal, page: 2 };
+                // Adjust ID to be unique and lift by 358px (was 360, moved down 2)
+                return { ...f, id: f.id + '_p2', val: newVal, page: 2, startY: f.startY - 358 };
             });
 
-            activeFields = [...activeFields, ...page2Fields];
+            // Add specific bottom date fields and stamp for OP form
+            const p2ExtraFields = [
+                { id: 'c_day_bottom', val: patientData.c_day, startX: 639, type: 'grid', count: 2, spacing: 19.7, startY: 1534.5 },
+                { id: 'c_dot1', val: '.', startX: 674.4, type: 'grid', count: 1, spacing: 19.7, startY: 1534.5 },
+                { id: 'c_month_bottom', val: patientData.c_month, startX: 692.1, type: 'grid', count: 2, spacing: 19.7, startY: 1534.5 },
+                { id: 'c_dot2', val: '.', startX: 727.5, type: 'grid', count: 1, spacing: 19.7, startY: 1534.5 },
+                { id: 'c_year_bottom', val: patientData.c_year, startX: 745.2, type: 'grid', count: 4, spacing: 19.7, startY: 1534.5 },
+                // Stamp centered on Page 2
+                { id: 'stamp_p2', url: patientData.stamp_url, startX: 323, startY: 1340, width: 264, type: 'image', page: 2 }
+            ].map(f => ({ ...f, page: 2 }));
+
+            activeFields = [...activeFields, ...page2Fields, ...p2ExtraFields];
         }
 
         const globalX = parseInt(localStorage.getItem('cert_x') || '0');
@@ -266,8 +275,9 @@
                 img.style.pointerEvents = 'none';
                 img.style.opacity = '0.7';
 
-                // Images only on Page 1 usually (stamp)
+                // Handle Page 1 and Page 2 images
                 if (!f.page || f.page === 1) overlay1.appendChild(img);
+                else if (f.page === 2) overlay2.appendChild(img);
             }
         });
     }

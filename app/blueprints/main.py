@@ -900,11 +900,17 @@ def certificate_edit(appointment_id):
         'doc_info': payer_doc_info.strip()
     }
     
+    is_op = (q_form_type == 'knd1151156_op')
+    bg_filename = 'uploads/stampz_page-0001.jpg' if is_op else 'uploads/certificate_bg.png'
+    bg_filename_p2 = 'uploads/stampz_page-0002.jpg' if is_op else None
+
     return render_template('certificate_editor.html', 
                           appointment_id=appointment_id, 
                           patient_data=patient_data,
                           payer_data=payer_data,
-                          form_type=q_form_type)
+                          form_type=q_form_type,
+                          bg_url=url_for('static', filename=bg_filename),
+                          bg_url_p2=url_for('static', filename=bg_filename_p2) if bg_filename_p2 else None)
 
 
 @main.route('/stamp-tool/certificate/generate', methods=['POST'])
@@ -924,11 +930,18 @@ def generate_certificate():
         stamp_path = stamp_setting.value if stamp_setting else 'uploads/stamps/orbital_stamp.png'
         
         # Prepare render data for Playwright
+        is_op = (data.get('form_type') == 'knd1151156_op')
+        
+        bg_filename = 'uploads/stampz_page-0001.jpg' if is_op else 'uploads/certificate_bg.png'
+        bg_filename_p2 = 'uploads/stampz_page-0002.jpg' if is_op else None
+        
         render_data = {
             'form_data': form_data,
             'calibration': data.get('calibration', {'x': 0, 'y': 0}),
-            'bg_url': url_for('static', filename='uploads/certificate_bg.png', _external=True),
-            'stamp_url': url_for('static', filename=stamp_path, _external=True)
+            'bg_url': url_for('static', filename=bg_filename, _external=True),
+            'bg_url_p2': url_for('static', filename=bg_filename_p2, _external=True) if bg_filename_p2 else None,
+            'stamp_url': url_for('static', filename=stamp_path, _external=True),
+            'is_op': is_op
         }
         
         # We need a tiny template strictly for Playwright to "Photograph"

@@ -48,7 +48,7 @@
 <body>
     <img id="background" src="{{ bg_url }}">
     {% if form_type == 'knd1151156_op' %}
-    <img id="background-2" src="{{ bg_url }}"
+    <img id="background-2" src="{{ bg_url_p2 }}"
         style="position: absolute; top: 1585px; left: 0; width: 100%; height: 1585px;">
     {% endif %}
 
@@ -100,36 +100,44 @@
                 'rep_surname': { startX: 140, startY: 1150.5, spacing: 26.7 },
                 'rep_name': { startX: 140, startY: 1196.0, spacing: 26.7 },
                 'rep_patronymic': { startX: 140, startY: 1241.5, spacing: 26.7 },
+                // Page 2 Bottom Date (OP Form) - relative to Stamp_p2 (2925, W264) -> Date Y +2px (cumulative +12) = 3119.5, Spacing -3px (cumulative -7) = 19.7
+                // Continous Grid Layout: Day(639) -> Dot(674.4) -> Month(692.1) -> Dot(727.5) -> Year(745.2) (Shifted Right +10px)
+                'c_day_bottom': { startX: 639, startY: 3119.5, spacing: 19.7 },
+                'c_month_bottom': { startX: 692.1, startY: 3119.5, spacing: 19.7 },
+                'c_year_bottom': { startX: 745.2, startY: 3119.5, spacing: 19.7 },
             };
 
             const images = {
                 'stamp': { url: '{{ stamp_url }}', startX: 34, startY: 1210, width: 264 }
-            };
+                {% if form_type == 'knd1151156_op' %}
+                , 'stamp_p2': { url: '{{ stamp_url }}', startX: 323, startY: 2925, width: 264 }
+            {% endif %}
+        };
+        // Handle p2 suffix
+        let baseId = f_id;
+        let pageOffset = 0;
+        if (f_id.endsWith('_p2')) {
+            baseId = f_id.replace('_p2', '');
+            // User requested lifting text by 358px (was 360, moved down 2)
+            pageOffset = 1585 - 358;
+        }
 
-            // Handle p2 suffix
-            let baseId = f_id;
-            let pageOffset = 0;
-            if (f_id.endsWith('_p2')) {
-                baseId = f_id.replace('_p2', '');
-                pageOffset = 1585;
+        const c = config[baseId];
+        if (c) {
+            for (let i = 0; i < f_val.length; i++) {
+                const char = f_val[i];
+                if (!char || char === ' ') continue;
+
+                const div = document.createElement('div');
+                div.className = 'char-box';
+                div.style.left = (c.startX + (i * c.spacing) + globalX + off.x) + 'px';
+                div.style.top = (c.startY + globalY + off.y + pageOffset - 2) + 'px';
+                div.textContent = char;
+                document.body.appendChild(div);
             }
+        }
 
-            const c = config[baseId];
-            if (c) {
-                for (let i = 0; i < f_val.length; i++) {
-                    const char = f_val[i];
-                    if (!char || char === ' ') continue;
-
-                    const div = document.createElement('div');
-                    div.className = 'char-box';
-                    div.style.left = (c.startX + (i * c.spacing) + globalX + off.x) + 'px';
-                    div.style.top = (c.startY + globalY + off.y + pageOffset - 2) + 'px';
-                    div.textContent = char;
-                    document.body.appendChild(div);
-                }
-            }
-
-        })();
+        }) ();
     </script>
     {% endfor %}
 
@@ -141,22 +149,48 @@
 
             const images = {
                 'stamp': { url: '{{ stamp_url }}', startX: 34, startY: 1210, width: 264 }
-            };
+                {% if form_type == 'knd1151156_op' %}
+                , 'stamp_p2': { url: '{{ stamp_url }}', startX: 428, startY: 2985, width: 264 }
+            {% endif %}
+        };
 
-            Object.keys(images).forEach(id => {
-                const imgConfig = images[id];
-                if (imgConfig && imgConfig.url && imgConfig.url !== '') {
-                    const img = document.createElement('img');
-                    img.src = imgConfig.url;
-                    img.style.position = 'absolute';
-                    img.style.left = (imgConfig.startX + globalX) + 'px';
-                    img.style.top = (imgConfig.startY + globalY) + 'px';
-                    img.style.width = imgConfig.width + 'px';
-                    img.style.opacity = '1.0'; // Multiply works better with full opacity
-                    img.style.mixBlendMode = 'multiply';
-                    document.body.appendChild(img);
-                }
+        Object.keys(images).forEach(id => {
+            const imgConfig = images[id];
+            if (imgConfig && imgConfig.url && imgConfig.url !== '') {
+                const img = document.createElement('img');
+                img.src = imgConfig.url;
+                img.style.position = 'absolute';
+                img.style.left = (imgConfig.startX + globalX) + 'px';
+                img.style.top = (imgConfig.startY + globalY) + 'px';
+                img.style.width = imgConfig.width + 'px';
+                img.style.opacity = '1.0'; // Multiply works better with full opacity
+                img.style.mixBlendMode = 'multiply';
+                document.body.appendChild(img);
+            }
+        });
+        }) ();
+    </script>
+    <script>
+        (function () {
+            {% if form_type == 'knd1151156_op' %}
+            // Render Static Dots for Page 2 Date
+            const globalX = parseInt('{{ calibration.x | default(0) }}');
+            const globalY = parseInt('{{ calibration.y | default(0) }}');
+            const dots = [
+                { x: 674.4, y: 3119.5 },
+                { x: 727.5, y: 3119.5 }
+            ];
+            dots.forEach(d => {
+                const div = document.createElement('div');
+                div.className = 'char-box';
+                div.style.left = (d.x + globalX) + 'px';
+                // Note: top matches calculation in main loop: c.startY + globalY + off.y + pageOffset - 2. 
+                // Here off.y=0, pageOffset=0 (absolute Y). -2 adjustment preserved.
+                div.style.top = (d.y + globalY - 2) + 'px';
+                div.textContent = '.';
+                document.body.appendChild(div);
             });
+            {% endif %}
         })();
     </script>
 </body>

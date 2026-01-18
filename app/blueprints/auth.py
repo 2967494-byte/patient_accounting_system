@@ -38,8 +38,8 @@ def login():
             # Role-based redirection
             if user.role == 'doctor':
                 redirect_url = url_for('doctor.dashboard')
-            elif user.role == 'admin' or user.role == 'superadmin':
-                redirect_url = url_for('admin.users')  # Default admin page
+            elif user.role in ['admin', 'superadmin']:
+                redirect_url = url_for('main.dashboard')
             else:
                 redirect_url = url_for('main.index')
                 
