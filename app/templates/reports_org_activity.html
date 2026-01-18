@@ -96,8 +96,8 @@
             const totalUsers = data.length;
             const totalRecords = data.reduce((sum, item) => sum + (item.count || 0), 0);
 
-            document.getElementById('total-users-th').innerHTML = `Пользователь <span style="color:#374151; font-weight:600;">(Всего: ${totalUsers})</span>`;
-            document.getElementById('total-records-th').innerHTML = `Записей <span style="color:#374151; font-weight:600;">(Всего: ${totalRecords})</span>`;
+            document.getElementById('total-users-th').innerHTML = `Пользователь <span style="color:#6b7280; font-weight:400; font-size:0.8rem;">(Всего: ${totalUsers})</span>`;
+            document.getElementById('total-records-th').innerHTML = `Записей <span style="color:#6b7280; font-weight:400; font-size:0.8rem;">(Всего: ${totalRecords})</span>`;
 
             tbody.innerHTML = '';
             if (data.length === 0) {

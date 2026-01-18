@@ -9,7 +9,6 @@
             padding: 0;
             width: 1121px;
 
-            /* Matches editor scale */
             height: {
                     {
                     '3170px' if form_type=='knd1151156_op' else '1585px'
@@ -19,15 +18,15 @@
             ;
             overflow: hidden;
             filter: blur(0.15px);
-            /* Digital edges softener */
         }
 
-        #background {
+        #background,
+        #background-2 {
             position: absolute;
-            top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 1121px;
+            height: 1585px;
+            z-index: -1;
         }
 
         .char-box {
@@ -46,10 +45,9 @@
 </head>
 
 <body>
-    <img id="background" src="{{ bg_url }}">
+    <img id="background" src="{{ bg_url }}" style="top: 0;" loading="eager">
     {% if form_type == 'knd1151156_op' %}
-    <img id="background-2" src="{{ bg_url_p2 }}"
-        style="position: absolute; top: 1585px; left: 0; width: 100%; height: 1585px;">
+    <img id="background-2" src="{{ bg_url_p2 }}" style="top: 1585px;" loading="eager">
     {% endif %}
 
     {% for field, value in form_data.items() %}
@@ -143,10 +141,8 @@
 
     <script>
         (function () {
-            // Basic offsets from backend
             const globalX = parseInt('{{ calibration.x | default(0) }}');
             const globalY = parseInt('{{ calibration.y | default(0) }}');
-
             const images = {
                 'stamp': { url: '{{ stamp_url }}', startX: 34, startY: 1210, width: 264 }
                 {% if form_type == 'knd1151156_op' %}
@@ -163,7 +159,7 @@
                 img.style.left = (imgConfig.startX + globalX) + 'px';
                 img.style.top = (imgConfig.startY + globalY) + 'px';
                 img.style.width = imgConfig.width + 'px';
-                img.style.opacity = '1.0'; // Multiply works better with full opacity
+                img.style.opacity = '1.0';
                 img.style.mixBlendMode = 'multiply';
                 document.body.appendChild(img);
             }

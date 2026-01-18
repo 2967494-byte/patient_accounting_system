@@ -320,7 +320,7 @@
             const result = await response.json();
             if (result.success) {
                 alert('✅ Справка успешно сгенерирована!');
-                window.location.href = result.download_url;
+                window.location.href = '/stamp-tool';
             } else {
                 alert('Ошибка: ' + result.error);
             }

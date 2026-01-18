@@ -9,7 +9,30 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import extract
 import os
 import random
+import base64
 from PIL import Image, ImageEnhance, ImageFilter
+
+def to_base64_src(filename):
+    if not filename: return None
+    try:
+        # Static folder path correction
+        abspath = os.path.join(current_app.static_folder, filename)
+        if not os.path.exists(abspath):
+            # Try without leading slash if present
+            alt_path = os.path.join(current_app.static_folder, filename.lstrip('/'))
+            if os.path.exists(alt_path):
+                abspath = alt_path
+            else:
+                print(f"DEBUG: Base64 fail - {abspath} not found")
+                return None
+        with open(abspath, 'rb') as f:
+            b64data = base64.b64encode(f.read()).decode('utf-8')
+            ext = filename.split('.')[-1].lower()
+            mime = 'image/jpeg' if ext in ('jpg', 'jpeg') else 'image/png' if ext == 'png' else 'image/gif' if ext == 'gif' else 'application/octet-stream'
+            return f"data:{mime};base64,{b64data}"
+    except Exception as e:
+        print(f"DEBUG: Base64 error for {filename}: {e}")
+        return None
 
 main = Blueprint('main', __name__)
 
@@ -938,9 +961,9 @@ def generate_certificate():
         render_data = {
             'form_data': form_data,
             'calibration': data.get('calibration', {'x': 0, 'y': 0}),
-            'bg_url': url_for('static', filename=bg_filename, _external=True),
-            'bg_url_p2': url_for('static', filename=bg_filename_p2, _external=True) if bg_filename_p2 else None,
-            'stamp_url': url_for('static', filename=stamp_path, _external=True),
+            'bg_url': to_base64_src(bg_filename),
+            'bg_url_p2': to_base64_src(bg_filename_p2) if bg_filename_p2 else None,
+            'stamp_url': to_base64_src(stamp_path),
             'is_op': is_op
         }
         
@@ -964,21 +987,32 @@ def generate_certificate():
         
         is_op = (data.get('form_type') == 'knd1151156_op')
         
-        final_filename = f'cert_{safe_name}_{timestamp}.pdf' if is_op else f'cert_{safe_name}_{timestamp}.jpg'
+        final_filename = f'cert_{safe_name}_{timestamp}.jpg'
         final_filepath = os.path.join(cert_dir, final_filename)
         
         captured_images = []
 
+        import time
         with sync_playwright() as p:
+            print(f"DEBUG: Launching Playwright for form_type: {data.get('form_type')}")
             browser = p.chromium.launch()
             # Viewport height double if OP
             v_height = 3170 if is_op else 1585
             page = browser.new_page(viewport={'width': 1121, 'height': v_height})
-            page.goto('file:///' + temp_html_path.replace('\\', '/'))
+            
+            # Use absolute path for file://
+            file_url = 'file:///' + temp_html_path.replace('\\', '/')
+            print(f"DEBUG: Navigating to {file_url}")
+            page.goto(file_url)
+            
+            # Wait for network idle AND a small buffer for rendering
             page.wait_for_load_state('networkidle') 
+            print("DEBUG: Network idle reached, waiting 1.5s for rendering...")
+            time.sleep(1.5) 
             
             if is_op:
                 # Capture 2 pages separately
+                print("DEBUG: Capturing 2-page OP form...")
                 # Page 1
                 p1_path = os.path.join(temp_dir, f'p1_{timestamp}.jpg')
                 page.screenshot(path=p1_path, type='jpeg', quality=95, clip={'x':0, 'y':0, 'width':1121, 'height':1585})
@@ -990,6 +1024,7 @@ def generate_certificate():
                 captured_images.append(p2_path)
             else:
                 # Single capture
+                print("DEBUG: Capturing single-page form...")
                 p1_path = os.path.join(temp_dir, f'p1_{timestamp}.jpg')
                 page.screenshot(path=p1_path, type='jpeg', quality=95)
                 captured_images.append(p1_path)
@@ -1024,75 +1059,84 @@ def generate_certificate():
             except Exception as e:
                 print(f"Img process error: {e}")
 
-        # Save Final Metadata
-        # Save Final Metadata
-        new_cert = MedicalCertificate(
-            appointment_id=appointment.id,
-            patient_name=appointment.patient_name,
-            filename=final_filename,
-            created_by_id=current_user.id,
-            amount=appointment.cost or 0
-        )
-        db.session.add(new_cert)
-        db.session.commit()
-
-        # Save File
-        if is_op:
-            # Save as PDF
-            if processed_pil_images:
-                first_img = processed_pil_images[0]
-                rest_imgs = processed_pil_images[1:]
-                first_img.save(final_filepath, "PDF", resolution=100.0, save_all=True, append_images=rest_imgs)
-        else:
-            # Save as JPG
-            if processed_pil_images:
+        # Save File and Records
+        download_urls = []
+        if processed_pil_images:
+            if is_op and len(processed_pil_images) >= 2:
+                # Save both pages to disk
+                p1_filename = f'cert_{safe_name}_{timestamp}_p1.jpg'
+                p2_filename = f'cert_{safe_name}_{timestamp}_p2.jpg'
+                
+                processed_pil_images[0].save(os.path.join(cert_dir, p1_filename), "JPEG", quality=90)
+                processed_pil_images[1].save(os.path.join(cert_dir, p2_filename), "JPEG", quality=90)
+                
+                # Create SINGLE record with joined filenames
+                new_cert = MedicalCertificate(
+                    appointment_id=appointment.id,
+                    patient_name=appointment.patient_name,
+                    filename=f"{p1_filename}|{p2_filename}",
+                    created_by_id=current_user.id,
+                    amount=appointment.cost or 0
+                )
+                db.session.add(new_cert)
+                db.session.commit()
+                
+                download_urls = [
+                    url_for('static', filename=f'uploads/certificates/{p1_filename}'),
+                    url_for('static', filename=f'uploads/certificates/{p2_filename}')
+                ]
+                print(f"DEBUG: Saved 2 pages into one record: {new_cert.filename}")
+            else:
+                # Save single page
                 processed_pil_images[0].save(final_filepath, "JPEG", quality=90)
+                new_cert = MedicalCertificate(
+                    appointment_id=appointment.id,
+                    patient_name=appointment.patient_name,
+                    filename=final_filename,
+                    created_by_id=current_user.id,
+                    amount=appointment.cost or 0
+                )
+                db.session.add(new_cert)
+                db.session.commit()
+                download_urls = [url_for('static', filename=f'uploads/certificates/{final_filename}')]
+                print(f"DEBUG: Saved single-page JPEG to {final_filepath}")
             
         # Cleanup temp
         os.remove(temp_html_path)
         for p in captured_images:
              if os.path.exists(p): os.remove(p)
 
-        return jsonify({'success': True, 'download_url': url_for('static', filename=f'uploads/certificates/{final_filename}')})
+        return jsonify({
+            'success': True, 
+            'download_urls': download_urls,
+            'download_url': download_urls[0] if download_urls else None # for compatibility
+        })
         
     except Exception as e:
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-        
-        # Prepare record
-        cert = MedicalCertificate(
-            appointment_id=appointment_id,
-            patient_name=appointment.patient_name,
-            inn=form_data.get('p_inn', '').strip(),
-            amount=appointment.cost or 0,
-            filename=filename,
-            created_by_id=current_user.id
-        )
-        db.session.add(cert)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'download_url': url_for('main.download_certificate', cert_id=cert.id)
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
 
 
 @main.route('/stamp-tool/certificate/<int:cert_id>/download')
 @login_required
 def download_certificate(cert_id):
-    """Download generated certificate"""
+    """Download generated certificate (handles multi-page via page query param)"""
     cert = MedicalCertificate.query.get_or_404(cert_id)
-    filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', cert.filename)
+    page = request.args.get('page', 0, type=int)
+    
+    filenames = cert.filename.split('|')
+    if page >= len(filenames):
+        page = 0
+        
+    filename = filenames[page]
+    filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', filename)
     
     if not os.path.exists(filepath):
         abort(404)
     
-    return send_file(filepath, as_attachment=True, download_name=f'certificate_{cert.patient_name}_{cert.id}.jpg')
+    suffix = f"_p{page+1}" if len(filenames) > 1 else ""
+    return send_file(filepath, as_attachment=True, download_name=f'certificate_{cert.patient_name}{suffix}_{cert.id}.jpg')
 
 
 @main.route('/stamp-tool/certificates', methods=['GET'])

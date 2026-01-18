@@ -393,6 +393,18 @@
 
                     const delBtn = `<button class="btn-delete-cert" onclick="deleteCert(${cert.id})">🗑️</button>`;
 
+                    // Handle multi-page icons
+                    let downloadBtns = '';
+                    const filenames = (cert.filename || '').split('|');
+                    if (filenames.length > 1) {
+                        downloadBtns = `
+                            <a href="/stamp-tool/certificate/${cert.id}/download?page=0" target="_blank" title="Скачать стр. 1" style="font-size: 1.2rem; margin-right: 5px; color: #10b981;">📥<span style="font-size: 0.6rem; vertical-align: super; font-weight: bold;">1</span></a>
+                            <a href="/stamp-tool/certificate/${cert.id}/download?page=1" target="_blank" title="Скачать стр. 2" style="font-size: 1.2rem; color: #10b981;">📥<span style="font-size: 0.6rem; vertical-align: super; font-weight: bold;">2</span></a>
+                         `;
+                    } else {
+                        downloadBtns = `<a href="/stamp-tool/certificate/${cert.id}/download" target="_blank" title="Скачать" style="font-size: 1.2rem; color: #6366f1;">📥</a>`;
+                    }
+
                     tr.innerHTML = `
                         <td class="cell-name" title="${cert.patient_name || ''}">${cert.patient_name || 'Без имени'}</td>
                         <td class="cell-amount">${cert.amount} ₽</td>
@@ -400,7 +412,7 @@
                         <td class="cell-time">${timeStr}</td>
                         <td class="${daysClass}">${daysText}</td>
                         <td class="cell-action">
-                            <a href="/stamp-tool/certificate/${cert.id}/download" target="_blank">📥</a>
+                            ${downloadBtns}
                             ${delBtn}
                         </td>
                     `;
