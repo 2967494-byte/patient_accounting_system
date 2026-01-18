@@ -1025,10 +1025,13 @@ def generate_certificate():
                 print(f"Img process error: {e}")
 
         # Save Final Metadata
-        new_cert = Certificate(
+        # Save Final Metadata
+        new_cert = MedicalCertificate(
             appointment_id=appointment.id,
-            file_path=f'uploads/certificates/{final_filename}',
-            generated_by=current_user.id
+            patient_name=appointment.patient_name,
+            filename=final_filename,
+            created_by_id=current_user.id,
+            amount=appointment.cost or 0
         )
         db.session.add(new_cert)
         db.session.commit()

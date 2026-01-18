@@ -34,8 +34,8 @@
         <table id="org-report-table" style="width:100%; border-collapse: collapse; font-size: 0.9rem; display:none;">
             <thead>
                 <tr style="border-bottom: 2px solid #f3f4f6; text-align: left;">
-                    <th style="padding: 0.5rem; color: #6b7280;">Пользователь</th>
-                    <th style="padding: 0.5rem; color: #6b7280; text-align: right;">Записей</th>
+                    <th id="total-users-th" style="padding: 0.5rem; color: #6b7280;">Пользователь</th>
+                    <th id="total-records-th" style="padding: 0.5rem; color: #6b7280; text-align: right;">Записей</th>
                     <th style="padding: 0.5rem; color: #6b7280; text-align: right; width: 50px;"></th>
                 </tr>
             </thead>
@@ -91,6 +91,13 @@
 
             loading.style.display = 'none';
             table.style.display = 'table';
+
+            // Calculate Totals
+            const totalUsers = data.length;
+            const totalRecords = data.reduce((sum, item) => sum + (item.count || 0), 0);
+
+            document.getElementById('total-users-th').innerHTML = `Пользователь <span style="color:#374151; font-weight:600;">(Всего: ${totalUsers})</span>`;
+            document.getElementById('total-records-th').innerHTML = `Записей <span style="color:#374151; font-weight:600;">(Всего: ${totalRecords})</span>`;
 
             tbody.innerHTML = '';
             if (data.length === 0) {
