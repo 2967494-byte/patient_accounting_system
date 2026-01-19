@@ -4491,6 +4491,7 @@ def reports_bonuses():
         
     month_str = request.args.get('month')
     filter_type = request.args.get('filter_type', 'all') # all, with, without
+    search_query = request.args.get('search', '').strip()
     
     if not month_str:
         today = datetime.now()
@@ -4533,7 +4534,11 @@ def reports_bonuses():
          .outerjoin(Service, AppointmentService.service_id == Service.id)\
          .filter(Appointment.date >= start_date, Appointment.date < end_date)
          
-        # Apply Filter
+        # Apply Search Filter
+        if search_query:
+            query = query.filter(doctor_name_expr.ilike(f'%{search_query}%'))
+
+        # Apply Type Filter
         if filter_type == 'with':
             query = query.filter(Doctor.bonus_type != None)
         elif filter_type == 'without':
