@@ -1,0 +1,274 @@
+{% extends "reports_base.html" %}
+
+{% block report_content %}
+<div style="background: white; border-radius: 8px; padding: 1.5rem; border: 1px solid #e5e7eb;">
+    <!-- Controls -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
+        <!-- View Type Selector -->
+        <select id="viewType"
+            style="padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.9rem;">
+            <option value="doctors">Врачи</option>
+            <option value="clinics" disabled>Клиники</option>
+        </select>
+
+        <!-- Search (visible only for doctors) -->
+        <input type="text" id="doctorSearch" placeholder="Поиск по врачам..."
+            style="padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 6px; flex: 1; max-width: 300px; font-size: 0.9rem;">
+
+        <!-- Month controls -->
+        <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+            <button onclick="removeMonth()" id="removeMonthBtn" disabled
+                style="background: #ef4444; color: white; border: none; border-radius: 6px; width: 40px; height: 40px; cursor: pointer; font-size: 1.25rem; font-weight: bold; transition: all 0.2s;"
+                onmouseover="if(!this.disabled) this.style.background='#dc2626'"
+                onmouseout="this.style.background='#ef4444'">
+                −
+            </button>
+            <button onclick="addMonth()"
+                style="background: #9333ea; color: white; border: none; border-radius: 6px; width: 40px; height: 40px; cursor: pointer; font-size: 1.25rem; font-weight: bold; transition: all 0.2s;"
+                onmouseover="this.style.background='#7e22ce'" onmouseout="this.style.background='#9333ea'">
+                +
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x: auto;">
+        <table id="summaryTable" style="width: 100%; border-collapse: collapse; min-width: 600px;">
+            <thead>
+                <tr id="tableHeader" style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                    <th
+                        style="padding: 0.75rem; text-align: left; font-weight: 600; position: sticky; left: 0; background: #f9fafb; z-index: 1;">
+                        Врач</th>
+                    <!-- Month columns populated dynamically -->
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Rows populated dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" style="display: none; text-align: center; padding: 2rem; color: #6b7280;">
+        <div style="font-size: 1rem;">Загрузка...</div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="emptyState" style="display: none; text-align: center; padding: 3rem; color: #9ca3af;">
+        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</div>
+        <div>Нет данных для отображения</div>
+    </div>
+</div>
+
+<script>
+    let currentMonths = 1;
+    let currentData = null;
+    let sortColumn = null;
+    let sortDirection = 'asc';
+
+    // Debounce helper
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function showLoading() {
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('summaryTable').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+
+    function loadData() {
+        showLoading();
+        const search = document.getElementById('doctorSearch').value;
+        const url = `{{ url_for('admin.reports_summary_data') }}?months=${currentMonths}&search=${encodeURIComponent(search)}`;
+        console.log('Fetching from:', url);
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                console.log('API Response:', data);
+                console.log('Doctors count:', data.doctors ? data.doctors.length : 0);
+                hideLoading();
+                currentData = data;
+                renderTable(data);
+            })
+            .catch(err => {
+                hideLoading();
+                console.error('Error loading data:', err);
+                document.getElementById('emptyState').style.display = 'block';
+            });
+    }
+
+    function getComparisonColor(current, previous) {
+        if (previous === null || previous === undefined) return '';
+        if (current > previous) return '#d1fae5'; // Light green
+        if (current < previous) return '#fee2e2'; // Light red
+        return '';
+    }
+
+    function sortData(columnIndex) {
+        if (!currentData || !currentData.doctors) return;
+
+        // Toggle direction if same column, else default to ascending
+        if (sortColumn === columnIndex) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortColumn = columnIndex;
+            sortDirection = 'asc';
+        }
+
+        currentData.doctors.sort((a, b) => {
+            let valA, valB;
+
+            if (columnIndex === 0) {
+                // Doctor name - alphabetical
+                valA = a.name.toLowerCase();
+                valB = b.name.toLowerCase();
+            } else {
+                // Month column - numerical
+                const monthIndex = columnIndex - 1;
+                valA = a.months[monthIndex]?.count || 0;
+                valB = b.months[monthIndex]?.count || 0;
+            }
+
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        renderTable(currentData);
+    }
+
+    function renderTable(data) {
+        const tableHeader = document.getElementById('tableHeader');
+        const tableBody = document.getElementById('tableBody');
+        const table = document.getElementById('summaryTable');
+
+        // Check if we have data
+        if (!data.doctors || data.doctors.length === 0) {
+            table.style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
+
+        table.style.display = 'table';
+        document.getElementById('emptyState').style.display = 'none';
+
+        // Clear existing content
+        tableHeader.innerHTML = '';
+        tableBody.innerHTML = '';
+
+        // Doctor name header with sort
+        const docHeader = document.createElement('th');
+        docHeader.style.cssText = 'padding: 0.75rem; text-align: left; font-weight: 600; position: sticky; left: 0; background: #f9fafb; z-index: 1; white-space: nowrap; cursor: pointer; user-select: none;';
+        docHeader.innerHTML = `Врач ${sortColumn === 0 ? (sortDirection === 'asc' ? '↑' : '↓') : ''}`;
+        docHeader.onclick = () => sortData(0);
+        tableHeader.appendChild(docHeader);
+
+        // Render month columns in header with sort
+        data.months.forEach((monthLabel, idx) => {
+            const th = document.createElement('th');
+            th.style.cssText = 'padding: 0.75rem; text-align: center; font-weight: 600; white-space: nowrap; cursor: pointer; user-select: none;';
+            const columnIndex = idx + 1;
+            th.innerHTML = `${monthLabel} ${sortColumn === columnIndex ? (sortDirection === 'asc' ? '↑' : '↓') : ''}`;
+            th.onclick = () => sortData(columnIndex);
+            tableHeader.appendChild(th);
+        });
+
+        // Render doctor rows
+        data.doctors.forEach(doctor => {
+            const tr = document.createElement('tr');
+            tr.style.cssText = 'border-bottom: 1px solid #e5e7eb;';
+
+            // Doctor name cell
+            const nameCell = document.createElement('td');
+            nameCell.style.cssText = 'padding: 0.75rem 1rem; font-weight: 500; position: sticky; left: 0; background: white; z-index: 1;';
+            nameCell.textContent = doctor.name;
+            tr.appendChild(nameCell);
+
+            // Month count cells
+            doctor.months.forEach((month, idx) => {
+                const cell = document.createElement('td');
+                cell.style.cssText = 'padding: 0.75rem; text-align: center; font-weight: 600;';
+                cell.textContent = month.count;
+
+                // Apply color coding based on comparison with previous month
+                if (idx > 0) {
+                    const previousCount = doctor.months[idx - 1].count;
+                    const bgColor = getComparisonColor(month.count, previousCount);
+                    if (bgColor) {
+                        cell.style.backgroundColor = bgColor;
+                    }
+                }
+
+                tr.appendChild(cell);
+            });
+
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function addMonth() {
+        currentMonths++;
+        sortColumn = null; // Reset sort when adding months
+        loadData();
+        updateMonthButtons();
+    }
+
+    function removeMonth() {
+        if (currentMonths > 1) {
+            currentMonths--;
+            sortColumn = null; // Reset sort when removing months
+            loadData();
+            updateMonthButtons();
+        }
+    }
+
+    function updateMonthButtons() {
+        const removeBtn = document.getElementById('removeMonthBtn');
+        if (currentMonths <= 1) {
+            removeBtn.disabled = true;
+            removeBtn.style.opacity = '0.5';
+            removeBtn.style.cursor = 'not-allowed';
+        } else {
+            removeBtn.disabled = false;
+            removeBtn.style.opacity = '1';
+            removeBtn.style.cursor = 'pointer';
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        updateMonthButtons();
+    });
+
+    // Search with debounce
+    document.getElementById('doctorSearch').addEventListener('input', debounce(loadData, 300));
+</script>
+
+<style>
+    #summaryTable tr:hover td {
+        background: #f9fafb !important;
+    }
+
+    #summaryTable tr:hover td:first-child {
+        background: #f3f4f6 !important;
+    }
+
+    #summaryTable th:hover {
+        background: #f3f4f6 !important;
+    }
+</style>
+{% endblock %}

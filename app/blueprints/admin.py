@@ -4718,6 +4718,111 @@ def reports_bonuses_config_page():
     services_data = [{'id': s.id, 'name': s.name} for s in services]
     return render_template('reports_bonuses_config.html', services=services_data)
 
+
+@admin.route('/reports/summary')
+@login_required
+def reports_summary_page():
+    """Render summary report page"""
+    if current_user.role != 'superadmin':
+        flash('Доступ запрещен', 'danger')
+        return redirect(url_for('main.dashboard'))
+    return render_template('reports_summary.html')
+
+
+@admin.route('/reports/summary/data')
+@login_required
+def reports_summary_data():
+    """
+    Returns JSON with doctor patient counts by month
+    Query params:
+    - view_type: 'clinics' or 'doctors' (default: 'doctors')
+    - months: number of months to include (default: 1, current month)
+    - search: optional search term for doctor names
+    """
+    if current_user.role != 'superadmin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        view_type = request.args.get('view_type', 'doctors')
+        months = int(request.args.get('months', 1))
+        search = request.args.get('search', '').strip()
+        
+        # Russian month names
+        RUSSIAN_MONTHS = {
+            1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель',
+            5: 'Май', 6: 'Июнь', 7: 'Июль', 8: 'Август',
+            9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'
+        }
+        
+        # Generate list of month periods (current month + previous months)
+        today = date.today()
+        month_periods = []
+        for i in range(months):
+            # Calculate previous months using standard library
+            year = today.year
+            month = today.month - i
+            while month <= 0:
+                month += 12
+                year -= 1
+            
+            month_name = f"{RUSSIAN_MONTHS[month]} {year}"
+            
+            month_periods.append({
+                'year': year,
+                'month': month,
+                'label': month_name
+            })
+        
+        # Get all doctors (filtered by search if provided)
+        doctors_query = Doctor.query
+        if search:
+            doctors_query = doctors_query.filter(Doctor.name.ilike(f'%{search}%'))
+        doctors = doctors_query.order_by(Doctor.name).all()
+        
+        # Aggregate appointment counts by doctor and month
+        results = []
+        for doctor in doctors:
+            doctor_data = {
+                'id': doctor.id,
+                'name': doctor.name,
+                'months': []
+            }
+            
+            for period in month_periods:
+                # Count appointments for this doctor in this month
+                # PostgreSQL-compatible date filtering using extract
+                # Support both doctor_id (FK) and legacy doctor (string) field
+                from sqlalchemy import func, or_, extract
+                count = Appointment.query.filter(
+                    or_(
+                        Appointment.doctor_id == doctor.id,
+                        Appointment.doctor == doctor.name
+                    ),
+                    extract('year', Appointment.date) == period['year'],
+                    extract('month', Appointment.date) == period['month']
+                ).count()
+                
+                doctor_data['months'].append({
+                    'label': period['label'],
+                    'count': count
+                })
+            
+            results.append(doctor_data)
+        
+        return jsonify({
+            'doctors': results,
+            'months': [p['label'] for p in month_periods]
+        })
+    except Exception as e:
+        import traceback
+        error_details = {
+            'error': str(e),
+            'type': type(e).__name__,
+            'traceback': traceback.format_exc()
+        }
+        print("ERROR in reports_summary_data:", error_details)
+        return jsonify(error_details), 500
+
 @admin.route('/api/bonuses/config', methods=['GET', 'POST'])
 @login_required
 @csrf.exempt
