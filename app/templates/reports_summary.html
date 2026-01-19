@@ -186,6 +186,52 @@
             tableHeader.appendChild(th);
         });
 
+        // Calculate active doctors count for each month
+        const activeDoctorsCounts = data.months.map((month, idx) => {
+            return data.doctors.filter(doctor => doctor.months[idx]?.count > 0).length;
+        });
+
+        // Calculate total studies (patients) for each month
+        const totalStudies = data.months.map((month, idx) => {
+            return data.doctors.reduce((sum, doctor) => sum + (doctor.months[idx]?.count || 0), 0);
+        });
+
+        // Add active doctors row
+        const activeRow = document.createElement('tr');
+        activeRow.style.cssText = 'background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: 500;';
+
+        const activeLabel = document.createElement('td');
+        activeLabel.style.cssText = 'padding: 0.5rem 1rem; position: sticky; left: 0; background: #f9fafb; z-index: 1; color: #6b7280; font-size: 0.875rem;';
+        activeLabel.textContent = 'Активных врачей';
+        activeRow.appendChild(activeLabel);
+
+        activeDoctorsCounts.forEach(count => {
+            const cell = document.createElement('td');
+            cell.style.cssText = 'padding: 0.5rem; text-align: center; color: #6b7280; font-size: 0.875rem;';
+            cell.textContent = count;
+            activeRow.appendChild(cell);
+        });
+
+        tableBody.appendChild(activeRow);
+
+        // Add total studies row
+        const totalRow = document.createElement('tr');
+        totalRow.style.cssText = 'background: #f9fafb; border-bottom: 2px solid #e5e7eb; font-weight: 600;';
+
+        const totalLabel = document.createElement('td');
+        totalLabel.style.cssText = 'padding: 0.5rem 1rem; position: sticky; left: 0; background: #f9fafb; z-index: 1; color: #374151; font-size: 0.875rem;';
+        totalLabel.textContent = 'Исследований всего';
+        totalRow.appendChild(totalLabel);
+
+        totalStudies.forEach(total => {
+            const cell = document.createElement('td');
+            cell.style.cssText = 'padding: 0.5rem; text-align: center; color: #374151; font-size: 0.875rem; font-weight: 600;';
+            cell.textContent = total;
+            totalRow.appendChild(cell);
+        });
+
+        tableBody.appendChild(totalRow);
+
         // Render doctor rows
         data.doctors.forEach(doctor => {
             const tr = document.createElement('tr');
@@ -203,9 +249,10 @@
                 cell.style.cssText = 'padding: 0.75rem; text-align: center; font-weight: 600;';
                 cell.textContent = month.count;
 
-                // Apply color coding based on comparison with previous month
-                if (idx > 0) {
-                    const previousCount = doctor.months[idx - 1].count;
+                // Apply color coding: compare current month with NEXT month (previous in time)
+                // idx=0 is current month, idx=1 is previous month
+                if (idx < doctor.months.length - 1) {
+                    const previousCount = doctor.months[idx + 1].count;
                     const bgColor = getComparisonColor(month.count, previousCount);
                     if (bgColor) {
                         cell.style.backgroundColor = bgColor;
