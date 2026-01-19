@@ -1858,10 +1858,15 @@ def add_user():
         new_user.city_id = int(city_id)
     if center_id:
         new_user.center_id = int(center_id)
-    if clinic_id:
-        new_user.clinic_id = int(clinic_id)
     if doctor_id:
-        new_user.doctor_id = int(doctor_id)
+        doctor_id = int(doctor_id)
+        new_user.doctor_id = doctor_id
+        # Sync clinic_id with doctor's first clinic for backward compatibility
+        doctor = Doctor.query.get(doctor_id)
+        if doctor and doctor.clinics:
+            new_user.clinic_id = doctor.clinics[0].id
+    elif clinic_id:
+        new_user.clinic_id = int(clinic_id)
 
     db.session.add(new_user)
     db.session.commit()
@@ -1932,11 +1937,18 @@ def edit_user(user_id):
     if center_id: user.center_id = int(center_id)
     else: user.center_id = None
 
-    if clinic_id: user.clinic_id = int(clinic_id)
-    else: user.clinic_id = None
-
-    if doctor_id: user.doctor_id = int(doctor_id)
-    else: user.doctor_id = None
+    if doctor_id:
+        doctor_id = int(doctor_id)
+        user.doctor_id = doctor_id
+        # Sync clinic_id with doctor's first clinic
+        doctor = Doctor.query.get(doctor_id)
+        if doctor and doctor.clinics:
+            user.clinic_id = doctor.clinics[0].id
+        else:
+            user.clinic_id = None
+    else:
+        user.doctor_id = None
+        user.clinic_id = None
 
     try:
         db.session.commit()
@@ -1980,8 +1992,9 @@ def users():
     clinics = Clinic.query.order_by(Clinic.name).all()
 
     doctors = Doctor.query.order_by(Doctor.name).all()
-
-    return render_template('admin_users.html', users=users, centers=centers, cities=cities, organizations=organizations, clinics=clinics, doctors=doctors, current_role=role_filter)
+    doctors_data = [d.to_dict() for d in doctors]
+    
+    return render_template('admin_users.html', users=users, centers=centers, cities=cities, organizations=organizations, clinics=clinics, doctors=doctors_data, current_role=role_filter)
 
 
 
@@ -2219,8 +2232,9 @@ def doctors():
     ).order_by(BonusPeriod.start_date.desc()).first()
     
     bonus_cols = period.columns if period else 0
+    clinics = Clinic.query.order_by(Clinic.name).all()
     
-    return render_template('admin_doctors.html', doctors=doctors, managers=managers, bonus_cols=bonus_cols)
+    return render_template('admin_doctors.html', doctors=doctors, managers=managers, bonus_cols=bonus_cols, clinics=clinics)
 
 
 
@@ -2239,6 +2253,10 @@ def add_doctor():
     if bonus_type:
         doctor.bonus_type = int(bonus_type)
         
+    clinic_ids = request.form.getlist('clinic_ids')
+    if clinic_ids:
+        doctor.clinics = Clinic.query.filter(Clinic.id.in_([int(cid) for cid in clinic_ids])).all()
+        
     db.session.add(doctor)
     db.session.commit()
     flash(f'Врач {name} добавлен', 'success')
@@ -2256,6 +2274,12 @@ def update_doctor(id):
         doctor.bonus_type = int(bonus_type)
     else:
         doctor.bonus_type = None
+
+    clinic_ids = request.form.getlist('clinic_ids')
+    if clinic_ids:
+        doctor.clinics = Clinic.query.filter(Clinic.id.in_([int(cid) for cid in clinic_ids])).all()
+    else:
+        doctor.clinics = []
 
     db.session.commit()
     flash(f'Данные врача {doctor.name} обновлены', 'success')
@@ -2434,49 +2458,39 @@ def services():
 
 
 @admin.route('/services/add', methods=['POST'])
-
 def add_service():
-
     name = request.form.get('name')
-
-    price = request.form.get('price')
-
+    price_str = request.form.get('price')
+    parent_id = request.form.get('parent_id')
     
-
-    if not name or not price:
-
-        flash('Все поля обязательны', 'error')
-
+    if not name:
+        flash('Название обязательно', 'error')
         return redirect(url_for('admin.services'))
-
-        
-
-    service = Service(name=name, price=float(price))
-
+    
+    price = float(price_str) if price_str and price_str.strip() != "" else 0.0
+    parent_id = int(parent_id) if parent_id and parent_id != "" else None
+    
+    service = Service(name=name, price=price, parent_id=parent_id)
     db.session.add(service)
-
     db.session.commit()
-
     flash(f'Услуга {name} добавлена', 'success')
-
     return redirect(url_for('admin.services'))
 
 
 
 @admin.route('/services/<int:id>/update', methods=['POST'])
-
 def update_service(id):
-
     service = Service.query.get_or_404(id)
-
     service.name = request.form.get('name')
-
-    service.price = float(request.form.get('price'))
+    
+    price_str = request.form.get('price')
+    service.price = float(price_str) if price_str and price_str.strip() != "" else 0.0
+    
+    parent_id = request.form.get('parent_id')
+    service.parent_id = int(parent_id) if parent_id and parent_id != "" else None
 
     db.session.commit()
-
     flash(f'Услуга {service.name} обновлена', 'success')
-
     return redirect(url_for('admin.services'))
 
 
@@ -2767,52 +2781,39 @@ def additional_services():
 
 
 @admin.route('/additional_services/add', methods=['POST'])
-
 def add_additional_service():
-
     name = request.form.get('name')
-
-    price = request.form.get('price')
-
+    price_str = request.form.get('price')
+    parent_id = request.form.get('parent_id')
     
-
-    if not name or not price:
-
-        flash('Все поля обязательны', 'error')
-
+    if not name:
+        flash('Название обязательно', 'error')
         return redirect(url_for('admin.additional_services'))
-
-        
-
-    service = AdditionalService(name=name, price=float(price))
-
+    
+    price = float(price_str) if price_str and price_str.strip() != "" else 0.0
+    parent_id = int(parent_id) if parent_id and parent_id != "" else None
+    
+    service = AdditionalService(name=name, price=price, parent_id=parent_id)
     db.session.add(service)
-
     db.session.commit()
-
     flash(f'Доп. услуга {name} добавлена', 'success')
-
     return redirect(url_for('admin.additional_services'))
 
 
 
 @admin.route('/additional_services/<int:id>/update', methods=['POST'])
-
 def update_additional_service(id):
-
     service = AdditionalService.query.get_or_404(id)
-
     service.name = request.form.get('name')
+    
+    price_str = request.form.get('price')
+    service.price = float(price_str) if price_str and price_str.strip() != "" else 0.0
 
-    # Only update price if provided (for name-only editing)
-    price = request.form.get('price')
-    if price:
-        service.price = float(price)
+    parent_id = request.form.get('parent_id')
+    service.parent_id = int(parent_id) if parent_id and parent_id != "" else None
 
     db.session.commit()
-
     flash(f'Доп. услуга {service.name} обновлена', 'success')
-
     return redirect(url_for('admin.additional_services'))
 
 

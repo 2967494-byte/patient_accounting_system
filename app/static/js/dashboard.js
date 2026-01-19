@@ -70,7 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 patient_phone: document.getElementById('patient-phone').value,
                 doctor_id: document.getElementById('doctor') ? document.getElementById('doctor').value : null,
                 clinic_id: document.getElementById('clinic') ? document.getElementById('clinic').value : null,
-                service: document.getElementById('service').value,
+                // Services Logic: Prefer child ID if selected, otherwise main ID
+                services_ids: (function () {
+                    const childId = document.getElementById('child-service-select').value;
+                    const mainId = document.getElementById('main-service-select').value;
+                    const ids = [];
+                    if (childId) ids.push(childId);
+                    else if (mainId) ids.push(mainId);
+                    return ids;
+                })(),
                 date: document.getElementById('appt-date').value,
                 time: document.getElementById('appt-time').value,
                 center_id: document.getElementById('appt-center').value || ((typeof currentCenterId !== 'undefined') ? currentCenterId : null),
@@ -130,6 +138,49 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') {
                 performSearch();
             }
+        });
+    }
+
+    // --- Hierarchical Service Selection Logic ---
+    const mainSvc = document.getElementById('main-service-select');
+    const childSvc = document.getElementById('child-service-select');
+    const childCont = document.getElementById('child-service-container');
+    const svcData = document.getElementById('service-hierarchy-data');
+    let servicesRaw = [];
+    try {
+        servicesRaw = JSON.parse(svcData.dataset.services || '[]');
+    } catch (e) { console.error("Error parsing services:", e); }
+
+    window.updateChildDropdown = function (parentId, selectedChildId = null) {
+        if (!childSvc || !childCont) return;
+
+        // Hide if no parent selected
+        if (!parentId) {
+            childCont.style.display = 'none';
+            return;
+        }
+
+        const children = servicesRaw.filter(s => s.parent_id == parentId);
+
+        if (children.length > 0) {
+            childSvc.innerHTML = '<option value="">-- Уточните услугу --</option>';
+            children.forEach(child => {
+                const opt = document.createElement('option');
+                opt.value = child.id;
+                opt.textContent = child.name;
+                if (selectedChildId && child.id == selectedChildId) opt.selected = true;
+                childSvc.appendChild(opt);
+            });
+            childCont.style.display = 'block';
+        } else {
+            childSvc.innerHTML = '<option value="">-- Уточните услугу --</option>';
+            childCont.style.display = 'none';
+        }
+    };
+
+    if (mainSvc) {
+        mainSvc.addEventListener('change', function () {
+            window.updateChildDropdown(this.value);
         });
     }
 });
@@ -194,6 +245,12 @@ async function openCreateModal(date, time) {
     $('#doctor').val(null).trigger('change');
     $('#clinic').val(null).trigger('change');
 
+    // Reset Services
+    const mainSvc = document.getElementById('main-service-select');
+    if (mainSvc) mainSvc.value = '';
+    const childCont = document.getElementById('child-service-container');
+    if (childCont) childCont.style.display = 'none';
+
     document.getElementById('appt-id').value = '';
     const pidInput = document.getElementById('patient-id');
     if (pidInput) pidInput.value = '';
@@ -202,7 +259,7 @@ async function openCreateModal(date, time) {
     if (typeof currentCenterId !== 'undefined') {
         document.getElementById('appt-center').value = currentCenterId;
     }
-    document.getElementById('author-info').classList.add('hidden');
+    document.getElementById('author-info').style.display = 'none';
 
     // Fetch slots and then set time
     await fetchSlots(date, document.getElementById('appt-center').value, null, time);
@@ -239,7 +296,24 @@ async function openEditModal(id) {
         $('#doctor').val(appt.doctor_id).trigger('change');
         $('#clinic').val(appt.clinic_id).trigger('change');
 
-        document.getElementById('service').value = appt.service || '';
+        // Populate Hierarchical Services
+        const mainSvc = document.getElementById('main-service-select');
+        if (mainSvc && appt.services && appt.services.length > 0) {
+            // Check if first service is a child or parent
+            const firstSvc = appt.services[0];
+            if (firstSvc.parent_id) {
+                // It's a child. Select parent, then update dropdown and select child.
+                mainSvc.value = firstSvc.parent_id;
+                window.updateChildDropdown(firstSvc.parent_id, firstSvc.id);
+            } else {
+                // It's a parent.
+                mainSvc.value = firstSvc.id;
+                window.updateChildDropdown(firstSvc.id); // Check if it has children anyway
+            }
+        } else if (mainSvc) {
+            mainSvc.value = '';
+            window.updateChildDropdown('');
+        }
 
         // Set Center
         if (appt.center_id) {
@@ -253,7 +327,7 @@ async function openEditModal(id) {
         if (appt.author_name) {
             const authorDiv = document.getElementById('author-info');
             authorDiv.textContent = `Автор записи: ${appt.author_name}`;
-            authorDiv.classList.remove('hidden');
+            authorDiv.style.display = 'block';
         }
 
         // Show Delete and Viewer Buttons
@@ -290,14 +364,14 @@ async function openEditModal(id) {
         const historyList = document.getElementById('history-list');
 
         if (appt.history && appt.history.length > 0) {
-            historyContainer.classList.remove('hidden');
+            historyContainer.style.display = 'block';
             historyList.innerHTML = appt.history.map(h => {
                 const date = new Date(h.timestamp);
                 const dateStr = date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                 return `<div>${dateStr} - ${h.action} (<strong>${h.user}</strong>)</div>`;
             }).join('');
         } else {
-            historyContainer.classList.add('hidden');
+            historyContainer.style.display = 'none';
         }
 
         // Keep standard author display but maybe rename logic? 

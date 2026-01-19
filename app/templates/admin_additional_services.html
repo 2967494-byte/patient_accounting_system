@@ -61,6 +61,7 @@
             <tr>
                 <th>ID</th>
                 <th>Название</th>
+                <th>Родитель</th>
                 <th>Цена</th>
                 <th>Действия</th>
             </tr>
@@ -70,11 +71,14 @@
             <tr>
                 <td>{{ service.id }}</td>
                 <td>{{ service.name }}</td>
+                <td>{{ service.parent.name if service.parent else '—' }}</td>
                 <td>{{ service.get_price() }} ₽</td>
                 <td>
-                    <button onclick="editAddService('{{ service.id }}', '{{ service.name }}')" class="btn"
+                    <button
+                        onclick='editAddService({{ service.id | tojson }}, {{ service.name | tojson }}, {{ service.price | tojson }}, {{ service.parent_id | tojson }})'
+                        class="btn"
                         style="background: transparent; color: #3b82f6; padding: 0.25rem; font-size: 1.2rem;"
-                        title="Редактировать название">
+                        title="Редактировать">
                         ✎
                     </button>
                     <a href="{{ url_for('admin.additional_service_prices', id=service.id) }}" class="btn"
@@ -104,6 +108,15 @@
                 <label style="display: block; margin-bottom: 0.5rem;">Название</label>
                 <input type="text" name="name" required style="width: 100%; padding: 0.5rem;">
             </div>
+            <div class="mb-4">
+                <label style="display: block; margin-bottom: 0.5rem;">Родительская услуга</label>
+                <select name="parent_id" style="width: 100%; padding: 0.5rem;">
+                    <option value="">-- Нет (Корневая) --</option>
+                    {% for as in additional_services %}
+                    <option value="{{ as.id }}">{{ as.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="mb-4" id="price-field">
                 <label style="display: block; margin-bottom: 0.5rem;">Цена</label>
                 <input type="number" step="0.01" name="price" style="width: 100%; padding: 0.5rem;">
@@ -122,20 +135,23 @@
         document.getElementById('add-service-form').reset();
         document.getElementById('modal-title').innerText = 'Добавить доп. услугу';
         document.getElementById('add-service-form').action = "{{ url_for('admin.add_additional_service') }}";
-        // Show price field when adding new service
-        document.getElementById('price-field').style.display = 'block';
-        document.getElementById('add-service-form').querySelector('[name="price"]').setAttribute('required', 'required');
     }
 
-    function editAddService(id, name) {
+    function editAddService(id, name, price, parent_id) {
         document.getElementById('add-add-service-modal').style.display = 'block';
-        document.getElementById('modal-title').innerText = 'Редактировать название';
+        document.getElementById('modal-title').innerText = 'Редактировать доп. услугу';
         const form = document.getElementById('add-service-form');
         form.action = `/admin/additional_services/${id}/update`;
         form.querySelector('[name="name"]').value = name;
-        // Hide price field when editing
-        document.getElementById('price-field').style.display = 'none';
-        form.querySelector('[name="price"]').removeAttribute('required');
+        form.querySelector('[name="price"]').value = price;
+
+        const parentSelect = form.querySelector('[name="parent_id"]');
+        parentSelect.value = parent_id;
+
+        // Disable self in parent selection
+        Array.from(parentSelect.options).forEach(opt => {
+            opt.disabled = (opt.value == id);
+        });
     }
 
     function deleteAddService(id) {

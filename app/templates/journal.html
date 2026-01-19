@@ -624,7 +624,7 @@
             <button class="btn-action btn-secondary" onclick="openAppointmentSelectionModal()">
                 <span>📋</span> Из записи
             </button>
-            <button class="btn-action btn-primary" onclick="openModal()">
+            <button class="btn-action btn-primary" onclick="openJournalModal()">
                 <span>➕</span> Добавить
             </button>
             {% if current_user.role == 'admin' %}
@@ -637,14 +637,13 @@
     </div>
 
     <!-- Select Appointment Modal -->
-    <!-- Select Appointment Modal -->
     <div id="select-appointment-modal" class="modal hidden"
         style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
         <div class="modal-content"
-            style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 600px; border-radius: 8px;">
+            style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 600px; border-radius: 8px; position: relative;">
             <div class="modal-header" style="overflow: hidden; margin-bottom: 1rem;">
                 <span class="close" onclick="closeAppointmentSelectionModal()"
-                    style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1;">&times;</span>
+                    style="color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1;">&times;</span>
                 <h2 style="margin: 0; color: #1f2937;">Выберите запись</h2>
             </div>
             <div class="modal-body">
@@ -745,7 +744,18 @@
                             {% if appointment.service_associations %}
                             {% for assoc in appointment.service_associations %}
                             <div class="service-pill" title="{{ assoc.service.name }}">
-                                <span>{{ assoc.service.name }}</span>
+                                {% if assoc.service.parent %}
+                                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+                                    <span style="font-size: 0.85rem; color: var(--accent-color); font-weight: 500;">{{
+                                        assoc.service.parent.name }}</span>
+                                    <span
+                                        style="color: var(--accent-color); font-size: 0.85rem; font-weight: 500; margin-left: 2px;">|
+                                        {{ assoc.service.name }}</span>
+                                </div>
+                                {% else %}
+                                <span style="font-size: 0.85rem; font-weight: 500; color: var(--accent-color);">{{
+                                    assoc.service.name }}</span>
+                                {% endif %}
                                 {% if assoc.quantity > 1 %}
                                 <span class="service-pill-qty">{{ assoc.quantity }}</span>
                                 {% endif %}
@@ -772,7 +782,19 @@
                             <div class="service-pill"
                                 style="background: #fdf2f8; color: #be185d; border-color: #fbcfe8;"
                                 title="{{ assoc.additional_service.name }}">
-                                <span>+ {{ assoc.additional_service.name }}</span>
+                                {% if assoc.additional_service.parent %}
+                                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+                                    <span style="font-size: 0.85rem; color: #be185d; font-weight: 500;">{{
+                                        assoc.additional_service.parent.name }}</span>
+                                    <span
+                                        style="color: #be185d; font-size: 0.85rem; font-weight: 500; margin-left: 2px;">|
+                                        {{ assoc.additional_service.name }}</span>
+                                </div>
+                                {% else %}
+                                <span style="font-size: 0.85rem; font-weight: 500; color: #be185d;">+ {{
+                                    assoc.additional_service.name }}</span>
+                                {% endif %}
+
                                 {% if assoc.quantity > 1 %}
                                 <span class="service-pill-qty" style="background: #fce7f3; color: #be185d;">{{
                                     assoc.quantity }}</span>
@@ -949,13 +971,19 @@
     {% endif %}
 </div>
 
+<!-- Hidden Service Data -->
+<div id="service-hierarchy-data" style="display: none;"
+    data-services='[{% for s in services %}{"id":{{s.id|tojson}},"name":{{s.name|tojson}},"price":{{(s.price or 0)|tojson}},"parent_id":{{(s.parent_id or None)|tojson}},"children":[{% for child in s.children %}{"id":{{child.id|tojson}},"name":{{child.name|tojson}},"price":{{(child.price or 0)|tojson}}}{% if not loop.last %},{% endif %}{% endfor %}]}{% if not loop.last %},{% endif %}{% endfor %}]'
+    data-additional-services='[{% for ads in additional_services %}{"id":{{ads.id|tojson}},"name":{{ads.name|tojson}},"price":{{(ads.price or 0)|tojson}},"parent_id":{{(ads.parent_id or None)|tojson}},"children":[{% for child in ads.children %}{"id":{{child.id|tojson}},"name":{{child.name|tojson}},"price":{{(child.price or 0)|tojson}}}{% if not loop.last %},{% endif %}{% endfor %}]}{% if not loop.last %},{% endif %}{% endfor %}]'>
+</div>
+
 <!-- Modal -->
 <div id="entryModal" class="modal"
     style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
     <div class="modal-content"
-        style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 600px; border-radius: 8px;">
+        style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 600px; border-radius: 8px; position: relative;">
         <span class="close" onclick="closeJournalModal()"
-            style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            style="color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
         <h2 style="margin-bottom: 20px; color: #1f2937;">Новая запись</h2>
         <form id="entryForm" style="display: flex; flex-direction: column; gap: 15px;">
 
@@ -1009,56 +1037,93 @@
 
             <!-- Row 3: Services (Dynamic) -->
             <div id="services-container">
-                <div class="service-row" style="display: flex; gap: 15px; margin-bottom: 10px;">
-                    <div style="flex: 2;">
-                        <label
-                            style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Исследование</label>
-                        <select name="service" class="journal-select service-select" onchange="calculateTotal()">
-                            <option value="">-- Выберите --</option>
-                            {% for s in services %}
-                            <option value="{{ s.id }}" data-price="{{ s.price }}">{{ s.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div style="flex: 1; display: flex; align-items: flex-end; gap: 5px;">
-                        <div>
+                <div class="service-row-wrapper"
+                    style="margin-bottom: 15px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #f3f4f6;">
+                    <div class="service-row" style="display: flex; gap: 15px; margin-bottom: 5px;">
+                        <div style="flex: 2;">
                             <label
-                                style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Кол-во</label>
-                            <input type="number" name="quantity" value="1" class="journal-input service-qty"
-                                style="text-align: center;" oninput="calculateTotal()" required>
+                                style="display: block; font-size: 0.85rem; margin-bottom: 4px; color: #6b7280;">Услуга</label>
+                            <select name="service" class="journal-select service-select"
+                                onchange="handleServiceChange(this)">
+                                <option value="">Выберите услугу</option>
+                                {% for s in services if not s.parent_id %}
+                                <option value="{{ s.id }}" data-price="{{ s.price }}">{{ s.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <button type="button" onclick="addServiceRow()" class="btn"
-                            style="background: #10b981; color: white; border: none; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; margin-left: 10px;">+</button>
+                        <div style="flex: 1; display: flex; align-items: flex-end; gap: 5px;">
+                            <div>
+                                <label
+                                    style="display: block; font-size: 0.85rem; margin-bottom: 4px; color: #6b7280;">Кол-во</label>
+                                <input type="number" name="quantity" value="1" class="journal-input service-qty"
+                                    style="text-align: center;" oninput="calculateTotal()" required>
+                            </div>
+                            <button type="button" onclick="addServiceRow()" class="btn"
+                                style="background: #10b981; color: white; border: none; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; margin-left: 10px;">+</button>
+                        </div>
+                    </div>
+                    <div class="child-service-row"
+                        style="display: none; margin-top: 10px; padding: 10px; background: #fff; border: 1px dashed #d1d5db; border-radius: 4px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label
+                                style="display: block; font-size: 0.8rem; color: #4b5563; font-weight: 500;">Уточнение
+                                услуги</label>
+                            <button type="button" onclick="clearChildService(this)"
+                                style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; padding: 0 4px; line-height: 1;"
+                                title="Удалить уточнение">&times;</button>
+                        </div>
+                        <select name="child_service" class="journal-select child-service-select"
+                            onchange="calculateTotal()" style="font-size: 0.85rem; padding: 0.4rem;">
+                            <option value="">-- По умолчанию --</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
             <!-- Row 4: Additional Services (Dynamic) -->
             <div id="additional-services-container">
-                <div class="additional-service-row" style="display: flex; gap: 15px; margin-bottom: 10px;">
-                    <div style="flex: 2;">
-                        <label style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Доп.
-                            услуга</label>
-                        <select name="additional_service" class="journal-select add-service-select"
-                            onchange="calculateTotal()">
-                            <option value="">-- Нет --</option>
-                            {% for ads in additional_services %}
-                            <option value="{{ ads.id }}" data-price="{{ ads.price }}">{{ ads.name }} - {{ ads.price
-                                }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div style="flex: 1; display: flex; align-items: flex-end; gap: 5px;">
-                        <div>
-                            <label
-                                style="display: block; font-size: 0.9rem; margin-bottom: 4px; color: #4b5563;">Кол-во</label>
-                            <input type="number" name="additional_service_quantity" value="1"
-                                class="journal-input add-service-qty" style="text-align: center;"
-                                oninput="calculateTotal()">
+                <div class="additional-service-row-wrapper"
+                    style="margin-bottom: 15px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #f3f4f6;">
+                    <div class="additional-service-row" style="display: flex; gap: 15px; margin-bottom: 5px;">
+                        <div style="flex: 2;">
+                            <label style="display: block; font-size: 0.85rem; margin-bottom: 4px; color: #6b7280;">Доп.
+                                услуга</label>
+                            <select name="additional_service" class="journal-select add-service-select"
+                                onchange="handleAddServiceChange(this)">
+                                <option value="">Выберите доп. услугу</option>
+                                {% for ads in additional_services if not ads.parent_id %}
+                                <option value="{{ ads.id }}" data-price="{{ ads.price }}">{{ ads.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <button type="button" onclick="addAdditionalServiceRow()" class="btn"
-                            style="background: #10b981; color: white; border: none; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; margin-left: 10px;">+</button>
+                        <div style="flex: 1; display: flex; align-items: flex-end; gap: 5px;">
+                            <div>
+                                <label
+                                    style="display: block; font-size: 0.85rem; margin-bottom: 4px; color: #6b7280;">Кол-во</label>
+                                <input type="number" name="additional_service_quantity" value="1"
+                                    class="journal-input add-service-qty" style="text-align: center;"
+                                    oninput="calculateTotal()">
+                            </div>
+                            <button type="button" onclick="addAdditionalServiceRow()" class="btn"
+                                style="background: #10b981; color: white; border: none; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; margin-left: 10px;">+</button>
+                        </div>
+                    </div>
+                    <div class="child-additional-service-row"
+                        style="display: none; margin-top: 10px; padding: 10px; background: #fff; border: 1px dashed #d1d5db; border-radius: 4px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label
+                                style="display: block; font-size: 0.8rem; color: #4b5563; font-weight: 500;">Уточнение
+                                доп. услуги</label>
+                            <button type="button" onclick="clearChildService(this)"
+                                style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; padding: 0 4px; line-height: 1;"
+                                title="Удалить уточнение">&times;</button>
+                        </div>
+                        <select name="child_additional_service" class="journal-select child-add-service-select"
+                            onchange="calculateTotal()" style="font-size: 0.85rem; padding: 0.4rem;">
+                            <option value="">-- По умолчанию --</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -1184,12 +1249,87 @@
 
     const CURRENT_CENTER_ID = {{ current_center_id | tojson }};
 
+    // Load Service Hierarchy Data from hidden div
+    const service_data_el = document.getElementById('service-hierarchy-data');
+    const services_raw = JSON.parse(service_data_el.dataset.services || '[]');
+    const additional_services_raw = JSON.parse(service_data_el.dataset.additionalServices || '[]');
+
+    // Convert arrays to objects indexed by ID (matching previous structure)
+    const SERVICE_HIERARCHY = {};
+    services_raw.forEach(s => {
+        SERVICE_HIERARCHY[s.id] = s;
+    });
+
+    const ADD_SERVICE_HIERARCHY = {};
+    additional_services_raw.forEach(ads => {
+        ADD_SERVICE_HIERARCHY[ads.id] = ads;
+    });
+
     function updateRowNumbers() {
         const rows = document.querySelectorAll('#journal-body tr');
         rows.forEach((row, index) => {
             const cell = row.querySelector('.row-number');
             if (cell) cell.textContent = index + 1;
         });
+    }
+
+    function handleServiceChange(select) {
+        const wrapper = select.closest('.service-row-wrapper');
+        const childRow = wrapper.querySelector('.child-service-row');
+        const childSelect = wrapper.querySelector('.child-service-select');
+        const parentId = select.value;
+
+        if (parentId && SERVICE_HIERARCHY[parentId] && SERVICE_HIERARCHY[parentId].children.length > 0) {
+            // Populate children
+            childSelect.innerHTML = '<option value="">-- По умолчанию --</option>';
+            SERVICE_HIERARCHY[parentId].children.forEach(child => {
+                const opt = document.createElement('option');
+                opt.value = child.id;
+                opt.textContent = child.name + (child.price > 0 ? ` (${child.price} ₽)` : '');
+                opt.setAttribute('data-price', child.price);
+                childSelect.appendChild(opt);
+            });
+            childRow.style.display = 'block';
+        } else {
+            childRow.style.display = 'none';
+            childSelect.innerHTML = '<option value="">-- По умолчанию --</option>';
+        }
+        calculateTotal();
+    }
+
+    function handleAddServiceChange(select) {
+        const wrapper = select.closest('.additional-service-row-wrapper');
+        const childRow = wrapper.querySelector('.child-additional-service-row');
+        const childSelect = wrapper.querySelector('.child-add-service-select');
+        const parentId = select.value;
+
+        if (parentId && ADD_SERVICE_HIERARCHY[parentId] && ADD_SERVICE_HIERARCHY[parentId].children.length > 0) {
+            childSelect.innerHTML = '<option value="">-- По умолчанию --</option>';
+            ADD_SERVICE_HIERARCHY[parentId].children.forEach(child => {
+                const opt = document.createElement('option');
+                opt.value = child.id;
+                opt.textContent = child.name + (child.price > 0 ? ` (${child.price} ₽)` : '');
+                opt.setAttribute('data-price', child.price);
+                childSelect.appendChild(opt);
+            });
+            childRow.style.display = 'block';
+        } else {
+            childRow.style.display = 'none';
+            childSelect.innerHTML = '<option value="">-- По умолчанию --</option>';
+        }
+        calculateTotal();
+    }
+
+    function clearChildService(btn) {
+        const row = btn.closest('.child-service-row') || btn.closest('.child-additional-service-row');
+        if (row) {
+            const select = row.querySelector('select');
+            if (select) {
+                select.value = "";
+                row.style.display = 'none';
+                calculateTotal();
+            }
+        }
     }
 
     // Removed old createAddButton and updateAddButtons as we now have static + button in the input row
@@ -1200,7 +1340,7 @@
         document.getElementById('entryForm').reset();
         // Reset Select2
         $('#entryForm select.select2-enable').val(null).trigger('change');
-        document.getElementById('modal-total-display').textContent = '0.00';
+        calculateTotal();
     }
 
     function closeJournalModal() {
@@ -1278,48 +1418,41 @@
 
             // Services
             const servicesContainer = document.getElementById('services-container');
-            // Clear all but first row? Or clear all and rebuild?
-            // Existing logic `addServiceRow` clones first row.
-            // If we clear all, we lose the template.
-            // So keep one, reset it, then clone.
-
-            // Remove extra rows
             while (servicesContainer.children.length > 1) {
                 servicesContainer.lastElementChild.remove();
             }
+            const firstWrapper = servicesContainer.firstElementChild;
 
-            const firstRow = servicesContainer.firstElementChild;
-
-            // Handle Services (Detailed list with quantities)
             if (appt.services && appt.services.length > 0) {
                 appt.services.forEach((s, index) => {
-                    let row = index === 0 ? firstRow : null;
-                    if (!row) {
+                    let wrapper = index === 0 ? firstWrapper : null;
+                    if (!wrapper) {
                         addServiceRow();
-                        row = servicesContainer.lastElementChild;
+                        wrapper = servicesContainer.lastElementChild;
                     }
-                    const sel = row.querySelector('.service-select');
-                    if (sel) sel.value = s.id;
-                    const qty = row.querySelector('.service-qty');
-                    if (qty) qty.value = s.quantity || 1;
-                });
-            } else if (appt.services_ids && appt.services_ids.length > 0) {
-                // Fallback for simple ID list
-                appt.services_ids.forEach((sid, index) => {
-                    let row = index === 0 ? firstRow : null;
-                    if (!row) {
-                        addServiceRow();
-                        row = servicesContainer.lastElementChild;
+                    const parentSelect = wrapper.querySelector('.service-select');
+                    const childSelect = wrapper.querySelector('.child-service-select');
+
+                    if (s.parent_id) {
+                        parentSelect.value = s.parent_id;
+                        handleServiceChange(parentSelect);
+                        childSelect.value = s.id;
+                    } else {
+                        parentSelect.value = s.id;
+                        handleServiceChange(parentSelect);
                     }
-                    const sel = row.querySelector('.service-select');
-                    if (sel) sel.value = sid;
-                    const qty = row.querySelector('.service-qty');
-                    if (qty) qty.value = 1; // Default
+
+                    const qtyInput = wrapper.querySelector('.service-qty');
+                    if (qtyInput) qtyInput.value = s.quantity || 1;
                 });
             } else {
-                // Reset first row
-                firstRow.querySelector('select').selectedIndex = 0;
-                firstRow.querySelector('input').value = 1;
+                const parentSel = firstWrapper.querySelector('.service-select');
+                if (parentSel) {
+                    parentSel.selectedIndex = 0;
+                    handleServiceChange(parentSel);
+                }
+                const qtyInput = firstWrapper.querySelector('.service-qty');
+                if (qtyInput) qtyInput.value = 1;
             }
 
             // Additional Services
@@ -1327,36 +1460,38 @@
             while (addContainer.children.length > 1) {
                 addContainer.lastElementChild.remove();
             }
-            const firstAddRow = addContainer.firstElementChild;
+            const firstAddWrapper = addContainer.firstElementChild;
 
-            // Handle Additional Services
             if (appt.additional_services && appt.additional_services.length > 0) {
                 appt.additional_services.forEach((s, index) => {
-                    let row = index === 0 ? firstAddRow : null;
-                    if (!row) {
+                    let wrapper = index === 0 ? firstAddWrapper : null;
+                    if (!wrapper) {
                         addAdditionalServiceRow();
-                        row = addContainer.lastElementChild;
+                        wrapper = addContainer.lastElementChild;
                     }
-                    const sel = row.querySelector('.add-service-select');
-                    if (sel) sel.value = s.id;
-                    const qty = row.querySelector('.add-service-qty');
-                    if (qty) qty.value = s.quantity || 1;
-                });
-            } else if (appt.additional_services_ids && appt.additional_services_ids.length > 0) {
-                appt.additional_services_ids.forEach((asid, index) => {
-                    let row = index === 0 ? firstAddRow : null;
-                    if (!row) {
-                        addAdditionalServiceRow();
-                        row = addContainer.lastElementChild;
+                    const parentSelect = wrapper.querySelector('.add-service-select');
+                    const childSelect = wrapper.querySelector('.child-add-service-select');
+
+                    if (s.parent_id) {
+                        parentSelect.value = s.parent_id;
+                        handleAddServiceChange(parentSelect);
+                        childSelect.value = s.id;
+                    } else {
+                        parentSelect.value = s.id;
+                        handleAddServiceChange(parentSelect);
                     }
-                    const sel = row.querySelector('.add-service-select');
-                    if (sel) sel.value = asid;
-                    const qty = row.querySelector('.add-service-qty');
-                    if (qty) qty.value = 1;
+
+                    const qtyInput = wrapper.querySelector('.add-service-qty');
+                    if (qtyInput) qtyInput.value = s.quantity || 1;
                 });
             } else {
-                firstAddRow.querySelector('select').selectedIndex = 0;
-                firstAddRow.querySelector('input').value = 1;
+                const addParentSel = firstAddWrapper.querySelector('.add-service-select');
+                if (addParentSel) {
+                    addParentSel.selectedIndex = 0;
+                    handleAddServiceChange(addParentSel);
+                }
+                const qtyInput = firstAddWrapper.querySelector('.add-service-qty');
+                if (qtyInput) qtyInput.value = 1;
             }
 
             // Recalculate Total
@@ -1377,46 +1512,27 @@
 
     async function handleSave() {
         const form = document.getElementById('entryForm');
-        // Check for ID
         const idInput = form.querySelector('input[name="id"]');
         const id = idInput ? idInput.value : null;
 
-        // --- READ COMMON DATA ---
         const commonData = {};
-
-        // Date Logic: If editing, we might want to keep existing date OR allow change.
-        // Current modal has NO date input. It uses 'journal-date' filter value.
-        // If we are editing, we should probably stick to the ID's date unless we add a field.
-        // For now, let's assume date is NOT editable in this modal variant or we add it.
-        // If I add it, I need to look for it.
         const modalDateInput = form.querySelector('input[name="date"]');
         if (modalDateInput) {
             commonData['date'] = modalDateInput.value;
         } else {
-            // Fallback to journal filter date (dangerous for Edit if they look at different day?)
-            // But usually you edit what you see.
             const dateInput = document.getElementById('journal-date');
             commonData['date'] = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
         }
 
         const urlParams = new URLSearchParams(window.location.search);
-        let centerId = urlParams.get('center_id');
-        if (!centerId) centerId = CURRENT_CENTER_ID;
+        let centerId = urlParams.get('center_id') || CURRENT_CENTER_ID;
         if (centerId) commonData['center_id'] = centerId;
 
-        // Time: If editing, keep original? Modal has no Time field.
-        // If New, use current time.
-        // We rely on backend or default?
-        // If ID exists, we probably shouldn't overwrite time unless UI allows.
-        // Let's check api.py `update_appointment`. If `time` not in data, it keeps existing.
-        // So for EDIT, we just ommit `time` if we don't have input.
         if (!id) {
             const now = new Date();
-            const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-            commonData['time'] = timeString;
+            commonData['time'] = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
         }
 
-        // Collect fields that are single-entry
         ['contract_number', 'is_child', 'patient_name', 'clinic_id', 'doctor_id', 'payment_method_id', 'discount', 'comment', 'manager'].forEach(name => {
             const input = form.querySelector(`[name="${name}"]`);
             if (input) {
@@ -1425,211 +1541,121 @@
             }
         });
 
-        // --- VALIDATION (Basic) ---
         if (!commonData['patient_name'] || !commonData['clinic_id'] || !commonData['doctor_id']) {
             alert("Пожалуйста, заполните обязательные поля (Пациент, Клиника, Врач)");
             return;
         }
 
-        // --- GATHER SERVICES (Main) ---
-        const serviceContainer = document.getElementById('services-container');
-        const serviceRows = serviceContainer.querySelectorAll('.service-row');
-        const serviceIds = [];
+        // Services Data
+        const servicesData = [];
+        document.querySelectorAll('.service-row-wrapper').forEach(wrapper => {
+            const parentId = wrapper.querySelector('.service-select').value;
+            const childId = wrapper.querySelector('.child-service-select').value;
+            const qty = parseInt(wrapper.querySelector('.service-qty').value) || 1;
 
-        serviceRows.forEach(row => {
-            const sel = row.querySelector('.service-select');
-            if (sel && sel.value) serviceIds.push(sel.value);
+            if (childId) {
+                servicesData.push({ id: parseInt(childId), quantity: qty });
+            } else if (parentId) {
+                servicesData.push({ id: parseInt(parentId), quantity: qty });
+            }
         });
 
-        // --- GATHER ADDITIONAL SERVICES ---
-        const addSvcContainer = document.getElementById('additional-services-container');
-        const addSvcRows = addSvcContainer.querySelectorAll('.additional-service-row');
-        const addSvcIds = [];
+        // Additional Services Data
+        const addServicesData = [];
+        document.querySelectorAll('.additional-service-row-wrapper').forEach(wrapper => {
+            const parentId = wrapper.querySelector('.add-service-select').value;
+            const childId = wrapper.querySelector('.child-add-service-select').value;
+            const qty = parseInt(wrapper.querySelector('.add-service-qty').value) || 1;
 
-        addSvcRows.forEach(row => {
-            const sel = row.querySelector('.add-service-select');
-            if (sel && sel.value) addSvcIds.push(sel.value);
+            if (childId) {
+                addServicesData.push({ id: parseInt(childId), quantity: qty });
+            } else if (parentId) {
+                addServicesData.push({ id: parseInt(parentId), quantity: qty });
+            }
         });
 
-        if (serviceIds.length === 0 && addSvcIds.length === 0) {
-            alert("Выберите хотя бы одно исследование или доп. услугу");
+        if (servicesData.length === 0 && addServicesData.length === 0) {
+            alert("Выберите хотя бы одну услугу");
             return;
         }
 
-        // --- CONSTRUCT PAYLOAD ---
-        const payload = { ...commonData };
-        payload['ignore_overlap'] = true; // Bypass calendar conflict checks for manual journal entries
+        const payload = {
+            ...commonData,
+            services_data: servicesData,
+            additional_services_data: addServicesData,
+            ignore_overlap: true
+        };
 
-        // Build services_data (New format with quantity)
-        const servicesData = [];
-        serviceRows.forEach(row => {
-            const sel = row.querySelector('.service-select');
-            const qtyInput = row.querySelector('.service-qty');
-            if (sel && sel.value) {
-                servicesData.push({
-                    id: parseInt(sel.value),
-                    quantity: parseInt(qtyInput ? qtyInput.value : 1)
-                });
-            }
-        });
-        payload['services_data'] = servicesData;
-        payload['services_ids'] = servicesData.map(s => s.id); // Compat
-
-        // Build additional_services_data
-        const addServicesData = [];
-        addSvcRows.forEach(row => {
-            const sel = row.querySelector('.add-service-select');
-            const qtyInput = row.querySelector('.add-service-qty');
-            if (sel && sel.value) {
-                addServicesData.push({
-                    id: parseInt(sel.value),
-                    quantity: parseInt(qtyInput ? qtyInput.value : 1)
-                });
-            }
-        });
-        payload['additional_services_data'] = addServicesData;
-        payload['additional_services_ids'] = addServicesData.map(s => s.id); // Compat
-
-        // Quantity fields
-        // Capture quantity from the FIRST service row (limitation: DB supports only one quantity field per appointment)
-        const firstServiceRow = document.querySelector('#services-container .service-row');
-        if (firstServiceRow) {
-            const qtyInput = firstServiceRow.querySelector('.service-qty');
-            payload['quantity'] = parseInt(qtyInput ? qtyInput.value : 1);
-        } else {
-            payload['quantity'] = 1;
-        }
-
-        const firstAddRow = document.querySelector('#additional-services-container .additional-service-row');
-        if (firstAddRow) {
-            const asQtyInput = firstAddRow.querySelector('.add-service-qty');
-            payload['additional_service_quantity'] = parseInt(asQtyInput ? asQtyInput.value : 1);
-        } else {
-            payload['additional_service_quantity'] = 1;
-        }
-
-        // Calculate Cost
-        let totalCost = 0;
-        serviceRows.forEach(row => {
-            const sel = row.querySelector('.service-select');
-            const qtyInput = row.querySelector('.service-qty');
-            if (sel && sel.value) {
-                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
-                const qty = parseInt(qtyInput ? qtyInput.value : 1);
-                totalCost += price * qty;
-            }
-        });
-        addSvcRows.forEach(row => {
-            const asSel = row.querySelector('.add-service-select');
-            const asQtyInput = row.querySelector('.add-service-qty');
-            if (asSel && asSel.value) {
-                const asPrice = parseFloat(asSel.options[asSel.selectedIndex].getAttribute('data-price')) || 0;
-                const asQty = parseInt(asQtyInput ? asQtyInput.value : 1);
-                totalCost += asPrice * asQty;
-            }
-        });
-
-        // Apply discount
-        if (payload['discount']) {
-            totalCost -= parseFloat(payload['discount']);
-        }
-
-        if (totalCost < 0) totalCost = 0;
-        payload['cost'] = totalCost;
+        // Final cost from UI calculation for consistency
+        payload['cost'] = parseFloat(document.getElementById('modal-total-display').textContent) || 0;
 
         try {
             const url = id ? `/api/appointments/${id}` : '/api/appointments';
             const method = id ? 'PUT' : 'POST';
-
             const response = await fetch(url, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
                 body: JSON.stringify(payload)
             });
 
-            if (response.ok) {
-                window.location.reload();
-            } else {
+            if (response.ok) window.location.reload();
+            else {
                 const err = await response.json();
-                alert('Error: ' + (err.error || 'Unknown error'));
+                alert('Ошибка: ' + (err.error || 'Неизвестная ошибка'));
             }
         } catch (e) {
             console.error(e);
-            alert('Network error: ' + e.message);
+            alert('Ошибка сети: ' + e.message);
         }
     }
 
     function addServiceRow() {
         const container = document.getElementById('services-container');
-        const firstRow = container.querySelector('.service-row');
-        const newRow = firstRow.cloneNode(true);
+        const firstWrapper = container.querySelector('.service-row-wrapper');
+        const newWrapper = firstWrapper.cloneNode(true);
 
         // Reset values
-        newRow.querySelector('select').selectedIndex = 0;
-        newRow.querySelector('input').value = 1;
+        const mainSelect = newWrapper.querySelector('.service-select');
+        mainSelect.selectedIndex = 0;
+        newWrapper.querySelector('.service-qty').value = 1;
+
+        // Reset child select
+        const childRow = newWrapper.querySelector('.child-service-row');
+        const childSelect = newWrapper.querySelector('.child-service-select');
+        childRow.style.display = 'none';
+        childSelect.innerHTML = '<option value="">-- По умолчанию --</option>';
 
         // Change + button to - button
-        const btn = newRow.querySelector('button');
+        const btn = newWrapper.querySelector('.service-row button');
         btn.textContent = '-';
-        btn.style.backgroundColor = '#ef4444'; // Red
-        btn.onclick = function () { this.closest('.service-row').remove(); calculateTotal(); };
+        btn.style.backgroundColor = '#ef4444';
+        btn.onclick = function () { this.closest('.service-row-wrapper').remove(); calculateTotal(); };
 
-        container.appendChild(newRow);
+        container.appendChild(newWrapper);
     }
 
     function addAdditionalServiceRow() {
         const container = document.getElementById('additional-services-container');
-        const firstRow = container.querySelector('.additional-service-row');
-        const newRow = firstRow.cloneNode(true);
+        const firstWrapper = container.querySelector('.additional-service-row-wrapper');
+        const newWrapper = firstWrapper.cloneNode(true);
 
-        // Reset values
-        newRow.querySelector('select').selectedIndex = 0;
-        newRow.querySelector('input').value = 1;
+        const mainSelect = newWrapper.querySelector('.add-service-select');
+        mainSelect.selectedIndex = 0;
+        newWrapper.querySelector('.add-service-qty').value = 1;
 
-        // Change + to -
-        const btn = newRow.querySelector('button');
+        const childRow = newWrapper.querySelector('.child-additional-service-row');
+        const childSelect = newWrapper.querySelector('.child-add-service-select');
+        childRow.style.display = 'none';
+        childSelect.innerHTML = '<option value="">-- По умолчанию --</option>';
+
+        const btn = newWrapper.querySelector('.additional-service-row button');
         btn.textContent = '-';
         btn.style.backgroundColor = '#ef4444';
-        btn.onclick = function () { this.closest('.additional-service-row').remove(); calculateTotal(); };
+        btn.onclick = function () { this.closest('.additional-service-row-wrapper').remove(); calculateTotal(); };
 
-        container.appendChild(newRow);
+        container.appendChild(newWrapper);
     }
 
-    function calculateTotal() {
-        let total = 0;
-
-        // Services
-        document.querySelectorAll('.service-row').forEach(row => {
-            const sel = row.querySelector('.service-select');
-            const qty = row.querySelector('.service-qty').value || 0;
-            if (sel && sel.value) {
-                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
-                total += price * qty;
-            }
-        });
-
-        // Add Services
-        document.querySelectorAll('.additional-service-row').forEach(row => {
-            const sel = row.querySelector('.add-service-select');
-            const qty = row.querySelector('.add-service-qty').value || 0;
-            if (sel && sel.value) {
-                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
-                total += price * qty;
-            }
-        });
-
-        // Discount
-        const discountInput = document.querySelector('input[name="discount"]');
-        if (discountInput) {
-            total -= (parseFloat(discountInput.value) || 0);
-        }
-
-        if (total < 0) total = 0;
-        document.getElementById('modal-total-display').textContent = total.toFixed(2);
-    }
 
     function addNewRow(data) {
         // Since we removed the "Input Row Template", we need to create a read-only row 
@@ -1803,24 +1829,50 @@
         let total = 0;
 
         // Sum Services
-        const serviceRows = document.querySelectorAll('.service-row');
-        serviceRows.forEach(row => {
-            const sel = row.querySelector('.service-select');
-            const qtyInput = row.querySelector('.service-qty');
+        const serviceWrappers = document.querySelectorAll('.service-row-wrapper');
+        serviceWrappers.forEach(wrapper => {
+            const sel = wrapper.querySelector('.service-select');
+            const childSel = wrapper.querySelector('.child-service-select');
+            const qtyInput = wrapper.querySelector('.service-qty');
             if (sel && sel.value) {
-                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
+                const parentId = sel.value;
+                const childId = childSel ? childSel.value : null;
+                let price = 0;
+
+                if (childId && SERVICE_HIERARCHY[childId]) {
+                    price = SERVICE_HIERARCHY[childId].price;
+                    if (price === 0 && SERVICE_HIERARCHY[parentId]) {
+                        price = SERVICE_HIERARCHY[parentId].price;
+                    }
+                } else if (SERVICE_HIERARCHY[parentId]) {
+                    price = SERVICE_HIERARCHY[parentId].price;
+                }
+
                 const qty = parseInt(qtyInput.value) || 0;
                 total += price * qty;
             }
         });
 
         // Sum Additional Services
-        const addSvcRows = document.querySelectorAll('.additional-service-row');
-        addSvcRows.forEach(row => {
-            const sel = row.querySelector('.add-service-select');
-            const qtyInput = row.querySelector('.add-service-qty');
+        const addSvcWrappers = document.querySelectorAll('.additional-service-row-wrapper');
+        addSvcWrappers.forEach(wrapper => {
+            const sel = wrapper.querySelector('.add-service-select');
+            const childSel = wrapper.querySelector('.child-add-service-select');
+            const qtyInput = wrapper.querySelector('.add-service-qty');
             if (sel && sel.value) {
-                const price = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-price')) || 0;
+                const parentId = sel.value;
+                const childId = childSel ? childSel.value : null;
+                let price = 0;
+
+                if (childId && ADD_SERVICE_HIERARCHY[childId]) {
+                    price = ADD_SERVICE_HIERARCHY[childId].price;
+                    if (price === 0 && ADD_SERVICE_HIERARCHY[parentId]) {
+                        price = ADD_SERVICE_HIERARCHY[parentId].price;
+                    }
+                } else if (ADD_SERVICE_HIERARCHY[parentId]) {
+                    price = ADD_SERVICE_HIERARCHY[parentId].price;
+                }
+
                 const qty = parseInt(qtyInput.value) || 0;
                 total += price * qty;
             }
@@ -2164,9 +2216,9 @@
 <div id="importJournalModal" class="modal"
     style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
     <div class="modal-content"
-        style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 400px; border-radius: 8px;">
+        style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 400px; border-radius: 8px; position: relative;">
         <span class="close" onclick="document.getElementById('importJournalModal').style.display='none'"
-            style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            style="color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
         <h2 style="margin-bottom: 20px; color: #1f2937;">Импорт в журнал</h2>
         <form action="{{ url_for('admin.import_journal') }}" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

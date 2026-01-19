@@ -92,7 +92,19 @@
                         </select>
                     </form>
                 </td>
-                <td>{{ user.clinic.name if user.clinic else '--' }}</td>
+                <td>
+                    {% if user.doctor_details and user.doctor_details.clinics %}
+                    {% for clinic in user.doctor_details.clinics %}
+                    <span class="badge"
+                        style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;">{{
+                        clinic.name }}</span>
+                    {% endfor %}
+                    {% elif user.clinic %}
+                    {{ user.clinic.name }}
+                    {% else %}
+                    --
+                    {% endif %}
+                </td>
                 <td>{{ user.doctor_details.name if user.doctor_details else '--' }}</td>
                 <td>
                     <form action="{{ url_for('admin.update_user_role', user_id=user.id) }}" method="POST"
@@ -153,7 +165,8 @@
                         {% endif %}
                         {% endif %}
 
-                        <button type="button" title="Редактировать" onclick='openEditModal({
+                        <button type="button" title="Редактировать"
+                            onclick='openEditModal({
                                 "id": {{ user.id }},
                                 "username": "{{ user.username }}",
                                 "email": "{{ user.email }}",
@@ -162,8 +175,8 @@
                                 "city_id": "{{ user.city_id or "" }}",
                                 "center_id": "{{ user.center_id or "" }}",
                                 "clinic_id": "{{ user.clinic_id or "" }}",
-                                "doctor_id": "{{ user.doctor_id or "" }}"
-                            })'
+                                "doctor_id": "{{ user.doctor_id or "" }}",
+                                "doctor_clinics": {{ user.doctor_details.to_dict().clinics|tojson if user.doctor_details else "[]" }} })'
                             style="background: none; border: none; cursor: pointer; color: #f59e0b; font-size: 1.2rem;">
                             ✏️
                         </button>
@@ -270,21 +283,19 @@
                 </div>
                 <div>
                     <label
-                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Клиника</label>
-                    <select name="clinic_id"
-                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
-                        <option value="">-- Нет --</option>
-                        {% for clinic in clinics %}
-                        <option value="{{ clinic.id }}">{{ clinic.name }}</option>
-                        {% endfor %}
-                    </select>
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Клиники
+                        (от врача)</label>
+                    <div id="add_doctor_clinics_display"
+                        style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #f9fafb; min-height: 38px;">
+                        <span style="color: #6b7280;">Выберите врача для отображения клиник</span>
+                    </div>
                 </div>
             </div>
 
             <div style="margin-bottom: 1.5rem;">
                 <label
                     style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Врач</label>
-                <select name="doctor_id"
+                <select name="doctor_id" id="add_doctor_id"
                     style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
                     <option value="">-- Нет --</option>
                     {% for doctor in doctors %}
@@ -392,14 +403,12 @@
                 </div>
                 <div>
                     <label
-                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Клиника</label>
-                    <select name="clinic_id" id="edit_clinic_id"
-                        style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
-                        <option value="">-- Нет --</option>
-                        {% for clinic in clinics %}
-                        <option value="{{ clinic.id }}">{{ clinic.name }}</option>
-                        {% endfor %}
-                    </select>
+                        style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Клиники
+                        (от врача)</label>
+                    <div id="edit_doctor_clinics_display"
+                        style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #f9fafb; min-height: 38px;">
+                        <span style="color: #6b7280;">Выберите врача для отображения клиник</span>
+                    </div>
                 </div>
             </div>
 
@@ -436,12 +445,39 @@
         document.getElementById('edit_organization_id').value = userData.organization_id || '';
         document.getElementById('edit_city_id').value = userData.city_id || '';
         document.getElementById('edit_center_id').value = userData.center_id || '';
-        document.getElementById('edit_clinic_id').value = userData.clinic_id || '';
         document.getElementById('edit_doctor_id').value = userData.doctor_id || '';
 
-        // Set Action URL
+        // Update Action URL
         document.getElementById('editUserForm').action = '/admin/users/edit/' + userData.id;
+
+        // Update clinics display from doctor
+        updateClinicsFromDoctor(userData.doctor_id, 'edit_');
     }
+
+    // Map doctor ID to their clinics (using global doctors list)
+    const allDoctors = {{ doctors| tojson }};
+
+    function updateClinicsFromDoctor(doctorId, prefix) {
+        const doc = allDoctors.find(d => d.id == doctorId);
+        const display = document.getElementById(prefix + 'doctor_clinics_display');
+
+        if (doc && doc.clinics && doc.clinics.length > 0) {
+            display.innerHTML = doc.clinics.map(c => `
+                <span style="display: inline-block; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-right: 4px; margin-bottom: 4px; font-weight: 500;">${c.name}</span>
+            `).join('');
+        } else {
+            display.innerHTML = '<span style="color: #6b7280;">Нет привязанных клиник</span>';
+        }
+    }
+
+    // Add listener for doctor change in both modals
+    document.getElementById('edit_doctor_id').addEventListener('change', function () {
+        updateClinicsFromDoctor(this.value, 'edit_');
+    });
+
+    document.getElementById('add_doctor_id').addEventListener('change', function () {
+        updateClinicsFromDoctor(this.value, 'add_');
+    });
 
     // Close modal when clicking outside
     window.onclick = function (event) {

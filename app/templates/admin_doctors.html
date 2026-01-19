@@ -32,6 +32,10 @@
         font-weight: 400;
         margin-left: 0.5rem;
     }
+
+    .clinic-item:hover {
+        background-color: #f3f4f6;
+    }
 </style>
 <div class="card" style="overflow-x: auto;">
     <div class="flex-between mb-4">
@@ -62,6 +66,7 @@
                 <th>ФИО</th>
                 <th>Специализация</th>
                 <th>Менеджер</th>
+                <th>Клиники</th>
                 <th>Бонусы</th>
                 <th>Действия</th>
             </tr>
@@ -73,11 +78,23 @@
                 <td>{{ doctor.name }}</td>
                 <td>{{ doctor.specialization or '-' }}</td>
                 <td>{{ doctor.manager or '-' }}</td>
+                <td>
+                    {% for clinic in doctor.clinics %}
+                    <span class="badge"
+                        style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem;">{{
+                        clinic.name }}</span>
+                    {% endfor %}
+                    {% if not doctor.clinics %}-{% endif %}
+                </td>
                 <td>{{ 'Б-' ~ doctor.bonus_type if doctor.bonus_type else '-' }}</td>
                 <td>
-                    <button
-                        onclick="editDoctor('{{ doctor.id }}', '{{ doctor.name }}', '{{ doctor.specialization or '' }}', '{{ doctor.manager or '' }}', '{{ doctor.bonus_type or '' }}')"
-                        class="btn" style="background: transparent; color: #4b5563; padding: 0.25rem;">
+                    <button onclick="editDoctor(this)" data-id="{{ doctor.id }}"
+                        data-name="{{ doctor.name|tojson|forceescape }}"
+                        data-specialization="{{ (doctor.specialization or '')|tojson|forceescape }}"
+                        data-manager="{{ (doctor.manager or '')|tojson|forceescape }}"
+                        data-bonus_type="{{ (doctor.bonus_type or '')|tojson|forceescape }}"
+                        data-clinics='{{ doctor.clinics|map(attribute="id")|list|tojson }}' class="btn"
+                        style="background: transparent; color: #4b5563; padding: 0.25rem;">
                         ✎
                     </button>
                     <button onclick="deleteDoctor('{{ doctor.id }}')" class="btn"
@@ -91,26 +108,31 @@
     </table>
 </div>
 
-<!-- ... Modals ... -->
-
 <!-- Add/Edit Modal -->
 <div id="add-doctor-modal"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
-    <div style="background: white; margin: 100px auto; padding: 2rem; width: 400px; border-radius: 0.5rem;">
-        <h3 id="modal-title">Добавить врача</h3>
-        <form id="doctor-form" method="POST" action="{{ url_for('admin.add_doctor') }}">
+    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);">
+    <div
+        style="background-color: #ffffff; margin: 5% auto; padding: 0; border: none; width: 90%; max-width: 450px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+        <div
+            style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modal-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Добавить врача
+            </h3>
+            <span onclick="closeModal()"
+                style="cursor: pointer; font-size: 24px; line-height: 1; color: #6b7280; transition: color 0.2s;">&times;</span>
+        </div>
+        <form id="doctor-form" method="POST" action="{{ url_for('admin.add_doctor') }}" style="padding: 1.5rem;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label style="display: block; margin-bottom: 0.5rem;">ФИО</label>
-                <input type="text" name="name" required style="width: 100%; padding: 0.5rem;">
+                <input type="text" name="name" required style="width: 100%; padding: 0.5rem; box-sizing: border-box;">
             </div>
             <div class="mb-4">
                 <label style="display: block; margin-bottom: 0.5rem;">Специализация</label>
-                <input type="text" name="specialization" style="width: 100%; padding: 0.5rem;">
+                <input type="text" name="specialization" style="width: 100%; padding: 0.5rem; box-sizing: border-box;">
             </div>
             <div class="mb-4">
                 <label style="display: block; margin-bottom: 0.5rem;">Менеджер</label>
-                <select name="manager" style="width: 100%; padding: 0.5rem;">
+                <select name="manager" style="width: 100%; padding: 0.5rem; box-sizing: border-box;">
                     <option value="">-- Выберите менеджера --</option>
                     {% for manager in managers %}
                     <option value="{{ manager.name }}">{{ manager.name }}</option>
@@ -120,7 +142,7 @@
 
             <div class="mb-4">
                 <label style="display: block; margin-bottom: 0.5rem;">Бонусы</label>
-                <select name="bonus_type" style="width: 100%; padding: 0.5rem;">
+                <select name="bonus_type" style="width: 100%; padding: 0.5rem; box-sizing: border-box;">
                     <option value="">-- Нет --</option>
                     {% if bonus_cols %}
                     {% for i in range(1, bonus_cols + 1) %}
@@ -129,6 +151,25 @@
                     {% endif %}
                 </select>
                 <small style="color: #6b7280;">Доступно вариантов: {{ bonus_cols }} (из активного периода)</small>
+            </div>
+
+            <div class="mb-4">
+                <label style="display: block; margin-bottom: 0.5rem;">Клиники (можно выбрать несколько)</label>
+                <div style="border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; background: #fff;">
+                    <input type="text" id="clinic-search" placeholder="Поиск клиники..."
+                        style="width: 100%; padding: 0.4rem; border: 1px solid #e5e7eb; border-radius: 0.25rem; margin-bottom: 0.5rem; font-size: 0.875rem; box-sizing: border-box;"
+                        onkeyup="filterClinics()">
+                    <div id="clinics-list"
+                        style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+                        {% for clinic in clinics %}
+                        <label class="clinic-item"
+                            style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;">
+                            <input type="checkbox" name="clinic_ids" value="{{ clinic.id }}" class="clinic-checkbox">
+                            <span class="clinic-name">{{ clinic.name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 1rem;">
@@ -143,11 +184,39 @@
     function closeModal() {
         document.getElementById('add-doctor-modal').style.display = 'none';
         document.getElementById('doctor-form').reset();
+
+        // Clear checkboxes
+        document.querySelectorAll('.clinic-checkbox').forEach(cb => cb.checked = false);
+        // Clear search and show all
+        document.getElementById('clinic-search').value = '';
+        filterClinics();
+
         document.getElementById('modal-title').innerText = 'Добавить врача';
         document.getElementById('doctor-form').action = "{{ url_for('admin.add_doctor') }}";
     }
 
-    function editDoctor(id, name, specialization, manager, bonusType) {
+    function filterClinics() {
+        const query = document.getElementById('clinic-search').value.toLowerCase();
+        const items = document.querySelectorAll('.clinic-item');
+
+        items.forEach(item => {
+            const name = item.querySelector('.clinic-name').innerText.toLowerCase();
+            if (name.includes(query)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function editDoctor(btn) {
+        const id = btn.dataset.id;
+        const name = JSON.parse(btn.dataset.name);
+        const specialization = JSON.parse(btn.dataset.specialization);
+        const manager = JSON.parse(btn.dataset.manager);
+        const bonusType = JSON.parse(btn.dataset.bonus_type);
+        const clinicIds = JSON.parse(btn.dataset.clinics);
+
         document.getElementById('add-doctor-modal').style.display = 'block';
         document.getElementById('modal-title').innerText = 'Редактировать врача';
         const form = document.getElementById('doctor-form');
@@ -155,11 +224,21 @@
         form.querySelector('[name="name"]').value = name;
         form.querySelector('[name="specialization"]').value = specialization;
         form.querySelector('[name="manager"]').value = manager;
+
         // Set bonus type if exists
         const bonusSelect = form.querySelector('[name="bonus_type"]');
         if (bonusSelect) {
             bonusSelect.value = bonusType || "";
         }
+
+        // Set clinics
+        document.querySelectorAll('.clinic-checkbox').forEach(cb => {
+            cb.checked = clinicIds.includes(parseInt(cb.value));
+        });
+
+        // Reset search/filter to show selected
+        document.getElementById('clinic-search').value = '';
+        filterClinics();
     }
 
     function deleteDoctor(id) {

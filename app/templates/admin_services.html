@@ -2,41 +2,311 @@
 
 {% block content %}
 <style>
-    .card table {
-        font-size: 0.75rem;
+    .services-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
     }
 
-    .card table th,
-    .card table td {
-        padding: 0.4rem 0.5rem;
-        white-space: nowrap;
-    }
-
-    .card table th {
-        font-size: 0.7rem;
-    }
-
-    .card table select {
-        font-size: 0.7rem;
-        padding: 0.2rem 0.3rem;
-        max-width: 120px;
-    }
-
-    .card table button {
-        font-size: 0.9rem;
+    .services-header h2 {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #111827;
     }
 
     .count-badge {
-        font-size: 0.8rem;
+        font-size: 0.875rem;
         color: #6b7280;
         font-weight: 400;
-        margin-left: 0.5rem;
+        background: #f3f4f6;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    /* Service List */
+    .service-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    /* Parent Service Card */
+    .service-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .service-card.is-hidden {
+        opacity: 0.6;
+    }
+
+    .service-row {
+        display: flex;
+        align-items: center;
+        padding: 0.625rem 1rem;
+        gap: 0.75rem;
+    }
+
+    .service-row:hover {
+        background: #f9fafb;
+    }
+
+    /* Expand Toggle */
+    .expand-toggle {
+        width: 1.5rem;
+        height: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        background: #f3f4f6;
+        color: #6b7280;
+        cursor: pointer;
+        font-size: 0.625rem;
+        transition: all 0.15s;
+        flex-shrink: 0;
+        border: none;
+    }
+
+    .expand-toggle:hover {
+        background: #e5e7eb;
+    }
+
+    .expand-toggle.has-children {
+        background: #ede9fe;
+        color: #7c3aed;
+    }
+
+    .expand-toggle.collapsed {
+        transform: rotate(-90deg);
+    }
+
+    .expand-placeholder {
+        width: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    /* Service Info */
+    .service-info {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 0;
+    }
+
+    .service-name {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: #111827;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .service-badge {
+        font-size: 0.6875rem;
+        font-weight: 500;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        flex-shrink: 0;
+    }
+
+    .badge-children {
+        background: #ede9fe;
+        color: #7c3aed;
+    }
+
+    .badge-hidden {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .service-price {
+        font-size: 0.875rem;
+        color: #374151;
+        font-weight: 500;
+        min-width: 70px;
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .service-price.inherited {
+        color: #9ca3af;
+        font-style: italic;
+    }
+
+    /* Actions */
+    .service-actions {
+        display: flex;
+        gap: 0.125rem;
+        flex-shrink: 0;
+    }
+
+    .action-btn {
+        width: 1.75rem;
+        height: 1.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: all 0.15s;
+        text-decoration: none;
+    }
+
+    .action-btn.visibility {
+        color: #10b981;
+    }
+
+    .action-btn.visibility.is-hidden {
+        color: #9ca3af;
+    }
+
+    .action-btn.price {
+        color: #10b981;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .action-btn.edit {
+        color: #3b82f6;
+    }
+
+    .action-btn.delete {
+        color: #ef4444;
+    }
+
+    .action-btn:hover {
+        background: #f3f4f6;
+    }
+
+    /* Children Container */
+    .children-container {
+        background: #fafafa;
+        border-top: 1px solid #f3f4f6;
+    }
+
+    .children-container.collapsed {
+        display: none;
+    }
+
+    .child-row {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem 0.5rem 3rem;
+        gap: 0.75rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .child-row:last-child {
+        border-bottom: none;
+    }
+
+    .child-row:hover {
+        background: #f3f4f6;
+    }
+
+    .child-row .service-name {
+        font-weight: 400;
+        color: #374151;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #6b7280;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        backdrop-filter: blur(2px);
+    }
+
+    .modal-content {
+        background: white;
+        margin: 10vh auto;
+        padding: 1.5rem;
+        width: 400px;
+        max-width: 90vw;
+        border-radius: 12px;
+        box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .modal-content h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 1.25rem;
+        color: #111827;
+    }
+
+    .modal-content label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.375rem;
+    }
+
+    .modal-content input,
+    .modal-content select {
+        width: 100%;
+        padding: 0.625rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        margin-bottom: 0.875rem;
+        box-sizing: border-box;
+    }
+
+    .modal-content input:focus,
+    .modal-content select:focus {
+        outline: none;
+        border-color: #9333ea;
+        box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.1);
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 1rem;
     }
 </style>
-<div class="card" style="overflow-x: auto;">
-    <div class="flex-between mb-4">
-        <h2>Услуги <span class="count-badge">всего {{ services|length }}</span></h2>
-        <div style="display: flex; gap: 10px;">
+
+<div class="card">
+    <div class="services-header">
+        <h2>
+            Услуги
+            <span class="count-badge">{{ services|length }}</span>
+        </h2>
+        <div class="header-actions">
             <button onclick="document.getElementById('import-file').click()" class="btn"
                 style="background-color: #10b981; color: white;">
                 Импорт (Excel/CSV)
@@ -47,7 +317,6 @@
             </button>
         </div>
 
-        <!-- Hidden Import Form -->
         <form id="import-form" action="{{ url_for('admin.import_services') }}" method="POST"
             enctype="multipart/form-data" style="display: none;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -56,69 +325,113 @@
         </form>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Название</th>
-                <th>Цена</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for service in services %}
-            <tr style="{{ 'opacity: 0.6; background-color: #f3f4f6;' if service.is_hidden else '' }}">
-                <td>{{ service.id }}</td>
-                <td>
-                    {{ service.name }}
-                    {% if service.is_hidden %}
-                    <span
-                        style="font-size: 0.8rem; background: #9ca3af; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">Скрыта</span>
+    <div class="service-list">
+        {% set parent_services = services | selectattr('parent_id', 'none') | list %}
+        {% if parent_services %}
+        {% for service in parent_services %}
+        {% set children = services | selectattr('parent_id', 'equalto', service.id) | list %}
+        <div class="service-card {{ 'is-hidden' if service.is_hidden else '' }}" data-id="{{ service.id }}">
+            <div class="service-row">
+                {% if children %}
+                <button type="button" class="expand-toggle has-children" onclick="toggleExpand(this)">▼</button>
+                {% else %}
+                <span class="expand-placeholder"></span>
+                {% endif %}
+
+                <div class="service-info">
+                    <span class="service-name">{{ service.name }}</span>
+                    {% if children %}
+                    <span class="service-badge badge-children">{{ children|length }}</span>
                     {% endif %}
-                </td>
-                <td>{{ service.get_price() }} ₽</td>
-                <td>
+                    {% if service.is_hidden %}
+                    <span class="service-badge badge-hidden">Скрыта</span>
+                    {% endif %}
+                </div>
+
+                <div class="service-price">{{ service.get_price() }} ₽</div>
+
+                <div class="service-actions">
                     <form action="{{ url_for('admin.toggle_service_visibility', id=service.id) }}" method="POST"
-                        style="display: inline;">
+                        style="display: contents;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn"
-                            style="background: transparent; color: {{ '#6b7280' if service.is_hidden else '#10b981' }}; padding: 0.25rem;"
+                        <button type="submit"
+                            class="action-btn visibility {{ 'is-hidden' if service.is_hidden else '' }}"
                             title="{{ 'Показать' if service.is_hidden else 'Скрыть' }}">
-                            {{ '👁️‍🗨️' if service.is_hidden else '👁️' }}
+                            👁️
                         </button>
                     </form>
-                    <a href="{{ url_for('admin.service_prices', id=service.id) }}" class="btn"
-                        style="background: transparent; color: #10b981; padding: 0.25rem; font-size: 1.2rem; text-decoration: none;"
-                        title="Цены по периодам">
-                        $
-                    </a>
-                    <button onclick="deleteService('{{ service.id }}')" class="btn"
-                        style="background: transparent; color: #ef4444; padding: 0.25rem;">
-                        ✕
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    <a href="{{ url_for('admin.service_prices', id=service.id) }}" class="action-btn price"
+                        title="Цены">$</a>
+                    <button type="button" class="action-btn edit" title="Редактировать"
+                        onclick="editService({{ service.id }}, '{{ service.name | replace("'", "\\'") }}', {{ service.price if service.price else 'null' }}, null)">✏️</button>
+                    <button type="button" class="action-btn delete" title="Удалить"
+                        onclick="deleteService({{ service.id }})">✕</button>
+                </div>
+            </div>
+
+            {% if children %}
+            <div class="children-container">
+                {% for child in children %}
+                <div class="child-row {{ 'is-hidden' if child.is_hidden else '' }}">
+                    <div class="service-info">
+                        <span class="service-name">{{ child.name }}</span>
+                        {% if child.is_hidden %}
+                        <span class="service-badge badge-hidden">Скрыта</span>
+                        {% endif %}
+                    </div>
+                    <div class="service-price {{ 'inherited' if not child.price else '' }}">{{ child.get_price() }} ₽
+                    </div>
+                    <div class="service-actions">
+                        <form action="{{ url_for('admin.toggle_service_visibility', id=child.id) }}" method="POST"
+                            style="display: contents;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit"
+                                class="action-btn visibility {{ 'is-hidden' if child.is_hidden else '' }}"
+                                title="{{ 'Показать' if child.is_hidden else 'Скрыть' }}">
+                                👁️
+                            </button>
+                        </form>
+                        <a href="{{ url_for('admin.service_prices', id=child.id) }}" class="action-btn price"
+                            title="Цены">$</a>
+                        <button type="button" class="action-btn edit" title="Редактировать"
+                            onclick="editService({{ child.id }}, '{{ child.name | replace("'", "\\'") }}', {{ child.price if child.price else 'null' }}, {{ child.parent_id }})">✏️</button>
+                        <button type="button" class="action-btn delete" title="Удалить"
+                            onclick="deleteService({{ child.id }})">✕</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <p>Нет услуг. Добавьте первую услугу.</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
-<!-- Add/Edit Modal -->
-<div id="add-service-modal"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
-    <div style="background: white; margin: 100px auto; padding: 2rem; width: 400px; border-radius: 0.5rem;">
+<!-- Modal -->
+<div id="add-service-modal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal-content">
         <h3 id="modal-title">Добавить услугу</h3>
         <form id="service-form" method="POST" action="{{ url_for('admin.add_service') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="mb-4">
-                <label style="display: block; margin-bottom: 0.5rem;">Название</label>
-                <input type="text" name="name" required style="width: 100%; padding: 0.5rem;">
-            </div>
-            <div class="mb-4">
-                <label style="display: block; margin-bottom: 0.5rem;">Цена</label>
-                <input type="number" step="0.01" name="price" required style="width: 100%; padding: 0.5rem;">
-            </div>
-            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+            <label>Название</label>
+            <input type="text" name="name" required>
+            <label>Родительская услуга</label>
+            <select name="parent_id">
+                <option value="">— Нет (корневая) —</option>
+                {% for s in services %}
+                {% if not s.parent_id %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+            <label>Цена</label>
+            <input type="number" step="0.01" name="price">
+            <div class="modal-actions">
                 <button type="button" onclick="closeModal()" class="btn" style="background: #e5e7eb;">Отмена</button>
                 <button type="submit" class="btn btn-primary">Сохранить</button>
             </div>
@@ -127,6 +440,50 @@
 </div>
 
 <script>
+    const STORAGE_KEY = 'services_collapsed';
+
+    function getCollapsedState() {
+        try {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        } catch { return {}; }
+    }
+
+    function saveCollapsedState(state) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function toggleExpand(btn) {
+        btn.classList.toggle('collapsed');
+        const card = btn.closest('.service-card');
+        const children = card.querySelector('.children-container');
+        const id = card.dataset.id;
+        const state = getCollapsedState();
+
+        if (children) {
+            children.classList.toggle('collapsed');
+            state[id] = children.classList.contains('collapsed');
+        }
+        saveCollapsedState(state);
+    }
+
+    // Restore state on page load (default: all collapsed)
+    document.addEventListener('DOMContentLoaded', function () {
+        const state = getCollapsedState();
+        const hasStoredState = Object.keys(state).length > 0;
+
+        document.querySelectorAll('.service-card[data-id]').forEach(card => {
+            const id = card.dataset.id;
+            const btn = card.querySelector('.expand-toggle');
+            const children = card.querySelector('.children-container');
+
+            // If no stored state OR state says collapsed, collapse it
+            if (!hasStoredState || state[id] !== false) {
+                if (btn) btn.classList.add('collapsed');
+                if (children) children.classList.add('collapsed');
+            }
+        });
+    });
+
     function closeModal() {
         document.getElementById('add-service-modal').style.display = 'none';
         document.getElementById('service-form').reset();
@@ -134,27 +491,26 @@
         document.getElementById('service-form').action = "{{ url_for('admin.add_service') }}";
     }
 
-    function editService(id, name, price) {
+    function editService(id, name, price, parentId) {
         document.getElementById('add-service-modal').style.display = 'block';
         document.getElementById('modal-title').innerText = 'Редактировать услугу';
         const form = document.getElementById('service-form');
-        form.action = `/admin/services/${id}/update`;
+        form.action = '/admin/services/' + id + '/update';
         form.querySelector('[name="name"]').value = name;
-        form.querySelector('[name="price"]').value = price;
+        form.querySelector('[name="price"]').value = price || '';
+        form.querySelector('[name="parent_id"]').value = parentId || '';
     }
 
     function deleteService(id) {
-        if (confirm('Вы уверены, что хотите удалить эту услугу?')) {
+        if (confirm('Удалить эту услугу?')) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = `/admin/services/${id}/delete`;
-
+            form.action = '/admin/services/' + id + '/delete';
             const csrf = document.createElement('input');
             csrf.type = 'hidden';
             csrf.name = 'csrf_token';
             csrf.value = "{{ csrf_token() }}";
             form.appendChild(csrf);
-
             document.body.appendChild(form);
             form.submit();
         }

@@ -112,6 +112,7 @@
             </div>
 
             <!-- Double Time Checkbox -->
+            {% if current_user.role not in ['org', 'doctor'] %}
             <div class="form-group checkbox-group"
                 style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0;">
                 <input type="checkbox" id="is-double-time"
@@ -120,6 +121,7 @@
                     style="margin-bottom:0; font-size: 0.875rem; color: #4b5563; font-weight: normal; cursor: pointer; user-select: none;">Доп.
                     время (+15 мин)</label>
             </div>
+            {% endif %}
 
             <!-- Patient Name (Full Width) -->
             <div class="form-group" style="margin-bottom: 0;">
@@ -173,22 +175,42 @@
             <div class="form-group" style="margin-bottom: 0;">
                 <label
                     style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Услуга</label>
-                <input type="text" id="service" list="services-list" placeholder="Выберите услугу"
-                    style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box;">
-                <datalist id="services-list">
+
+                <!-- Parent Service Dropdown -->
+                <select id="main-service-select"
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; background-color: white;">
+                    <option value="">-- Выберите услугу --</option>
                     {% for service in services %}
-                    <option value="{{ service.name }}">
-                        {% endfor %}
-                </datalist>
+                    {% if not service.parent_id %}
+                    <option value="{{ service.id }}">{{ service.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+
+                <!-- Child Service Container (Hidden by default) -->
+                <div id="child-service-container" style="margin-top: 8px; display: none;">
+                    <select id="child-service-select"
+                        style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; background-color: white;">
+                        <option value="">-- Уточните услугу --</option>
+                    </select>
+                </div>
+
+                <!-- Hidden Input to store final service ID/name if needed for legacy compatibility -->
+                <input type="hidden" id="service" name="service">
+            </div>
+
+            <!-- Hidden Data Source for JavaScript -->
+            <div id="service-hierarchy-data" class="hidden"
+                data-services='[ {% for s in services %}{{ s.to_dict() | tojson }}{% if not loop.last %},{% endif %}{% endfor %} ]'>
             </div>
 
             <!-- Info & History -->
-            <div class="form-item-info hidden" id="author-info"
-                style="font-size: 0.75rem; color: #6b7280; padding: 8px; background: #f9fafb; border-radius: 6px;">
+            <div class="form-item-info" id="author-info"
+                style="font-size: 0.75rem; color: #6b7280; padding: 8px; background: #f9fafb; border-radius: 6px; display: none;">
             </div>
 
-            <div id="history-container" class="hidden"
-                style="margin-top: 0.5rem; border-top: 1px solid #e5e7eb; padding-top: 0.5rem;">
+            <div id="history-container"
+                style="margin-top: 0.5rem; border-top: 1px solid #e5e7eb; padding-top: 0.5rem; display: none;">
                 <h4 style="font-size: 0.875rem; margin: 0 0 0.25rem 0; color: #374151;">История</h4>
                 <div id="history-list" style="font-size: 0.75rem; color: #6b7280; max-height: 100px; overflow-y: auto;">
                 </div>

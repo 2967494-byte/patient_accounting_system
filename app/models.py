@@ -238,6 +238,7 @@ class Appointment(db.Model):
                 'id': assoc.service.id, 
                 'name': assoc.service.name, 
                 'price': assoc.service.price,
+                'parent_id': assoc.service.parent_id,
                 'quantity': assoc.quantity
             } for assoc in self.service_associations],
             # Services
@@ -245,6 +246,7 @@ class Appointment(db.Model):
                  'id': assoc.additional_service.id,
                  'name': assoc.additional_service.name,
                  'price': assoc.additional_service.price,
+                 'parent_id': assoc.additional_service.parent_id,
                  'quantity': assoc.quantity
             } for assoc in self.additional_service_associations],
              
@@ -300,17 +302,29 @@ class AppointmentHistory(db.Model):
             'timestamp': self.timestamp.isoformat() + 'Z'
         }
 
+# Many-to-Many Association for Doctors and Clinics
+doctor_clinics = db.Table('doctor_clinics',
+    db.Column('doctor_id', db.Integer, db.ForeignKey('doctors.id'), primary_key=True),
+    db.Column('clinic_id', db.Integer, db.ForeignKey('clinics.id'), primary_key=True)
+)
+
 class Doctor(db.Model):
     __tablename__ = 'doctors'
-
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     specialization = db.Column(db.String(100), nullable=True)
     manager = db.Column(db.String(100), nullable=True)
+    
+    # Legacy/Old field pointing to Location (Center)
     clinic_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
     bonus_type = db.Column(db.Integer, nullable=True)
-
+    
+    # Relationship to Location (Center)
     clinic = db.relationship('Location', foreign_keys=[clinic_id])
+    
+    # New M2M Relation to Clinics
+    clinics = db.relationship('Clinic', secondary=doctor_clinics, backref=db.backref('doctors', lazy='dynamic'))
 
     def to_dict(self):
         return {
@@ -318,8 +332,8 @@ class Doctor(db.Model):
             'name': self.name,
             'specialization': self.specialization,
             'manager': self.manager,
-            'clinic_name': self.clinic.name if self.clinic else None,
-            'bonus_type': self.bonus_type
+            'bonus_type': self.bonus_type,
+            'clinics': [c.to_dict() for c in self.clinics]
         }
 
 class Service(db.Model):
@@ -329,6 +343,9 @@ class Service(db.Model):
     name = db.Column(db.String(200), nullable=False)
     price = db.Column(db.Float, nullable=False)
     is_hidden = db.Column(db.Boolean, default=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('services.id'), nullable=True)
+    
+    children = db.relationship('Service', backref=db.backref('parent', remote_side=[id]), lazy=True)
     prices = db.relationship('ServicePrice', backref='service', lazy=True, cascade="all, delete-orphan")
 
     def get_price(self, date_obj=None):
@@ -350,13 +367,20 @@ class Service(db.Model):
         if relevant_price:
             return relevant_price.price
             
+        if self.price > 0:
+            return self.price
+            
+        if self.parent:
+            return self.parent.get_price(date_obj)
+            
         return self.price
 
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
-            'price': self.price
+            'price': self.price,
+            'parent_id': self.parent_id
         }
 
 class ServicePrice(db.Model):
@@ -375,6 +399,9 @@ class AdditionalService(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     price = db.Column(db.Float, nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('additional_services.id'), nullable=True)
+    
+    children = db.relationship('AdditionalService', backref=db.backref('parent', remote_side=[id]), lazy=True)
     prices = db.relationship('AdditionalServicePrice', backref='additional_service', lazy=True, cascade="all, delete-orphan")
 
     def get_price(self, date_obj=None):
@@ -391,13 +418,20 @@ class AdditionalService(db.Model):
         if relevant_price:
             return relevant_price.price
             
+        if self.price > 0:
+            return self.price
+            
+        if self.parent:
+            return self.parent.get_price(date_obj)
+            
         return self.price
 
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
-            'price': self.price
+            'price': self.price,
+            'parent_id': self.parent_id
         }
 
 class AdditionalServicePrice(db.Model):
