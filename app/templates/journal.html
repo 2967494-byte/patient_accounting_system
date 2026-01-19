@@ -621,16 +621,18 @@
         </div>
 
         <div class="filter-group">
-            <button class="btn-action btn-secondary" onclick="openAppointmentSelectionModal()">
-                <span>📋</span> Из записи
+            <button class="btn-action" style="background-color: transparent; color: #9333ea; border: 2px solid #9333ea;"
+                onclick="openAppointmentSelectionModal()">
+                Из записи
             </button>
-            <button class="btn-action btn-primary" onclick="openJournalModal()">
-                <span>➕</span> Добавить
+            <button class="btn-action" style="background-color: #9333ea; color: white; border: none;"
+                onclick="openJournalModal()">
+                Добавить
             </button>
             {% if current_user.role == 'admin' %}
             <button onclick="document.getElementById('importJournalModal').style.display='block'"
                 class="btn-action btn-success">
-                <span>📥</span> Импорт
+                Импорт
             </button>
             {% endif %}
         </div>
@@ -706,7 +708,8 @@
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Реб</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Клиника</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Врач</th>
-                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">Пациент</th>
+                    <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb;">
+                        Пациент</th>
                     <th style="padding: 0.75rem 0.5rem; border-bottom: 2px solid #e5e7eb; vertical-align: middle;">
                         Услуги
                     </th>
@@ -737,7 +740,8 @@
                         appointment.clinic else '-' }}</td>
                     <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.doctor_rel.name if
                         appointment.doctor_rel else (appointment.doctor or '-') }}</td>
-                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap;">{{ appointment.patient_name }}</td>
+                    <td style="padding: 0.25rem 0.5rem; white-space: nowrap; font-weight: 600;">{{
+                        appointment.patient_name }}</td>
                     <td style="padding: 0.25rem 0.5rem; white-space: normal; vertical-align: middle;">
                         <!-- Main Services -->
                         <div class="badge-services">
