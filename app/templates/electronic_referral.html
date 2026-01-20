@@ -145,17 +145,20 @@
     .radio-option,
     .checkbox-option {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 0.5rem;
         font-size: 0.85rem;
         color: #6b7280;
+        cursor: pointer;
     }
 
     .radio-option input,
     .checkbox-option input {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
         cursor: pointer;
+        margin-top: 1px;
     }
 
     .special-checkbox {
@@ -175,8 +178,9 @@
     }
 
     .special-checkbox input {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
     }
 
     .package-item {
@@ -197,7 +201,8 @@
     .package-item input[type="checkbox"] {
         width: 18px;
         height: 18px;
-        margin-top: 0.25rem;
+        flex-shrink: 0;
+        margin-top: 2px;
     }
 
     .package-title {
