@@ -221,9 +221,75 @@
 </style>
 
 <div class="referral-container">
-    <h1 style="font-size: 1.75rem; font-weight: 700; color: #111827; margin-bottom: 2rem;">
-        Электронное направление
-    </h1>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
+        <h1 style="font-size: 1.75rem; font-weight: 700; color: #111827; margin: 0;">
+            Электронное направление
+        </h1>
+        {% if patient %}
+        <div
+            style="text-align: right; background: #f3f4f6; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <div
+                style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.025em; margin-bottom: 0.25rem;">
+                Пациент</div>
+            <div style="font-size: 1.1rem; font-weight: 600; color: #1f2937;">{{ patient.name }}</div>
+            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Main Info Section -->
+    <div class="referral-section">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h2 class="section-title">Основная информация</h2>
+            <span class="section-chevron expanded">▼</span>
+        </div>
+        <div class="section-content expanded">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding-top: 0.5rem;">
+                <!-- Clinic Selection -->
+                <div>
+                    <label
+                        style="display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Клиника</label>
+                    {% if clinics|length == 1 %}
+                    <div
+                        style="padding: 0.75rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; color: #111827;">
+                        {{ clinics[0].name }}
+                    </div>
+                    <input type="hidden" name="clinic_id" value="{{ clinics[0].id }}">
+                    {% else %}
+                    <select name="clinic_id"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;">
+                        <option value="">Выберите клинику...</option>
+                        {% for clinic in clinics %}
+                        <option value="{{ clinic.id }}">{{ clinic.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                </div>
+
+                <!-- Doctor Selection -->
+                <div>
+                    <label
+                        style="display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Направляющий
+                        врач</label>
+                    {% if doctors|length == 1 %}
+                    <div
+                        style="padding: 0.75rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; color: #111827;">
+                        {{ doctors[0].name }}
+                    </div>
+                    <input type="hidden" name="doctor_id" value="{{ doctors[0].id }}">
+                    {% else %}
+                    <select name="doctor_id"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;">
+                        <option value="">Выберите врача...</option>
+                        {% for doc in doctors %}
+                        <option value="{{ doc.id }}">{{ doc.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- CT Scans Section -->
     <div class="referral-section">
@@ -607,13 +673,11 @@
                     </label>
                     <label class="checkbox-option" style="margin-bottom: 0.75rem;">
                         <input type="checkbox" name="add_vncs_program_desc">
-                        Описание программы ВНЧС
+                        Описание зонограммы ВНЧС
                     </label>
                     <label class="checkbox-option" style="margin-bottom: 0.75rem;">
                         <input type="checkbox" name="add_ct_teeth_desc">
-                        Описание КТ области зубов<br>
-                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 1.5rem;">(отметить в
-                            формуле)</span>
+                        Описание КТ области зубов (отметить в формуле)
                     </label>
                     <label class="checkbox-option" style="margin-bottom: 0.75rem;">
                         <input type="checkbox" name="add_ct_vncs_desc">
@@ -625,10 +689,7 @@
                     </label>
                     <label class="checkbox-option">
                         <input type="checkbox" name="add_ct_detail">
-                        Детализация КТ (скриншоты)<br>
-                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 1.5rem;">в области зубов (отметить
-                            в
-                            формуле)</span>
+                        Детализация КТ (скриншоты) в области зубов (отметить в формуле)
                     </label>
                 </div>
 
@@ -639,9 +700,7 @@
                     </label>
                     <label class="checkbox-option" style="margin-bottom: 0.75rem;">
                         <input type="checkbox" name="add_3d_ceph">
-                        3D-цефалометрия<br>
-                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 1.5rem;">(анализ и расчет по КТ
-                            16*16)</span>
+                        3D-цефалометрия (анализ и расчет по КТ 16*16)
                     </label>
                     <label class="checkbox-option" style="margin-bottom: 0.75rem;">
                         <input type="checkbox" name="add_comparative_trg">
@@ -649,10 +708,7 @@
                     </label>
                     <label class="checkbox-option">
                         <input type="checkbox" name="add_bone_measurement">
-                        Измерение кости для имплантации<br>
-                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 1.5rem;">в области отсутствующих
-                            зубов<br>
-                            (отметите в формуле)</span>
+                        Измерение кости для имплантации в области отсутствующих зубов (отметите в формуле)
                     </label>
                 </div>
             </div>
@@ -1270,16 +1326,55 @@
             if (changed) updateSelectedTeethDisplay();
         });
 
-        // Save functionality (placeholder)
+        // Save functionality
         const saveBtn = document.getElementById('save-referral-btn');
         if (saveBtn) {
-            saveBtn.addEventListener('click', function () {
-                const formData = {
-                    selectedTeeth: Array.from(selectedTeeth),
-                    comments: document.querySelector('textarea[name="doctor_comments"]').value
+            saveBtn.addEventListener('click', async function () {
+                this.disabled = true;
+                this.innerHTML = '<span style="display:inline-block; width:16px; height:16px; border:2px solid #fff; border-bottom-color:transparent; border-radius:50%; animation: rotation 1s linear infinite; margin-right: 8px;"></span>Сохранение...';
+
+                const data = {
+                    patient_id: document.querySelector('input[name="patient_id"]')?.value,
+                    doctor_id: document.querySelector('select[name="doctor_id"], input[name="doctor_id"]')?.value,
+                    clinic_id: document.querySelector('select[name="clinic_id"], input[name="clinic_id"]')?.value,
+                    selected_teeth: Array.from(selectedTeeth),
+                    doctor_comments: document.querySelector('textarea[name="doctor_comments"]').value,
+                    form_data: {}
                 };
-                console.log('Form data:', formData);
-                alert('Функция сохранения будет реализована позже');
+
+                // Collect all radio and checkbox values
+                document.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]:not([name="patient_id"]):not([name="doctor_id"]):not([name="clinic_id"])').forEach(input => {
+                    if (input.type === 'radio') {
+                        data.form_data[input.name] = input.value;
+                    } else if (input.type === 'checkbox') {
+                        data.form_data[input.name] = input.checked;
+                    }
+                });
+
+                try {
+                    const response = await fetch("{{ url_for('admin.electronic_referral') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        alert('Направление успешно сохранено');
+                        // Optional: redirect to dashboard or referral list
+                    } else {
+                        alert('Ошибка при сохранении: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Save error:', error);
+                    alert('Произошла ошибка при отправке данных');
+                } finally {
+                    this.disabled = false;
+                    this.textContent = 'Сохранить направление';
+                }
             });
         }
     </script>

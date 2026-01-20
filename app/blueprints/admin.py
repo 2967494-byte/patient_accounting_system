@@ -4966,11 +4966,71 @@ def notifications():
 
     return render_template('admin_notifications.html', users=users, roles=roles, history=history_data)
 
-@admin.route('/electronic-referral')
+@admin.route('/electronic-referral', methods=['GET', 'POST'])
 @login_required
 def electronic_referral():
     """Electronic referral form for medical imaging services"""
-    return render_template('electronic_referral.html')
+    from app.models import Patient, Doctor, Clinic, ElectronicReferral, ReferralTooth
+    
+    if request.method == 'POST':
+        import json
+        data = request.get_json()
+        
+        try:
+            referral = ElectronicReferral(
+                patient_id=data.get('patient_id'),
+                doctor_id=data.get('doctor_id'),
+                clinic_id=data.get('clinic_id'),
+                comments=data.get('doctor_comments'),
+                form_data=json.dumps(data.get('form_data', {}))
+            )
+            db.session.add(referral)
+            db.session.flush() # To get the referral.id
+            
+            # Save selected teeth
+            selected_teeth = data.get('selected_teeth', [])
+            for tooth_num in selected_teeth:
+                tooth = ReferralTooth(referral_id=referral.id, tooth_number=str(tooth_num))
+                db.session.add(tooth)
+            
+            db.session.commit()
+            return jsonify({'status': 'success', 'message': 'Направление сохранено', 'referral_id': referral.id})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    patient_id = request.args.get('patient_id', type=int)
+    patient = None
+    if patient_id:
+        patient = Patient.query.get(patient_id)
+    
+    doctors = []
+    clinics = []
+    
+    # Logic for selecting doctors and clinics based on role
+    if current_user.role in ['superadmin', 'admin', 'manager', 'lab_tech']:
+        doctors = Doctor.query.all()
+        clinics = Clinic.query.all()
+    elif current_user.role == 'org':
+        # If filling as an organization (clinic), show only their clinic and their doctors
+        if current_user.clinic:
+            clinics = [current_user.clinic]
+            doctors = current_user.clinic.doctors.all() if hasattr(current_user.clinic.doctors, 'all') else current_user.clinic.doctors
+        elif current_user.organization:
+            # Fallback if clinic is not set but organization is
+            clinics = Clinic.query.filter_by(city_id=current_user.city_id).all() if current_user.city_id else Clinic.query.all()
+            doctors = Doctor.query.all() # broad fallback
+    elif current_user.doctor_id:
+        # If filling as a doctor, auto-pick them
+        doc = Doctor.query.get(current_user.doctor_id)
+        if doc:
+            doctors = [doc]
+            clinics = doc.clinics
+            
+    return render_template('electronic_referral.html', 
+                           patient=patient, 
+                           doctors=doctors, 
+                           clinics=clinics)
 
 @admin.route('/support')
 @login_required

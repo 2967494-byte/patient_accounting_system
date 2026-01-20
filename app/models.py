@@ -727,3 +727,38 @@ class SupportTicket(db.Model):
         }
 
 
+
+class ElectronicReferral(db.Model):
+    __tablename__ = "electronic_referrals"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"), nullable=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey("doctors.id"), nullable=True)
+    clinic_id = db.Column(db.Integer, db.ForeignKey("clinics.id"), nullable=True)
+    comments = db.Column(db.Text, nullable=True)
+    form_data = db.Column(db.Text, nullable=True) # Stores JSON representation of selected checkboxes
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    patient = db.relationship("Patient", backref="electronic_referrals")
+    doctor = db.relationship("Doctor", backref="electronic_referrals")
+    clinic = db.relationship("Clinic", backref="electronic_referrals")
+    teeth = db.relationship("ReferralTooth", backref="referral", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "patient_id": self.patient_id,
+            "doctor_id": self.doctor_id,
+            "clinic_id": self.clinic_id,
+            "comments": self.comments,
+            "created_at": self.created_at.isoformat(),
+            "teeth": [t.tooth_number for t in self.teeth]
+        }
+
+class ReferralTooth(db.Model):
+    __tablename__ = "referral_teeth"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    referral_id = db.Column(db.Integer, db.ForeignKey("electronic_referrals.id"), nullable=False)
+    tooth_number = db.Column(db.String(10), nullable=False)
+
