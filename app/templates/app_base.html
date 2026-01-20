@@ -126,11 +126,13 @@
                     style="max-height: 40px; width: auto;">
 
 
+                {% if current_user.role != 'manager' %}
                 <a href="{{ url_for('main.dashboard') }}"
                     class="nav-tab {% if request.endpoint == 'main.dashboard' %}active{% endif %}">Календарь</a>
                 {% if current_user.role not in ['org', 'admin', 'doctor'] %}
                 <a href="{{ url_for('main.journal') }}"
                     class="nav-tab {% if request.endpoint == 'main.journal' %}active{% endif %}">Журнал</a>
+                {% endif %}
                 {% endif %}
                 <div
                     style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; margin-left: 2rem;">
@@ -274,8 +276,8 @@
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                 </button>
-                {% if current_user.role == 'superadmin' %}
-                <a href="{{ url_for('admin.index') }}"
+                {% if current_user.role == 'superadmin' or current_user.role == 'manager' %}
+                <a href="{{ url_for('admin.users') if current_user.role == 'manager' else url_for('admin.index') }}"
                     class="btn-icon  {% if request.endpoint and 'admin' in request.endpoint and 'reports' not in request.endpoint %}active{% endif %}"
                     title="Админка" style="margin-right: 1rem; color: #4b5563;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"

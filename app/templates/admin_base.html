@@ -128,6 +128,8 @@
             <nav class="nav-tabs">
                 <a href="{{ url_for('admin.users') }}"
                     class="nav-link {% if request.endpoint == 'admin.users' %}active{% endif %}">Пользователи</a>
+
+                {% if current_user.role != 'manager' %}
                 <a href="{{ url_for('admin.clinics') }}"
                     class="nav-link {% if request.endpoint == 'admin.clinics' %}active{% endif %}">Клиники</a>
                 <a href="{{ url_for('admin.doctors') }}"
@@ -146,6 +148,10 @@
                     class="nav-link {% if request.endpoint == 'admin.reports_bonuses_config_page' %}active{% endif %}">Бонусы</a>
                 <span style="border-left: 1px solid rgba(255,255,255,0.2); margin: 0 0.5rem; height: auto;"></span>
                 <a href="{{ url_for('main.dashboard') }}" class="nav-link">Вернуться на сайт</a>
+                {% else %}
+                <span style="border-left: 1px solid rgba(255,255,255,0.2); margin: 0 0.5rem; height: auto;"></span>
+                <a href="{{ url_for('auth.logout') }}" class="nav-link">Выйти</a>
+                {% endif %}
             </nav>
     </header>
 

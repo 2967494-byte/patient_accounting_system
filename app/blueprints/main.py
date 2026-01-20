@@ -322,11 +322,17 @@ def statistics():
 @main.route('/')
 @login_required
 def index():
+    if current_user.role == 'manager':
+        return redirect(url_for('admin.users'))
     return redirect(url_for('main.dashboard'))
 
 @main.route('/dashboard')
 @login_required
 def dashboard():
+    if current_user.role == 'manager':
+        flash('Доступ к календарю запрещен для вашей роли.', 'error')
+        return redirect(url_for('admin.users'))
+
     # Calculate dates for the current week (starting Monday)
     start_date_str = request.args.get('start_date')
     if start_date_str:
@@ -460,8 +466,10 @@ def dashboard():
 @main.route('/journal')
 @login_required
 def journal():
-    if current_user.role in ['org', 'admin', 'doctor']:
+    if current_user.role in ['org', 'admin', 'doctor', 'manager']:
         flash('Доступ к журналу запрещен для вашей роли.', 'error')
+        if current_user.role == 'manager':
+            return redirect(url_for('admin.users'))
         return redirect(url_for('main.dashboard'))
 
     # We still need centers/city context for the header

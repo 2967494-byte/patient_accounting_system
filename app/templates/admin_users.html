@@ -32,13 +32,192 @@
         font-weight: 400;
         margin-left: 0.5rem;
     }
+
+    /* Manager restrictions */
+    .manager-view .col-center,
+    .manager-view .col-clinic,
+    .manager-view .col-doctor,
+    .manager-view .col-role {
+        display: none !important;
+    }
+
+    /* Mobile Optimization */
+    @media (max-width: 768px) {
+        .admin-container {
+            padding: 1rem 0.5rem !important;
+        }
+
+        .flex-between {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 1rem;
+        }
+
+        .filters {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .filters form,
+        .filters select {
+            width: 100%;
+        }
+
+        /* Responsive Table to Cards */
+        table,
+        thead,
+        tbody,
+        th,
+        td,
+        tr {
+            display: block;
+        }
+
+        thead tr {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+        }
+
+        tr {
+            margin-bottom: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            background: #fff;
+            padding: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        td {
+            border: none;
+            position: relative;
+            padding-left: 50% !important;
+            white-space: normal !important;
+            min-height: 2rem;
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem !important;
+        }
+
+        td:before {
+            position: absolute;
+            left: 0.5rem;
+            width: 45%;
+            padding-right: 10px;
+            white-space: nowrap;
+            font-weight: 600;
+            color: #6b7280;
+            content: attr(data-label);
+        }
+
+        td.actions-cell {
+            padding-left: 0.5rem !important;
+            justify-content: center;
+            border-top: 1px solid #f3f4f6;
+            margin-top: 0.5rem;
+            padding-top: 1rem !important;
+        }
+
+        td.actions-cell:before {
+            display: none;
+        }
+
+        .btn-mobile-full {
+            width: 100%;
+            justify-content: center;
+            padding: 0.75rem !important;
+        }
+
+        /* Specific tweaks for IDs and small dates */
+        td[data-label="ID"] {
+            font-weight: bold;
+            color: #4f46e5;
+        }
+
+        /* Button pill styles for mobile - only inside media query */
+        .btn-action-confirm {
+            background: #dcfce7 !important;
+            border: 1px solid #86efac !important;
+            color: #166534 !important;
+            border-radius: 6px;
+            padding: 0.75rem !important;
+            width: 100%;
+            font-size: 1rem !important;
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-action-block {
+            background: #fee2e2 !important;
+            border: 1px solid #fecaca !important;
+            color: #991b1b !important;
+            border-radius: 6px;
+            padding: 0.75rem !important;
+            width: 100%;
+            font-size: 1rem !important;
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-action-unblock {
+            background: #fefce8 !important;
+            border: 1px solid #fde047 !important;
+            color: #854d0e !important;
+            border-radius: 6px;
+            padding: 0.75rem !important;
+            width: 100%;
+            font-size: 1rem !important;
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .mobile-only-text {
+            display: inline !important;
+        }
+    }
+
+    /* Desktop styles for buttons (icon only) */
+    .btn-action {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .btn-confirm-icon {
+        color: green;
+    }
+
+    .btn-block-icon {
+        color: red;
+    }
+
+    .btn-unblock-icon {
+        color: green;
+    }
+
+    .mobile-only-text {
+        display: none;
+    }
 </style>
-<div class="card" style="overflow-x: auto;">
+<div class="card {% if current_user.role == 'manager' %}manager-view{% endif %}" style="overflow-x: auto;">
     <div class="flex-between mb-4">
         <h2>Пользователи <span class="count-badge">всего {{ users|length }}</span></h2>
         <div class="filters" style="display: flex; gap: 10px; align-items: center;">
+            {% if current_user.role != 'manager' %}
             <button onclick="document.getElementById('addUserModal').style.display='block'" class="btn btn-primary"
                 style="padding: 0.5rem 1rem;">+ Добавить</button>
+            {% endif %}
             <form action="{{ url_for('admin.users') }}" method="GET"
                 style="display: flex; gap: 10px; align-items: center; margin: 0;">
                 <select name="role" onchange="this.form.submit()"
@@ -47,6 +226,7 @@
                     <option value="superadmin" {% if current_role=='superadmin' %}selected{% endif %}>Суперадмин
                     </option>
                     <option value="admin" {% if current_role=='admin' %}selected{% endif %}>Администратор</option>
+                    <option value="manager" {% if current_role=='manager' %}selected{% endif %}>Менеджер</option>
                     <option value="doctor" {% if current_role=='doctor' %}selected{% endif %}>Врач</option>
                     <option value="org" {% if current_role=='org' %}selected{% endif %}>Организация</option>
                     <option value="lab_tech" {% if current_role=='lab_tech' %}selected{% endif %}>Лаборант</option>
@@ -61,11 +241,11 @@
                 <th>ID</th>
                 <th>Имя пользователя</th>
                 <th>Email</th>
-                <th>Город</th>
-                <th>Центр</th>
-                <th>Клиника</th>
-                <th>Врач</th>
-                <th>Роль</th>
+                <th class="col-city">Город</th>
+                <th class="col-center">Центр</th>
+                <th class="col-clinic">Клиника</th>
+                <th class="col-doctor">Врач</th>
+                <th class="col-role">Роль</th>
                 <th>Статус</th>
                 <th>Действия</th>
                 <th>Дата регистрации</th>
@@ -74,11 +254,11 @@
         <tbody>
             {% for user in users %}
             <tr>
-                <td>{{ user.id }}</td>
-                <td>{{ user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.city.name if user.city else '-' }}</td>
-                <td>
+                <td data-label="ID">{{ user.id }}</td>
+                <td data-label="Имя">{{ user.username }}</td>
+                <td data-label="Email">{{ user.email }}</td>
+                <td class="col-city" data-label="Город">{{ user.city.name if user.city else '-' }}</td>
+                <td class="col-center" data-label="Центр">
                     <form action="{{ url_for('admin.update_user_center', user_id=user.id) }}" method="POST"
                         style="margin: 0;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -92,7 +272,7 @@
                         </select>
                     </form>
                 </td>
-                <td>
+                <td class="col-clinic" data-label="Клиника">
                     {% if user.doctor_details and user.doctor_details.clinics %}
                     {% for clinic in user.doctor_details.clinics %}
                     <span class="badge"
@@ -105,8 +285,9 @@
                     --
                     {% endif %}
                 </td>
-                <td>{{ user.doctor_details.name if user.doctor_details else '--' }}</td>
-                <td>
+                <td class="col-doctor" data-label="Врач">{{ user.doctor_details.name if user.doctor_details else '--' }}
+                </td>
+                <td class="col-role" data-label="Роль">
                     <form action="{{ url_for('admin.update_user_role', user_id=user.id) }}" method="POST"
                         style="margin: 0;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -115,13 +296,14 @@
                             <option value="superadmin" {% if user.role=='superadmin' %}selected{% endif %}>Суперадмин
                             </option>
                             <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Администратор</option>
+                            <option value="manager" {% if user.role=='manager' %}selected{% endif %}>Менеджер</option>
                             <option value="doctor" {% if user.role=='doctor' %}selected{% endif %}>Врач</option>
                             <option value="org" {% if user.role=='org' %}selected{% endif %}>Организация</option>
                             <option value="lab_tech" {% if user.role=='lab_tech' %}selected{% endif %}>Лаборант</option>
                         </select>
                     </form>
                 </td>
-                <td>
+                <td data-label="Статус">
                     {% if user.is_blocked %}
                     <span style="color: red; font-weight: bold;">Заблокирован</span>
                     {% elif user.is_confirmed %}
@@ -130,15 +312,15 @@
                     <span style="color: orange;">Не подтвержден</span>
                     {% endif %}
                 </td>
-                <td>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <td class="actions-cell">
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                         {% if not user.is_confirmed %}
                         <form action="{{ url_for('admin.confirm_user', user_id=user.id) }}" method="POST"
                             style="margin:0;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" title="Подтвердить"
-                                style="background: none; border: none; cursor: pointer; color: green; font-size: 1.2rem;">
-                                &#10004; <!-- Checkmark -->
+                                class="btn-action btn-confirm-icon btn-action-confirm">
+                                <span class="mobile-only-text">Подтвердить</span> &#10004;
                             </button>
                         </form>
                         {% endif %}
@@ -149,8 +331,8 @@
                             style="margin:0;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" title="Разблокировать"
-                                style="background: none; border: none; cursor: pointer; color: green; font-size: 1.2rem;">
-                                🔓
+                                class="btn-action btn-unblock-icon btn-action-unblock">
+                                <span class="mobile-only-text">Разблокировать</span> 🔓
                             </button>
                         </form>
                         {% else %}
@@ -158,13 +340,14 @@
                             style="margin:0;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" title="Заблокировать"
-                                style="background: none; border: none; cursor: pointer; color: red; font-size: 1.2rem;">
-                                🔒
+                                class="btn-action btn-block-icon btn-action-block">
+                                <span class="mobile-only-text">Заблокировать</span> 🔒
                             </button>
                         </form>
                         {% endif %}
                         {% endif %}
 
+                        {% if current_user.role != 'manager' %}
                         <button type="button" title="Редактировать"
                             onclick='openEditModal({
                                 "id": {{ user.id }},
@@ -176,20 +359,21 @@
                                 "center_id": "{{ user.center_id or "" }}",
                                 "clinic_id": "{{ user.clinic_id or "" }}",
                                 "doctor_id": "{{ user.doctor_id or "" }}",
-                                "doctor_clinics": {{ user.doctor_details.to_dict().clinics|tojson if user.doctor_details else "[]" }} })'
-                            style="background: none; border: none; cursor: pointer; color: #f59e0b; font-size: 1.2rem;">
+                                "doctor_clinics": {{ user.doctor_details.to_dict().clinics|tojson if user.doctor_details else "[]" }} })' class="btn-action"
+                            style="color: #f59e0b;">
                             ✏️
                         </button>
                         <form action="{{ url_for('admin.impersonate_user', user_id=user.id) }}" method="GET"
                             style="margin:0;">
-                            <button type="submit" title="Войти под пользователем"
-                                style="background: none; border: none; cursor: pointer; color: #3b82f6; font-size: 1.2rem;">
+                            <button type="submit" title="Войти под пользователем" class="btn-action"
+                                style="color: #3b82f6;">
                                 🎭
                             </button>
                         </form>
+                        {% endif %}
                     </div>
                 </td>
-                <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                <td data-label="Дата">{{ user.created_at.strftime('%Y-%m-%d') }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -241,6 +425,7 @@
                         <option value="org">Организация</option>
                         <option value="lab_tech">Лаборант</option>
                         <option value="admin">Администратор</option>
+                        <option value="manager">Менеджер</option>
                         <option value="doctor">Врач</option>
                     </select>
                 </div>
@@ -359,6 +544,7 @@
                         style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; box-sizing: border-box; background-color: #fff;">
                         <option value="superadmin">Суперадмин</option>
                         <option value="admin">Администратор</option>
+                        <option value="manager">Менеджер</option>
                         <option value="doctor">Врач</option>
                         <option value="org">Организация</option>
                         <option value="lab_tech">Лаборант</option>

@@ -51,8 +51,19 @@ admin = Blueprint('admin', __name__, template_folder='templates')
 @admin.before_request
 @login_required
 def require_admin():
-    # Allow org users specifically for their stats API, everyone else must be superadmin
+    # Allow org users specifically for their stats API, everyone else must be superadmin or manager (for specific routes)
     if current_user.role == 'org' and request.endpoint == 'admin.reports_organizations_details':
+        return
+
+    # List of endpoints allowed for managers
+    manager_allowed_endpoints = [
+        'admin.users', 
+        'admin.confirm_user', 
+        'admin.block_user', 
+        'admin.unblock_user'
+    ]
+
+    if current_user.role == 'manager' and request.endpoint in manager_allowed_endpoints:
         return
 
     if current_user.role != 'superadmin':
@@ -2019,13 +2030,14 @@ def update_user_role(user_id):
     role_map = {
         'superadmin': 'Суперадмин',
         'admin': 'Админ',
+        'manager': 'Менеджер',
         'org': 'Организация',
         'lab_tech': 'Лаборант',
         'doctor': 'Врач'
     }
 
     
-    if new_role not in ['superadmin', 'admin', 'org', 'lab_tech', 'doctor']:
+    if new_role not in ['superadmin', 'admin', 'manager', 'org', 'lab_tech', 'doctor']:
         flash('Недопустимая роль', 'error')
 
     else:
