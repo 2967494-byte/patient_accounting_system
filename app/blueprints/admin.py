@@ -4972,6 +4972,10 @@ def electronic_referral():
     """Electronic referral form for medical imaging services"""
     from app.models import Patient, Doctor, Clinic, ElectronicReferral, ReferralTooth
     
+    if request.method == 'POST':
+        import json
+        data = request.get_json()
+        
         def to_int(val):
             if val is None or val == "":
                 return None
@@ -5024,7 +5028,7 @@ def electronic_referral():
             # Fallback if clinic is not set but organization is
             clinics = Clinic.query.filter_by(city_id=current_user.city_id).all() if current_user.city_id else Clinic.query.all()
             doctors = Doctor.query.all() # broad fallback
-    elif current_user.doctor_id:
+    elif hasattr(current_user, 'doctor_id') and current_user.doctor_id:
         # If filling as a doctor, auto-pick them
         doc = Doctor.query.get(current_user.doctor_id)
         if doc:
