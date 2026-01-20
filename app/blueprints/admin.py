@@ -2085,39 +2085,29 @@ def update_user_center(user_id):
 
 
 @admin.route('/users/<int:user_id>/block', methods=['POST'])
-
 def block_user(user_id):
-
     user = User.query.get_or_404(user_id)
-
-    if user.role == 'admin':
-
-        flash('Нельзя заблокировать администратора', 'error')
-
+    if user.role in ['admin', 'superadmin']:
+        flash('Нельзя заблокировать администратора или суперадмина', 'error')
+    elif user.role == 'superadmin' and current_user.role != 'superadmin':
+        flash('Только суперадмин может блокировать других суперадминов', 'error')
     else:
-
         user.is_blocked = True
-
         db.session.commit()
-
         flash(f'Пользователь {user.username} заблокирован', 'success')
-
     return redirect(url_for('admin.users'))
 
 
 
 @admin.route('/users/<int:user_id>/unblock', methods=['POST'])
-
 def unblock_user(user_id):
-
     user = User.query.get_or_404(user_id)
-
-    user.is_blocked = False
-
-    db.session.commit()
-
-    flash(f'Пользователь {user.username} разблокирован', 'success')
-
+    if user.role == 'superadmin' and current_user.role != 'superadmin':
+        flash('Только суперадмин может разблокировать других суперадминов', 'error')
+    else:
+        user.is_blocked = False
+        db.session.commit()
+        flash(f'Пользователь {user.username} разблокирован', 'success')
     return redirect(url_for('admin.users'))
 
 

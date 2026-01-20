@@ -314,7 +314,8 @@
                 </td>
                 <td class="actions-cell">
                     <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                        {% if not user.is_confirmed %}
+                        {% if not user.is_confirmed and (current_user.role == 'superadmin' or user.role != 'superadmin')
+                        %}
                         <form action="{{ url_for('admin.confirm_user', user_id=user.id) }}" method="POST"
                             style="margin:0;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -325,7 +326,8 @@
                         </form>
                         {% endif %}
                         <!-- Block/Unblock Actions -->
-                        {% if not user.role == 'admin' %}
+                        {% if user.role != 'admin' and (current_user.role == 'superadmin' or user.role != 'superadmin')
+                        %}
                         {% if user.is_blocked %}
                         <form action="{{ url_for('admin.unblock_user', user_id=user.id) }}" method="POST"
                             style="margin:0;">
