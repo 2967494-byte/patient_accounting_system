@@ -4972,15 +4972,19 @@ def electronic_referral():
     """Electronic referral form for medical imaging services"""
     from app.models import Patient, Doctor, Clinic, ElectronicReferral, ReferralTooth
     
-    if request.method == 'POST':
-        import json
-        data = request.get_json()
-        
+        def to_int(val):
+            if val is None or val == "":
+                return None
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                return None
+
         try:
             referral = ElectronicReferral(
-                patient_id=data.get('patient_id'),
-                doctor_id=data.get('doctor_id'),
-                clinic_id=data.get('clinic_id'),
+                patient_id=to_int(data.get('patient_id')),
+                doctor_id=to_int(data.get('doctor_id')),
+                clinic_id=to_int(data.get('clinic_id')),
                 comments=data.get('doctor_comments'),
                 form_data=json.dumps(data.get('form_data', {}))
             )

@@ -1333,10 +1333,17 @@
                 this.disabled = true;
                 this.innerHTML = '<span style="display:inline-block; width:16px; height:16px; border:2px solid #fff; border-bottom-color:transparent; border-radius:50%; animation: rotation 1s linear infinite; margin-right: 8px;"></span>Сохранение...';
 
+                const getVal = (selector) => {
+                    const el = document.querySelector(selector);
+                    if (!el) return null;
+                    const val = el.value.trim();
+                    return val === "" ? null : parseInt(val) || val;
+                };
+
                 const data = {
-                    patient_id: document.querySelector('input[name="patient_id"]')?.value,
-                    doctor_id: document.querySelector('select[name="doctor_id"], input[name="doctor_id"]')?.value,
-                    clinic_id: document.querySelector('select[name="clinic_id"], input[name="clinic_id"]')?.value,
+                    patient_id: getVal('input[name="patient_id"]'),
+                    doctor_id: getVal('[name="doctor_id"]'),
+                    clinic_id: getVal('[name="clinic_id"]'),
                     selected_teeth: Array.from(selectedTeeth),
                     doctor_comments: document.querySelector('textarea[name="doctor_comments"]').value,
                     form_data: {}
