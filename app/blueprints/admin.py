@@ -4963,6 +4963,13 @@ def notifications():
         })
 
     return render_template('admin_notifications.html', users=users, roles=roles, history=history_data)
+
+@admin.route('/electronic-referral')
+@login_required
+def electronic_referral():
+    """Electronic referral form for medical imaging services"""
+    return render_template('electronic_referral.html')
+
 @admin.route('/support')
 @login_required
 def support():

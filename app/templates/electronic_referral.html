@@ -1,0 +1,1286 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    .referral-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .referral-section {
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s;
+    }
+
+    .section-header:hover {
+        background-color: #faf5ff;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #9333ea;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    .section-chevron {
+        font-size: 1.25rem;
+        color: #9333ea;
+        transition: transform 0.3s ease;
+    }
+
+    .section-chevron.expanded {
+        transform: rotate(180deg);
+    }
+
+    .section-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        padding: 0 1.5rem;
+    }
+
+    .section-content.expanded {
+        max-height: 5000px;
+        padding: 0 1.5rem 1.5rem 1.5rem;
+    }
+
+    .service-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* Marquee selection highlight */
+    .tooth.in-selection .tooth-img {
+        filter: brightness(0.8) sepia(0.5) hue-rotate(240deg);
+    }
+
+    .tooth.in-selection text {
+        fill: #9333ea;
+        font-weight: 800;
+    }
+
+    .service-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .service-item:hover {
+        border-color: #9333ea;
+        box-shadow: 0 2px 8px rgba(147, 51, 234, 0.1);
+    }
+
+    .service-avatar {
+        width: 80px;
+        height: 90px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #9333ea 0%, #c084fc 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .service-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: transparent;
+    }
+
+    .service-avatar:has(img) {
+        background: transparent;
+    }
+
+    .service-content {
+        flex: 1;
+    }
+
+    .service-name {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .service-size {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-bottom: 0.75rem;
+    }
+
+    .service-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .radio-option,
+    .checkbox-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .radio-option input,
+    .checkbox-option input {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+
+    .special-checkbox {
+        background: #f3f4f6;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+
+    .special-checkbox label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #9333ea;
+        cursor: pointer;
+    }
+
+    .special-checkbox input {
+        width: 20px;
+        height: 20px;
+    }
+
+    .package-item {
+        background: #faf5ff;
+        border: 1px solid #e9d5ff;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .package-item label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        cursor: pointer;
+    }
+
+    .package-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-top: 0.25rem;
+    }
+
+    .package-title {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.25rem;
+    }
+
+    .package-sub {
+        margin-left: 2rem;
+        margin-top: 0.5rem;
+    }
+
+    .package-sub label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+</style>
+
+<div class="referral-container">
+    <h1 style="font-size: 1.75rem; font-weight: 700; color: #111827; margin-bottom: 2rem;">
+        Электронное направление
+    </h1>
+
+    <!-- CT Scans Section -->
+    <div class="referral-section">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h2 class="section-title">Компьютерная томография</h2>
+            <span class="section-chevron">▼</span>
+        </div>
+        <div class="section-content">
+            <div class="service-grid">
+                <!-- КТ костей лицевого отдела черепа -->
+                <div class="service-item">
+                    <div class="service-avatar">
+                        <img src="/uploads/Side_16x16.png" alt="CT">
+                    </div>
+                    <div class="service-content">
+                        <div class="service-name">КТ костей лицевого отдела черепа</div>
+                        <div class="service-size">16x16</div>
+                        <div class="service-options">
+                            <label class="radio-option">
+                                <input type="radio" name="ct_facial" value="with_vncs">
+                                в естественной окклюзии (с ВНЧС)
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_facial" value="without_vncs">
+                                с приоткрытой пластиной (без ВНЧС)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- КТ двух челюстей -->
+                <div class="service-item">
+                    <div class="service-avatar">
+                        <img src="/uploads/Front_2_Ch.png" alt="CT">
+                    </div>
+                    <div class="service-content">
+                        <div class="service-name">КТ двух челюстей</div>
+                        <div class="service-size">12x9</div>
+                        <div class="service-options">
+                            <label class="radio-option">
+                                <input type="radio" name="ct_two_jaws" value="natural">
+                                в естественной окклюзии
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_two_jaws" value="open">
+                                с приоткрытой пластиной
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- КТ одной челюсти -->
+                <div class="service-item">
+                    <div class="service-avatar">
+                        <img src="/uploads/Front_1_Ch.png" alt="CT">
+                    </div>
+                    <div class="service-content">
+                        <div class="service-name">КТ одной челюсти</div>
+                        <div class="service-size">12x6</div>
+                        <div class="service-options">
+                            <label class="radio-option">
+                                <input type="radio" name="ct_one_jaw" value="upper">
+                                верхней
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_one_jaw" value="lower">
+                                нижней
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- КТ двух сегментов -->
+                <div class="service-item">
+                    <div class="service-avatar">
+                        <img src="/uploads/Front_2_Seg.png" alt="CT">
+                    </div>
+                    <div class="service-content">
+                        <div class="service-name">КТ двух сегментов</div>
+                        <div class="service-size">8.5x8.5</div>
+                        <div class="service-options">
+                            <label class="radio-option">
+                                <input type="radio" name="ct_two_segments" value="1_4">
+                                I и IV
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_two_segments" value="2_3">
+                                II и III
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- КТ одного сегмента -->
+                <div class="service-item">
+                    <div class="service-avatar">
+                        <img src="/uploads/Side_1_segm.png" alt="CT">
+                    </div>
+                    <div class="service-content">
+                        <div class="service-name">КТ одного сегмента</div>
+                        <div class="service-size">8.5x5</div>
+                        <div class="service-options"
+                            style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <label class="radio-option">
+                                <input type="radio" name="ct_one_segment" value="1">
+                                I
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_one_segment" value="3">
+                                III
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_one_segment" value="2">
+                                II
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_one_segment" value="4">
+                                IV
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- КТ области двух-трех зубов -->
+                <div class="service-item">
+                    <div class="service-avatar">
+                        <img src="/uploads/Front_2-3T.png" alt="CT">
+                    </div>
+                    <div class="service-content">
+                        <label class="radio-option">
+                            <input type="radio" name="ct_teeth_area" value="2-3teeth">
+                            <div class="service-name">КТ области двух-трех зубов</div>
+                        </label>
+                        <div class="service-size">5x5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CT ВНЧС Section -->
+    <div class="referral-section">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h2 class="section-title">Компьютерная томография ВНЧС</h2>
+            <span class="section-chevron">▼</span>
+        </div>
+        <div class="section-content">
+            <div class="service-grid">
+                <!-- КТ ВНЧС двух суставов -->
+                <div class="service-item">
+                    <div class="service-avatar">
+                        <img src="/uploads/Front_VNCS.png" alt="CT">
+                    </div>
+                    <div class="service-content">
+                        <div class="service-name">КТ ВНЧС двух суставов</div>
+                        <div class="service-options">
+                            <label class="radio-option">
+                                <input type="radio" name="ct_vncs_two" value="closed">
+                                закрытый
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_vncs_two" value="open">
+                                открытый
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- КТ ВНЧС одного сустава -->
+                <div class="service-item">
+                    <div class="service-avatar">
+                        <img src="/uploads/Side_VNCS.png" alt="CT">
+                    </div>
+                    <div class="service-content">
+                        <div class="service-name">КТ ВНЧС одного сустава</div>
+                        <div class="service-options"
+                            style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <label class="radio-option">
+                                <input type="radio" name="ct_vncs_one_side" value="left">
+                                левый
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_vncs_one_position" value="closed">
+                                закрытый
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_vncs_one_side" value="right">
+                                правый
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ct_vncs_one_position" value="open">
+                                открытый
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="special-checkbox">
+                <label>
+                    <input type="checkbox" name="diagnocat_report">
+                    <span>РЕНТГЕНОЛОГИЧЕСКИЙ ОТЧЕТ DIAGNOCAT</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Digital Radiography Section -->
+    <div class="referral-section">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h2 class="section-title">Цифровая рентгенография</h2>
+            <span class="section-chevron">▼</span>
+        </div>
+        <div class="section-content">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="optg">
+                        ОПТГ зубных рядов
+                    </label>
+                </div>
+
+                <div>
+                    <label class="checkbox-option" style="display: flex; align-items: flex-start;">
+                        <input type="checkbox" name="trg" style="margin-top: 0.25rem;">
+                        <div style="flex: 1;">
+                            <span>ТРГ черепа в одной проекции <em>(Корстон)</em></span>
+                            <div style="margin-top: 0.5rem; margin-left: 0;">
+                                <label class="radio-option">
+                                    <input type="radio" name="trg_type" value="side">
+                                    боковая
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="trg_type" value="front">
+                                    прямая
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="trg_type" value="chin">
+                                    подбородочно-теменная (ЗМУ)
+                                </label>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="zonography">
+                        Зонография ВНЧС с открытым и закрытым ртом
+                    </label>
+                </div>
+
+                <div>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="hand_xray">
+                        Рентгенограмма костей кисти
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Package Offers Section -->
+    <div class="referral-section">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h2 class="section-title">Комплексные предложения</h2>
+            <span class="section-chevron">▼</span>
+        </div>
+        <div class="section-content">
+
+            <div class="package-item">
+                <label>
+                    <input type="checkbox" name="package_function">
+                    <div>
+                        <div class="package-title">Функция (КТ ВНЧС в 2-х положениях с заключением)</div>
+                    </div>
+                </label>
+                <div class="package-sub">
+                    <label>
+                        <input type="checkbox" name="package_function_3d">
+                        3D-цефалометрия
+                    </label>
+                </div>
+            </div>
+
+            <div class="package-item">
+                <label>
+                    <input type="checkbox" name="package_template">
+                    <div>
+                        <div class="package-title">Шаблон (КТ 12x8,5 + КТ-сканирование гипсовой модели /
+                            рентгеноконтрастного шаблона)</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orthodontic Diagnostics Section -->
+    <div class="referral-section">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h2 class="section-title">Диагностика для ортодонта</h2>
+            <span class="section-chevron">▼</span>
+        </div>
+        <div class="section-content">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div>
+                    <label class="checkbox-option" style="margin-bottom: 1rem;">
+                        <input type="checkbox" name="ortho_1">
+                        <div>
+                            <strong>Ортодонтия 1</strong><br>
+                            <span style="font-size: 0.85rem; color: #6b7280;">(ОПТГ + ТРГ) <em>(Корстон)</em></span>
+                        </div>
+                    </label>
+
+                    <label class="checkbox-option" style="margin-bottom: 1rem;">
+                        <input type="checkbox" name="ortho_2">
+                        <div>
+                            <strong>Ортодонтия 2</strong><br>
+                            <span style="font-size: 0.85rem; color: #6b7280;">(ОПТГ + ТРГ + анализ и расчет ТРГ)
+                                <em>(Корстон)</em></span>
+                        </div>
+                    </label>
+
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="ortho_3">
+                        <div>
+                            <strong>Ортодонтия 3</strong><br>
+                            <span style="font-size: 0.85rem; color: #6b7280;">(КТ 16x16 + стандартная 3D -
+                                цефалометрия)</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="checkbox-option" style="margin-bottom: 1rem;">
+                        <input type="checkbox" name="ortho_4">
+                        <div>
+                            <strong>Ортодонтия 4</strong><br>
+                            <span style="font-size: 0.85rem; color: #6b7280;">(КТ 16x16 + расширенная 3D -
+                                цефалометрия:<br>
+                                - анализ по Киму<br>
+                                - анализ по Славичеку)</span>
+                        </div>
+                    </label>
+
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="ortho_check5">
+                        <div>
+                            <strong>Ortho check 5</strong><br>
+                            <span style="font-size: 0.85rem; color: #6b7280;">- КТ 16*16<br>
+                                - интраоральное сканирование<br>
+                                - биометрия<br>
+                                - фотометрия</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Services Section -->
+    <div class="referral-section">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h2 class="section-title">Дополнительные услуги</h2>
+            <span class="section-chevron">▼</span>
+        </div>
+        <div class="section-content">
+
+            <div
+                style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem; color: #92400e;">
+                * Все дополнительные услуги предоставляются в распечатанном виде и отправляются на почту.<br>
+                Срок исполнения до 5 рабочих дней, при исключении 3D-цефалометрии до 10 рабочих дней.
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div>
+                    <label class="checkbox-option" style="margin-bottom: 0.75rem;">
+                        <input type="checkbox" name="add_optg_desc">
+                        Описание ОПТГ
+                    </label>
+                    <label class="checkbox-option" style="margin-bottom: 0.75rem;">
+                        <input type="checkbox" name="add_vncs_program_desc">
+                        Описание программы ВНЧС
+                    </label>
+                    <label class="checkbox-option" style="margin-bottom: 0.75rem;">
+                        <input type="checkbox" name="add_ct_teeth_desc">
+                        Описание КТ области зубов<br>
+                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 1.5rem;">(отметить в
+                            формуле)</span>
+                    </label>
+                    <label class="checkbox-option" style="margin-bottom: 0.75rem;">
+                        <input type="checkbox" name="add_ct_vncs_desc">
+                        Описание КТ ВНЧС
+                    </label>
+                    <label class="checkbox-option" style="margin-bottom: 0.75rem;">
+                        <input type="checkbox" name="add_onp_desc">
+                        Описание ОНП
+                    </label>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="add_ct_detail">
+                        Детализация КТ (скриншоты)<br>
+                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 1.5rem;">в области зубов (отметить
+                            в
+                            формуле)</span>
+                    </label>
+                </div>
+
+                <div style="border-left: 2px dashed #d1d5db; padding-left: 1.5rem;">
+                    <label class="checkbox-option" style="margin-bottom: 0.75rem;">
+                        <input type="checkbox" name="add_trg_analysis">
+                        Анализ и расчет ТРГ
+                    </label>
+                    <label class="checkbox-option" style="margin-bottom: 0.75rem;">
+                        <input type="checkbox" name="add_3d_ceph">
+                        3D-цефалометрия<br>
+                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 1.5rem;">(анализ и расчет по КТ
+                            16*16)</span>
+                    </label>
+                    <label class="checkbox-option" style="margin-bottom: 0.75rem;">
+                        <input type="checkbox" name="add_comparative_trg">
+                        Сравнительный анализ и расчет ТРГ
+                    </label>
+                    <label class="checkbox-option">
+                        <input type="checkbox" name="add_bone_measurement">
+                        Измерение кости для имплантации<br>
+                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 1.5rem;">в области отсутствующих
+                            зубов<br>
+                            (отметите в формуле)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Tooth Diagram -->
+            <div style="margin-top: 2rem; padding: 1.5rem; background: #f9fafb; border-radius: 8px;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 0.95rem; font-weight: 500; color: #374151; margin-bottom: 1.5rem;">
+                        Выберите необходимые зубы для исследования:
+                    </div>
+                    <svg id="tooth-diagram" width="900" height="450" viewBox="0 0 900 450"
+                        style="max-width: 100%; height: auto; cursor: crosshair; -webkit-user-select: none; user-select: none;">
+                        <!-- Selection Box -->
+                        <rect id="selection-box" x="0" y="0" width="0" height="0" fill="rgba(147, 51, 234, 0.1)"
+                            stroke="#9333ea" stroke-width="1" stroke-dasharray="4"
+                            style="display: none; pointer-events: none;" />
+                        <defs>
+                            <!-- Realistic tooth shapes -->
+                            <!-- Molar (3 roots) -->
+                            <g id="molar-upper">
+                                <path
+                                    d="M 0,-5 Q -8,-8 -12,-3 Q -14,2 -12,8 L -12,12 Q -13,18 -10,22 L -8,30 Q -6,35 -3,38 L -3,55 Q -2,60 0,60 Q 2,60 3,55 L 3,38 Q 6,35 8,30 L 10,22 Q 13,18 12,12 L 12,8 Q 14,2 12,-3 Q 8,-8 0,-5 Z"
+                                    fill="white" stroke="#374151" stroke-width="1.5" />
+                                <path d="M -8,30 L -10,50 M 0,38 L 0,60 M 8,30 L 10,50" stroke="#374151"
+                                    stroke-width="0.5" fill="none" />
+                            </g>
+
+                            <!-- Molar (2 roots) lower -->
+                            <g id="molar-lower">
+                                <path
+                                    d="M 0,-5 Q -8,-8 -12,-3 Q -14,2 -12,8 L -12,12 Q -13,18 -10,22 L -8,28 Q -6,32 -4,35 L -6,55 Q -5,60 -3,60 Q -1,60 0,55 L 0,35 Q 2,32 4,28 L 6,22 Q 9,18 8,12 L 8,8 Q 10,2 8,-3 Q 4,-8 0,-5 Z M 0,35 L 2,55 Q 3,60 5,60 Q 7,60 8,55 L 10,35"
+                                    fill="white" stroke="#374151" stroke-width="1.5" />
+                            </g>
+
+                            <!-- Premolar -->
+                            <g id="premolar-upper">
+                                <path
+                                    d="M 0,-5 Q -6,-7 -8,-2 Q -9,3 -8,7 L -8,10 Q -9,14 -7,17 L -5,22 Q -3,26 0,28 L 0,50 Q 1,55 3,55 Q 5,55 6,50 L 6,28 Q 9,26 11,22 L 13,17 Q 15,14 14,10 L 14,7 Q 15,3 14,-2 Q 12,-7 6,-5 Q 3,-6 0,-5 Z"
+                                    fill="white" stroke="#374151" stroke-width="1.5" />
+                            </g>
+
+                            <g id="premolar-lower">
+                                <path
+                                    d="M 0,-5 Q -6,-7 -8,-2 Q -9,3 -8,7 L -8,10 Q -9,14 -7,17 L -5,22 Q -3,26 0,28 L 0,52 Q 1,57 3,57 Q 5,57 6,52 L 6,28 Q 9,26 11,22 L 13,17 Q 15,14 14,10 L 14,7 Q 15,3 14,-2 Q 12,-7 6,-5 Q 3,-6 0,-5 Z"
+                                    fill="white" stroke="#374151" stroke-width="1.5" />
+                            </g>
+
+                            <!-- Canine -->
+                            <g id="canine-upper">
+                                <path
+                                    d="M 0,-8 Q -4,-10 -6,-5 Q -7,0 -6,5 L -6,8 Q -7,12 -5,15 L -3,20 Q -1,24 0,26 L 0,55 Q 1,60 3,60 Q 5,60 6,55 L 6,26 Q 7,24 9,20 L 11,15 Q 13,12 12,8 L 12,5 Q 13,0 12,-5 Q 10,-10 6,-8 Q 3,-9 0,-8 Z"
+                                    fill="white" stroke="#374151" stroke-width="1.5" />
+                            </g>
+
+                            <g id="canine-lower">
+                                <path
+                                    d="M 0,-8 Q -4,-10 -6,-5 Q -7,0 -6,5 L -6,8 Q -7,12 -5,15 L -3,20 Q -1,24 0,26 L 0,58 Q 1,63 3,63 Q 5,63 6,58 L 6,26 Q 7,24 9,20 L 11,15 Q 13,12 12,8 L 12,5 Q 13,0 12,-5 Q 10,-10 6,-8 Q 3,-9 0,-8 Z"
+                                    fill="white" stroke="#374151" stroke-width="1.5" />
+                            </g>
+
+                            <!-- Incisor -->
+                            <g id="incisor-upper">
+                                <path
+                                    d="M 0,-5 Q -3,-6 -5,-3 Q -6,1 -5,5 L -5,8 Q -6,11 -4,14 L -2,18 Q 0,21 0,23 L 0,50 Q 1,55 3,55 Q 5,55 6,50 L 6,23 Q 6,21 8,18 L 10,14 Q 12,11 11,8 L 11,5 Q 12,1 11,-3 Q 9,-6 6,-5 Q 3,-6 0,-5 Z"
+                                    fill="white" stroke="#374151" stroke-width="1.5" />
+                            </g>
+
+                            <g id="incisor-lower">
+                                <path
+                                    d="M 0,-5 Q -3,-6 -5,-3 Q -6,1 -5,5 L -5,8 Q -6,11 -4,13 L -2,16 Q 0,18 0,20 L 0,52 Q 1,57 3,57 Q 5,57 6,52 L 6,20 Q 6,18 8,16 L 10,13 Q 12,11 11,8 L 11,5 Q 12,1 11,-3 Q 9,-6 6,-5 Q 3,-6 0,-5 Z"
+                                    fill="white" stroke="#374151" stroke-width="1.5" />
+                            </g>
+                        </defs>
+
+                        <!-- Upper teeth -->
+                        <g id="upper-teeth">
+                            <!-- Quadrant markers -->
+                            <text x="20" y="40" font-size="14" fill="#9333ea" font-weight="bold">I</text>
+                            <text x="860" y="40" font-size="14" fill="#9333ea" font-weight="bold">II</text>
+
+                            <!-- Separator Line and Side Markers -->
+                            <line x1="10" y1="195" x2="890" y2="195" stroke="#e5e7eb" stroke-width="1.5" />
+                            <text x="20" y="195" font-size="12" fill="#6b7280" font-weight="bold"
+                                alignment-baseline="middle">R</text>
+                            <text x="860" y="195" font-size="12" fill="#6b7280" font-weight="bold"
+                                alignment-baseline="middle">L</text>
+
+                            <!-- Right upper (I) - teeth 18-11 -->
+                            <g class="tooth" data-tooth="18" transform="translate(102.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V1.png" x="-27.5" y="0" width="55"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/V1M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">8</text>
+                            </g>
+                            <g class="tooth" data-tooth="17" transform="translate(157.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V2.png" x="-27.5" y="0" width="55"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/V2M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">7</text>
+                            </g>
+                            <g class="tooth" data-tooth="16" transform="translate(212.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V3.png" x="-27.5" y="0" width="55"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/V3M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">6</text>
+                            </g>
+                            <g class="tooth" data-tooth="15" transform="translate(262.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V4.png" x="-22.5" y="10" width="45"
+                                    height="100" />
+                                <image class="tooth-img-selected" href="/uploads/V4M.png" x="-22.5" y="10" width="45"
+                                    height="100" style="display: none;" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">5</text>
+                            </g>
+                            <g class="tooth" data-tooth="14" transform="translate(307.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V5.png" x="-22.5" y="10" width="45"
+                                    height="100" />
+                                <image class="tooth-img-selected" href="/uploads/V5M.png" x="-22.5" y="10" width="45"
+                                    height="100" style="display: none;" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">4</text>
+                            </g>
+                            <g class="tooth" data-tooth="13" transform="translate(350, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V6.png" x="-20" y="-10" width="40"
+                                    height="120" />
+                                <image class="tooth-img-selected" href="/uploads/V6M.png" x="-20" y="-10" width="40"
+                                    height="120" style="display: none;" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">3</text>
+                            </g>
+                            <g class="tooth" data-tooth="12" transform="translate(387.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V7.png" x="-17.5" y="15" width="35"
+                                    height="95" />
+                                <image class="tooth-img-selected" href="/uploads/V7M.png" x="-17.5" y="15" width="35"
+                                    height="95" style="display: none;" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">2</text>
+                            </g>
+                            <g class="tooth" data-tooth="11" transform="translate(427.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V8.png" x="-22.5" y="0" width="45"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/V8M.png" x="-22.5" y="0" width="45"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">1</text>
+                            </g>
+
+                            <!-- Left upper (II) - teeth 21-28 -->
+                            <g class="tooth" data-tooth="21" transform="translate(472.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V8.png" x="-22.5" y="0" width="45" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/V8M.png" x="-22.5" y="0" width="45"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">1</text>
+                            </g>
+                            <g class="tooth" data-tooth="22" transform="translate(512.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V7.png" x="-17.5" y="15" width="35" height="95"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/V7M.png" x="-17.5" y="15" width="35"
+                                    height="95" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">2</text>
+                            </g>
+                            <g class="tooth" data-tooth="23" transform="translate(550, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V6.png" x="-20" y="-10" width="40" height="120"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/V6M.png" x="-20" y="-10" width="40"
+                                    height="120" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">3</text>
+                            </g>
+                            <g class="tooth" data-tooth="24" transform="translate(592.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V5.png" x="-22.5" y="10" width="45" height="100"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/V5M.png" x="-22.5" y="10" width="45"
+                                    height="100" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">4</text>
+                            </g>
+                            <g class="tooth" data-tooth="25" transform="translate(637.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V4.png" x="-22.5" y="10" width="45" height="100"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/V4M.png" x="-22.5" y="10" width="45"
+                                    height="100" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">5</text>
+                            </g>
+                            <g class="tooth" data-tooth="26" transform="translate(687.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V3.png" x="-27.5" y="0" width="55" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/V3M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">6</text>
+                            </g>
+                            <g class="tooth" data-tooth="27" transform="translate(742.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V2.png" x="-27.5" y="0" width="55" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/V2M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">7</text>
+                            </g>
+                            <g class="tooth" data-tooth="28" transform="translate(797.5, 50)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/V1.png" x="-27.5" y="0" width="55" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/V1M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="135" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">8</text>
+                            </g>
+                        </g>
+
+                        <!-- Lower teeth -->
+                        <g id="lower-teeth">
+                            <!-- Quadrant markers -->
+                            <text x="20" y="320" font-size="14" fill="#9333ea" font-weight="bold">IV</text>
+                            <text x="860" y="320" font-size="14" fill="#9333ea" font-weight="bold">III</text>
+
+                            <!-- Right lower (IV) - teeth 48-41 -->
+                            <g class="tooth" data-tooth="48" transform="translate(102.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N1.png" x="-27.5" y="0" width="55"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/N1M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">8</text>
+                            </g>
+                            <g class="tooth" data-tooth="47" transform="translate(157.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N2.png" x="-27.5" y="0" width="55"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/N2M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">7</text>
+                            </g>
+                            <g class="tooth" data-tooth="46" transform="translate(212.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N3.png" x="-27.5" y="0" width="55"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/N3M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">6</text>
+                            </g>
+                            <g class="tooth" data-tooth="45" transform="translate(262.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N4.png" x="-22.5" y="0" width="45"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/N4M.png" x="-22.5" y="0" width="45"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">5</text>
+                            </g>
+                            <g class="tooth" data-tooth="44" transform="translate(307.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N5.png" x="-22.5" y="0" width="45"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/N5M.png" x="-22.5" y="0" width="45"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">4</text>
+                            </g>
+                            <g class="tooth" data-tooth="43" transform="translate(350, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N6.png" x="-20" y="0" width="40" height="110" />
+                                <image class="tooth-img-selected" href="/uploads/N6M.png" x="-20" y="0" width="40"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">3</text>
+                            </g>
+                            <g class="tooth" data-tooth="42" transform="translate(387.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N7.png" x="-17.5" y="0" width="35"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/N7M.png" x="-17.5" y="0" width="35"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">2</text>
+                            </g>
+                            <g class="tooth" data-tooth="41" transform="translate(427.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N8.png" x="-22.5" y="0" width="45"
+                                    height="110" />
+                                <image class="tooth-img-selected" href="/uploads/N8M.png" x="-22.5" y="0" width="45"
+                                    height="110" style="display: none;" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">1</text>
+                            </g>
+
+                            <!-- Left lower (III) - teeth 31-38 -->
+                            <g class="tooth" data-tooth="31" transform="translate(472.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N8.png" x="-22.5" y="0" width="45" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/N8M.png" x="-22.5" y="0" width="45"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">1</text>
+                            </g>
+                            <g class="tooth" data-tooth="32" transform="translate(512.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N7.png" x="-17.5" y="0" width="35" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/N7M.png" x="-17.5" y="0" width="35"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">2</text>
+                            </g>
+                            <g class="tooth" data-tooth="33" transform="translate(550, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N6.png" x="-20" y="0" width="40" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/N6M.png" x="-20" y="0" width="40"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">3</text>
+                            </g>
+                            <g class="tooth" data-tooth="34" transform="translate(592.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N5.png" x="-22.5" y="0" width="45" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/N5M.png" x="-22.5" y="0" width="45"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">4</text>
+                            </g>
+                            <g class="tooth" data-tooth="35" transform="translate(637.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N4.png" x="-22.5" y="0" width="45" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/N4M.png" x="-22.5" y="0" width="45"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">5</text>
+                            </g>
+                            <g class="tooth" data-tooth="36" transform="translate(687.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N3.png" x="-27.5" y="0" width="55" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/N3M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">6</text>
+                            </g>
+                            <g class="tooth" data-tooth="37" transform="translate(742.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N2.png" x="-27.5" y="0" width="55" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/N2M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">7</text>
+                            </g>
+                            <g class="tooth" data-tooth="38" transform="translate(797.5, 220)" style="cursor: pointer;">
+                                <image class="tooth-img" href="/uploads/N1.png" x="-27.5" y="0" width="55" height="110"
+                                    transform="scale(-1, 1)" />
+                                <image class="tooth-img-selected" href="/uploads/N1M.png" x="-27.5" y="0" width="55"
+                                    height="110" style="display: none;" transform="scale(-1, 1)" />
+                                <text x="0" y="-15" text-anchor="middle" font-size="10" font-weight="bold"
+                                    fill="#374151">8</text>
+                            </g>
+
+                        </g>
+                    </svg>
+                </div>
+
+                <!-- Selection Actions -->
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" id="select-all-toggle-btn" class="btn"
+                        style="background: transparent; color: #9333ea; border: 2px solid #9333ea; padding: 0.4rem 1rem; font-size: 0.85rem;">
+                        Выделить все
+                    </button>
+                </div>
+
+                <!-- Selected teeth display -->
+                <div
+                    style="margin-top: 1rem; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                    <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem;">Выбранные зубы:</div>
+                    <div id="selected-teeth-display" style="font-size: 0.9rem; color: #374151; min-height: 1.5rem;">
+                        <em style="color: #9ca3af;">Нажмите на зубы для выбора</em>
+                    </div>
+                </div>
+
+                <!-- Hidden input to store selected teeth -->
+                <input type="hidden" id="selected-teeth" name="selected_teeth" value="">
+            </div>
+        </div>
+    </div>
+
+    <!-- Doctor Comments Section -->
+    <div class="referral-section">
+        <div class="section-header" onclick="toggleSection(this)">
+            <h2 class="section-title">Комментарии врача</h2>
+            <span class="section-chevron">▼</span>
+        </div>
+        <div class="section-content">
+            <textarea name="doctor_comments" rows="5"
+                style="width: 100%; padding: 1rem; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box;"
+                placeholder="Введите комментарии..."></textarea>
+
+            <div
+                style="margin-top: 1.5rem; padding: 1rem; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981;">
+                <p style="margin: 0; font-size: 0.85rem; color: #065f46;">
+                    <strong>Уважаемые доктора, по тел: +7 (987)290-50-07 вы можете:</strong><br>
+                    • заказать дополнительные направления на исследования<br>
+                    • записаться на бесплатный практикум по работе с программным обеспечением
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+        <button type="button" id="save-referral-btn" class="btn"
+            style="background: #9333ea; color: white; border: 2px solid #9333ea;">
+            Сохранить направление
+        </button>
+    </div>
+    <script>
+        // Toggle section expand/collapse
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const chevron = header.querySelector('.section-chevron');
+
+            content.classList.toggle('expanded');
+            chevron.classList.toggle('expanded');
+        }
+
+        // Tooth selection functionality
+        const selectedTeeth = new Set();
+
+        // Add click handlers to all teeth
+        document.querySelectorAll('.tooth').forEach(tooth => {
+            tooth.style.cursor = 'pointer';
+
+            tooth.addEventListener('click', function () {
+                const toothNumber = this.getAttribute('data-tooth');
+                const pathElement = this.querySelector('use');
+                const imgNormal = this.querySelector('.tooth-img');
+                const imgSelected = this.querySelector('.tooth-img-selected');
+
+                if (selectedTeeth.has(toothNumber)) {
+                    // Deselect
+                    selectedTeeth.delete(toothNumber);
+                    if (pathElement) {
+                        pathElement.setAttribute('fill', 'white');
+                    }
+                    if (imgNormal && imgSelected) {
+                        imgNormal.style.display = 'block';
+                        imgSelected.style.display = 'none';
+                    }
+                } else {
+                    // Select
+                    selectedTeeth.add(toothNumber);
+                    if (pathElement) {
+                        pathElement.setAttribute('fill', '#c084fc');
+                    }
+                    if (imgNormal && imgSelected) {
+                        imgNormal.style.display = 'none';
+                        imgSelected.style.display = 'block';
+                    }
+                }
+
+                updateSelectedTeethDisplay();
+            });
+
+            // Add hover effect
+            tooth.addEventListener('mouseenter', function () {
+                const pathElement = this.querySelector('use');
+                if (pathElement && !selectedTeeth.has(this.getAttribute('data-tooth'))) {
+                    pathElement.setAttribute('fill', '#f3e8ff');
+                }
+            });
+
+            tooth.addEventListener('mouseleave', function () {
+                const pathElement = this.querySelector('use');
+                const toothNumber = this.getAttribute('data-tooth');
+                if (pathElement && !selectedTeeth.has(toothNumber)) {
+                    pathElement.setAttribute('fill', 'white');
+                }
+            });
+        });
+
+        function updateSelectedTeethDisplay() {
+            const display = document.getElementById('selected-teeth-display');
+            const hiddenInput = document.getElementById('selected-teeth');
+            const toggleBtn = document.getElementById('select-all-toggle-btn');
+
+            if (selectedTeeth.size === 0) {
+                display.innerHTML = '<em style="color: #9ca3af;">Нажмите на зубы для выбора</em>';
+                hiddenInput.value = '';
+                if (toggleBtn) toggleBtn.textContent = 'Выделить все';
+            } else {
+                const sortedTeeth = Array.from(selectedTeeth).sort((a, b) => parseInt(a) - parseInt(b));
+                display.textContent = sortedTeeth.join(', ');
+                hiddenInput.value = sortedTeeth.join(',');
+                if (toggleBtn) toggleBtn.textContent = 'Очистить выбор';
+            }
+        }
+
+        // Toggle select all / clear
+        const toggleBtn = document.getElementById('select-all-toggle-btn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function () {
+                if (selectedTeeth.size > 0) {
+                    // Clear all
+                    selectedTeeth.clear();
+                    document.querySelectorAll('.tooth').forEach(tooth => {
+                        const pathElement = tooth.querySelector('use');
+                        const imgNormal = tooth.querySelector('.tooth-img');
+                        const imgSelected = tooth.querySelector('.tooth-img-selected');
+
+                        if (pathElement) pathElement.setAttribute('fill', 'white');
+                        if (imgNormal && imgSelected) {
+                            imgNormal.style.display = 'block';
+                            imgSelected.style.display = 'none';
+                        }
+                    });
+                } else {
+                    // Select all
+                    document.querySelectorAll('.tooth').forEach(tooth => {
+                        const toothNumber = tooth.getAttribute('data-tooth');
+                        const pathElement = tooth.querySelector('use');
+                        const imgNormal = tooth.querySelector('.tooth-img');
+                        const imgSelected = tooth.querySelector('.tooth-img-selected');
+
+                        selectedTeeth.add(toothNumber);
+                        if (pathElement) pathElement.setAttribute('fill', '#9333ea');
+                        if (imgNormal && imgSelected) {
+                            imgNormal.style.display = 'none';
+                            imgSelected.style.display = 'block';
+                        }
+                    });
+                }
+                updateSelectedTeethDisplay();
+            });
+        }
+
+        // Marquee Selection Logic
+        const diagram = document.getElementById('tooth-diagram');
+        const selectionBox = document.getElementById('selection-box');
+        let isDragging = false;
+        let startPoint = { x: 0, y: 0 };
+
+        function getSVGPoint(event) {
+            const pt = diagram.createSVGPoint();
+            pt.x = event.clientX;
+            pt.y = event.clientY;
+            return pt.matrixTransform(diagram.getScreenCTM().inverse());
+        }
+
+        diagram.addEventListener('mousedown', function (e) {
+            if (e.target.closest('.tooth')) return; // Allow normal clicking on teeth
+
+            isDragging = true;
+            startPoint = getSVGPoint(e);
+
+            selectionBox.setAttribute('x', startPoint.x);
+            selectionBox.setAttribute('y', startPoint.y);
+            selectionBox.setAttribute('width', 0);
+            selectionBox.setAttribute('height', 0);
+            selectionBox.style.display = 'block';
+        });
+
+        window.addEventListener('mousemove', function (e) {
+            if (!isDragging) return;
+
+            const currentPoint = getSVGPoint(e);
+            const x = Math.min(startPoint.x, currentPoint.x);
+            const y = Math.min(startPoint.y, currentPoint.y);
+            const width = Math.abs(startPoint.x - currentPoint.x);
+            const height = Math.abs(startPoint.y - currentPoint.y);
+
+            selectionBox.setAttribute('x', x);
+            selectionBox.setAttribute('y', y);
+            selectionBox.setAttribute('width', width);
+            selectionBox.setAttribute('height', height);
+
+            // Highlight teeth within the box
+            const box = selectionBox.getBoundingClientRect();
+
+            document.querySelectorAll('.tooth').forEach(tooth => {
+                const toothBox = tooth.getBoundingClientRect();
+
+                // Check for rectangle intersection in screen space
+                const isInside = !(toothBox.left > box.right ||
+                    toothBox.right < box.left ||
+                    toothBox.top > box.bottom ||
+                    toothBox.bottom < box.top);
+
+                if (isInside) {
+                    tooth.classList.add('in-selection');
+                } else {
+                    tooth.classList.remove('in-selection');
+                }
+            });
+        });
+
+        window.addEventListener('mouseup', function () {
+            if (!isDragging) return;
+            isDragging = false;
+            selectionBox.style.display = 'none';
+
+            let changed = false;
+            document.querySelectorAll('.tooth.in-selection').forEach(tooth => {
+                const toothNumber = tooth.getAttribute('data-tooth');
+                if (!selectedTeeth.has(toothNumber)) {
+                    selectedTeeth.add(toothNumber);
+                    const imgNormal = tooth.querySelector('.tooth-img');
+                    const imgSelected = tooth.querySelector('.tooth-img-selected');
+                    if (imgNormal && imgSelected) {
+                        imgNormal.style.display = 'none';
+                        imgSelected.style.display = 'block';
+                    }
+                    changed = true;
+                }
+                tooth.classList.remove('in-selection');
+            });
+
+            if (changed) updateSelectedTeethDisplay();
+        });
+
+        // Save functionality (placeholder)
+        const saveBtn = document.getElementById('save-referral-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                const formData = {
+                    selectedTeeth: Array.from(selectedTeeth),
+                    comments: document.querySelector('textarea[name="doctor_comments"]').value
+                };
+                console.log('Form data:', formData);
+                alert('Функция сохранения будет реализована позже');
+            });
+        }
+    </script>
+    {% endblock %}

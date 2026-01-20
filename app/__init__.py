@@ -83,6 +83,12 @@ def create_app(test_config=None):
     from app.blueprints.viewer import viewer
     app.register_blueprint(viewer)
 
+    # Route to serve uploaded files
+    from flask import send_from_directory
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
+        return send_from_directory(upload_folder, filename)
 
 
     # Error Handler
