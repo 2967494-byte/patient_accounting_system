@@ -1,6 +1,19 @@
 {% extends "admin_base.html" %}
 
 {% block content %}
+<!-- Tab Navigation -->
+<div
+    style="background: white; padding: 0.5rem; border-radius: 8px; border: 1px solid #e5e7eb; display: inline-flex; margin-bottom: 1.5rem; gap: 0.25rem;">
+    <a href="{{ url_for('admin.services') }}"
+        style="padding: 0.625rem 1.25rem; text-decoration: none; border-radius: 6px; font-weight: 500; transition: all 0.2s; background: #9333ea; color: white;">
+        Услуги
+    </a>
+    <a href="{{ url_for('admin.additional_services') }}"
+        style="padding: 0.625rem 1.25rem; text-decoration: none; border-radius: 6px; font-weight: 500; transition: all 0.2s; color: #6b7280;">
+        Доп. услуги
+    </a>
+</div>
+
 <style>
     .services-header {
         display: flex;
@@ -308,11 +321,11 @@
         </h2>
         <div class="header-actions">
             <button onclick="document.getElementById('import-file').click()" class="btn"
-                style="background-color: #10b981; color: white;">
+                style="background-color: transparent; color: #9333ea; border: 1px solid #9333ea;">
                 Импорт (Excel/CSV)
             </button>
             <button onclick="document.getElementById('add-service-modal').style.display='block'"
-                class="btn btn-primary">
+                style="background-color: #9333ea; color: white;" class="btn">
                 Добавить услугу
             </button>
         </div>

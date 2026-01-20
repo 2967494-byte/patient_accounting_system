@@ -1,6 +1,19 @@
 {% extends "admin_base.html" %}
 
 {% block content %}
+<!-- Tab Navigation -->
+<div
+    style="background: white; padding: 0.5rem; border-radius: 8px; border: 1px solid #e5e7eb; display: inline-flex; margin-bottom: 1.5rem; gap: 0.25rem;">
+    <a href="{{ url_for('admin.support') }}"
+        style="padding: 0.625rem 1.25rem; text-decoration: none; border-radius: 6px; font-weight: 500; transition: all 0.2s; color: #6b7280;">
+        Тех. поддержка
+    </a>
+    <a href="{{ url_for('admin.notifications') }}"
+        style="padding: 0.625rem 1.25rem; text-decoration: none; border-radius: 6px; font-weight: 500; transition: all 0.2s; background: #9333ea; color: white;">
+        Уведомления
+    </a>
+</div>
+
 <div style="padding: 2rem; max-width: 800px; margin: 0 auto;">
     <div style="background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 2rem;">
         <div
@@ -68,7 +81,7 @@
 
             <div style="text-align: right;">
                 <button type="submit"
-                    style="background-color: #3b82f6; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 500; border: none; cursor: pointer;">
+                    style="background-color: #9333ea; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 500; border: none; cursor: pointer;">
                     Отправить уведомление
                 </button>
             </div>

@@ -133,18 +133,14 @@
                 <a href="{{ url_for('admin.doctors') }}"
                     class="nav-link {% if request.endpoint == 'admin.doctors' %}active{% endif %}">Врачи</a>
                 <a href="{{ url_for('admin.services') }}"
-                    class="nav-link {% if request.endpoint == 'admin.services' %}active{% endif %}">Услуги</a>
-                <a href="{{ url_for('admin.additional_services') }}"
-                    class="nav-link {% if request.endpoint == 'admin.additional_services' %}active{% endif %}">Доп.
-                    Услуги</a>
+                    class="nav-link {% if request.endpoint == 'admin.services' or request.endpoint == 'admin.additional_services' %}active{% endif %}">Услуги</a>
                 <a href="{{ url_for('admin.additional') }}"
                     class="nav-link {% if request.endpoint == 'admin.additional' %}active{% endif %}">Дополнительно</a>
-                <a href="{{ url_for('admin.notifications') }}"
-                    class="nav-link {% if request.endpoint == 'admin.notifications' %}active{% endif %}">Уведомления</a>
                 <a href="{{ url_for('admin.monitoring') }}"
                     class="nav-link {% if request.endpoint == 'admin.monitoring' %}active{% endif %}">Мониторинг</a>
                 <a href="{{ url_for('admin.support') }}"
-                    class="nav-link {% if request.endpoint == 'admin.support' %}active{% endif %}">Тех. поддержка</a>
+                    class="nav-link {% if request.endpoint == 'admin.support' or request.endpoint == 'admin.notifications' %}active{% endif %}">Тех.
+                    поддержка</a>
 
                 <a href="{{ url_for('admin.reports_bonuses_config_page') }}"
                     class="nav-link {% if request.endpoint == 'admin.reports_bonuses_config_page' %}active{% endif %}">Бонусы</a>

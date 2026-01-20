@@ -62,24 +62,32 @@ def require_admin():
 
 
 @admin.route('/additional')
-
+@login_required
 def additional():
-
     managers = Manager.query.all()
-
     payment_methods = PaymentMethod.query.all()
-
+    
+    # Get cities (parent locations) and centers (child locations)
+    cities = Location.query.filter_by(type='city', parent_id=None).all()
     centers = Location.query.filter_by(type='center').all()
-
+    
     chat_setting = GlobalSetting.query.get('chat_image')
-
     chat_image = chat_setting.value if chat_setting else None
     
     stamp_setting = GlobalSetting.query.get('stamp_image')
-    
     stamp_image = stamp_setting.value if stamp_setting else None
-
-    return render_template('admin_additional.html', managers=managers, payment_methods=payment_methods, centers=centers, chat_image=chat_image, stamp_image=stamp_image)
+    
+    guacamole_setting = GlobalSetting.query.get('guacamole_base_url')
+    guacamole_base_url = guacamole_setting.value if guacamole_setting else ''
+    
+    return render_template('admin_additional.html', 
+                         managers=managers, 
+                         payment_methods=payment_methods, 
+                         cities=cities,
+                         centers=centers, 
+                         chat_image=chat_image, 
+                         stamp_image=stamp_image,
+                         guacamole_base_url=guacamole_base_url)
 
 
 
