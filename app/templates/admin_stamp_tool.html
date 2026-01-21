@@ -226,6 +226,11 @@
                         downloadBtns = `<a href="/stamp-tool/certificate/${cert.id}/download" target="_blank" title="Скачать" style="font-size: 1.2rem; color: #6366f1;">📥</a>`;
                     }
 
+                    // Add PDF download button if available
+                    if (cert.pdf_filename) {
+                        downloadBtns += `<a href="/stamp-tool/certificate/${cert.id}/download-pdf" target="_blank" title="Скачать PDF" style="font-size: 1.2rem; margin-left: 5px; color: #ef4444;">📄</a>`;
+                    }
+
                     tr.innerHTML = `
                         <td class="cell-name" title="${cert.patient_name || ''}">${cert.patient_name || 'Без имени'}</td>
                         <td class="cell-amount">${cert.amount} ₽</td>

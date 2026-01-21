@@ -1069,7 +1069,33 @@ def generate_certificate():
 
         # Save File and Records
         download_urls = []
+        pdf_filename = None
+        
         if processed_pil_images:
+            # Generate PDF from processed images
+            try:
+                import img2pdf
+                pdf_filename_only = f'cert_{safe_name}_{timestamp}.pdf'
+                pdf_filepath = os.path.join(cert_dir, pdf_filename_only)
+                
+                # Convert PIL images to bytes for img2pdf
+                img_bytes_list = []
+                for pil_img in processed_pil_images:
+                    from io import BytesIO
+                    img_byte_arr = BytesIO()
+                    pil_img.save(img_byte_arr, format='JPEG', quality=90)
+                    img_bytes_list.append(img_byte_arr.getvalue())
+                
+                # Create PDF
+                with open(pdf_filepath, 'wb') as f:
+                    f.write(img2pdf.convert(img_bytes_list))
+                
+                pdf_filename = pdf_filename_only
+                print(f"DEBUG: Saved PDF to {pdf_filepath}")
+            except Exception as pdf_e:
+                print(f"WARNING: PDF generation failed: {pdf_e}")
+                # Continue even if PDF fails
+            
             if is_op and len(processed_pil_images) >= 2:
                 # Save both pages to disk
                 p1_filename = f'cert_{safe_name}_{timestamp}_p1.jpg'
@@ -1083,6 +1109,7 @@ def generate_certificate():
                     appointment_id=appointment.id,
                     patient_name=appointment.patient_name,
                     filename=f"{p1_filename}|{p2_filename}",
+                    pdf_filename=pdf_filename,
                     created_by_id=current_user.id,
                     amount=appointment.cost or 0
                 )
@@ -1101,6 +1128,7 @@ def generate_certificate():
                     appointment_id=appointment.id,
                     patient_name=appointment.patient_name,
                     filename=final_filename,
+                    pdf_filename=pdf_filename,
                     created_by_id=current_user.id,
                     amount=appointment.cost or 0
                 )
@@ -1147,6 +1175,23 @@ def download_certificate(cert_id):
     return send_file(filepath, as_attachment=True, download_name=f'certificate_{cert.patient_name}{suffix}_{cert.id}.jpg')
 
 
+@main.route('/stamp-tool/certificate/<int:cert_id>/download-pdf')
+@login_required
+def download_certificate_pdf(cert_id):
+    """Download certificate as PDF"""
+    cert = MedicalCertificate.query.get_or_404(cert_id)
+    
+    if not cert.pdf_filename:
+        abort(404, description="PDF not available for this certificate")
+    
+    filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', cert.pdf_filename)
+    
+    if not os.path.exists(filepath):
+        abort(404)
+    
+    return send_file(filepath, as_attachment=True, download_name=f'certificate_{cert.patient_name}_{cert.id}.pdf')
+
+
 @main.route('/stamp-tool/certificates', methods=['GET'])
 @login_required
 def list_certificates():
@@ -1168,16 +1213,23 @@ def delete_certificate(cert_id):
     cert = MedicalCertificate.query.get_or_404(cert_id)
     
     # Delete file(s) if exists
-    if cert.filename:
-        filenames = cert.filename.split('|')
-        for fname in filenames:
-            if not fname: continue
-            filepath = os.path.join(current_app.static_folder, 'uploads', 'certificates', fname)
-            if os.path.exists(filepath):
-                try:
-                    os.remove(filepath)
-                except Exception as e:
-                    print(f"[WARN] Could not delete cert file {fname}: {e}")
+    filenames = cert.filename.split('|') if cert.filename else []
+    for fname in filenames:
+        fpath = os.path.join(current_app.static_folder, 'uploads', 'certificates', fname)
+        if os.path.exists(fpath):
+            try:
+                os.remove(fpath)
+            except Exception as e:
+                print(f"[WARN] Could not delete cert file {fname}: {e}")
+    
+    # Delete PDF if exists
+    if cert.pdf_filename:
+        pdf_path = os.path.join(current_app.static_folder, 'uploads', 'certificates', cert.pdf_filename)
+        if os.path.exists(pdf_path):
+            try:
+                os.remove(pdf_path)
+            except Exception as e:
+                print(f"[WARN] Could not delete PDF file {cert.pdf_filename}: {e}")
     
     db.session.delete(cert)
     db.session.commit()

@@ -617,6 +617,7 @@ class MedicalCertificate(db.Model):
     
     # File info
     filename = db.Column(db.String(255), nullable=False)
+    pdf_filename = db.Column(db.String(255), nullable=True)  # PDF version of certificate
     generated_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
@@ -631,6 +632,7 @@ class MedicalCertificate(db.Model):
             'patient_name': self.patient_name,
             'amount': self.amount,
             'filename': self.filename,
+            'pdf_filename': self.pdf_filename,
             'generated_at': self.generated_at.isoformat(),
             'created_by': self.created_by.username if self.created_by else None
         }

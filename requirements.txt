@@ -41,3 +41,4 @@ Flask-APScheduler==1.13.1
 playwright==1.49.1
 pytz==2025.1
 boto3==1.36.2
+img2pdf==0.6.3
