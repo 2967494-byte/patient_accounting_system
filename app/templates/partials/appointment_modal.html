@@ -204,6 +204,14 @@
                 data-services='[ {% for s in services %}{{ s.to_dict() | tojson }}{% if not loop.last %},{% endif %}{% endfor %} ]'>
             </div>
 
+            <!-- Comment (Full Width) -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label
+                    style="font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Комментарий</label>
+                <textarea id="appt-comment" rows="2"
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; resize: vertical;"></textarea>
+            </div>
+
             <!-- Info & History -->
             <div class="form-item-info" id="author-info"
                 style="font-size: 0.75rem; color: #6b7280; padding: 8px; background: #f9fafb; border-radius: 6px; display: none;">

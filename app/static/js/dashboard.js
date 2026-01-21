@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 contract_number: document.getElementById('contract-number') ? document.getElementById('contract-number').value : null,
                 payment_method_id: document.getElementById('payment-method') ? document.getElementById('payment-method').value : null,
                 discount: document.getElementById('discount') ? document.getElementById('discount').value : 0,
-                comment: document.getElementById('comment') ? document.getElementById('comment').value : '',
+                comment: document.getElementById('appt-comment') ? document.getElementById('appt-comment').value : '',
                 is_double_time: document.getElementById('is-double-time') ? document.getElementById('is-double-time').checked : false
             };
 
@@ -291,6 +291,7 @@ async function openEditModal(id) {
 
         document.getElementById('patient-name').value = appt.patient_name;
         document.getElementById('patient-phone').value = appt.patient_phone || '';
+        document.getElementById('appt-comment').value = appt.comment || '';
 
         // Set Select2 values
         $('#doctor').val(appt.doctor_id).trigger('change');
