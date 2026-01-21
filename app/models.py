@@ -510,6 +510,14 @@ class Message(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_messages', lazy=True))
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref=db.backref('received_messages', lazy=True))
 
+    def get_reactions_summary(self):
+        """Returns dict of {emoji: count}"""
+        from collections import Counter
+        reactions = Counter()
+        for r in self.reactions:
+            reactions[r.emoji] += 1
+        return dict(reactions)
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -518,8 +526,27 @@ class Message(db.Model):
             'recipient_id': self.recipient_id,
             'body': self.body,
             'timestamp': self.timestamp.isoformat(),
-            'is_read': self.is_read
+            'is_read': self.is_read,
+            'reactions': self.get_reactions_summary()
         }
+
+
+class MessageReaction(db.Model):
+    __tablename__ = 'message_reactions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('messages.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    emoji = db.Column(db.String(10), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    message = db.relationship('Message', backref='reactions')
+    user = db.relationship('User')
+    
+    # Unique constraint: one user can only add one specific emoji per message
+    __table_args__ = (db.UniqueConstraint('message_id', 'user_id', 'emoji', name='_message_user_emoji_uc'),)
+
+
 
 class BonusPeriod(db.Model):
     __tablename__ = 'bonus_periods'

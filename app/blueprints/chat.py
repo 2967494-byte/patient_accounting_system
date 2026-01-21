@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
-from app.models import Message, User, Organization, db
+from app.models import Message, MessageReaction, User, Organization, db
 from datetime import datetime
 
 chat = Blueprint('chat', __name__)
@@ -39,11 +39,13 @@ def get_history():
     
     view_user_id = request.args.get('user_id')
     
+    from sqlalchemy.orm import joinedload
+    
     if current_user.role in ['org', 'doctor']:
         # Org/Doctor sees only their conversation with Support
         # Messages where (sender=self AND recipient=None) OR (recipient=self)
         # Get last 100 messages (descending)
-        messages_desc = Message.query.filter(
+        messages_desc = Message.query.options(joinedload(Message.reactions)).filter(
             ((Message.sender_id == current_user.id) & (Message.recipient_id == None)) |
             (Message.recipient_id == current_user.id)
         ).order_by(Message.timestamp.desc()).limit(100).all()
@@ -67,7 +69,7 @@ def get_history():
         # So thread is defined by the Org User's ID.
         
         # Get last 100 messages (descending)
-        messages_desc = Message.query.filter(
+        messages_desc = Message.query.options(joinedload(Message.reactions)).filter(
             ((Message.sender_id == view_user_id) & (Message.recipient_id == None)) |
             (Message.recipient_id == view_user_id)
         ).order_by(Message.timestamp.desc()).limit(100).all()
@@ -173,3 +175,46 @@ def mark_read():
         
     db.session.commit()
     return jsonify({'status': 'ok'})
+
+
+@chat.route('/messages/<int:message_id>/react', methods=['POST'])
+@login_required
+def toggle_reaction(message_id):
+    """Toggle a reaction on a message (add if not exists, remove if exists)"""
+    data = request.get_json()
+    emoji = data.get('emoji')
+    
+    if not emoji or len(emoji) > 10:
+        return jsonify({'error': 'Invalid emoji'}), 400
+    
+    # Check if message exists
+    message = Message.query.get_or_404(message_id)
+    
+    # Check if reaction already exists
+    existing = MessageReaction.query.filter_by(
+        message_id=message_id,
+        user_id=current_user.id,
+        emoji=emoji
+    ).first()
+    
+    if existing:
+        # Remove reaction (toggle off)
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({
+            'status': 'removed',
+            'reactions': message.get_reactions_summary()
+        })
+    else:
+        # Add reaction (toggle on)
+        reaction = MessageReaction(
+            message_id=message_id,
+            user_id=current_user.id,
+            emoji=emoji
+        )
+        db.session.add(reaction)
+        db.session.commit()
+        return jsonify({
+            'status': 'added',
+            'reactions': message.get_reactions_summary()
+        })

@@ -134,6 +134,7 @@ function renderMessages(messages, role) {
 
     messages.forEach(msg => {
         const div = document.createElement('div');
+        div.setAttribute('data-msg-id', msg.id);
         div.style.maxWidth = '80%';
         div.style.minWidth = '80px';
         div.style.padding = '8px 12px';
@@ -216,13 +217,86 @@ function renderMessages(messages, role) {
                 `;
         }
 
+        // Reactions display
+        let reactionsHtml = '';
+        if (msg.reactions && Object.keys(msg.reactions).length > 0) {
+            reactionsHtml = '<div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">';
+            for (const [emoji, count] of Object.entries(msg.reactions)) {
+                reactionsHtml += `
+                    <button onclick="event.stopPropagation(); toggleReaction(${msg.id}, '${emoji}')" 
+                            style="background: rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.12); 
+                                   border-radius: 12px; padding: 3px 7px; font-size: 13px; 
+                                   cursor: pointer; display: inline-flex; align-items: center; gap: 3px;
+                                   transition: all 0.15s ease;">
+                        <span style="line-height: 1;">${emoji}</span>
+                        <span style="color: #666; font-size: 11px; font-weight: 500;">${count}</span>
+                    </button>
+                `;
+            }
+            reactionsHtml += '</div>';
+        }
+
+        // Reaction picker - позиция зависит от того, чье сообщение
+        const pickerAlign = isMe ? 'right: 0;' : 'left: 0;';
+        const reactionPicker = `
+            <div class="reaction-picker" data-msg-id="${msg.id}" style="display: none; position: absolute; top: 100%; ${pickerAlign}
+                 background: white; border-radius: 20px; padding: 6px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+                 margin-top: 4px; z-index: 100; gap: 4px;">
+                <button onclick="event.stopPropagation(); toggleReaction(${msg.id}, '👍')" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; transition: transform 0.1s;" onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform='scale(1)'">👍</button>
+                <button onclick="event.stopPropagation(); toggleReaction(${msg.id}, '❤️')" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; transition: transform 0.1s;" onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform='scale(1)'">❤️</button>
+                <button onclick="event.stopPropagation(); toggleReaction(${msg.id}, '😂')" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; transition: transform 0.1s;" onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform='scale(1)'">😂</button>
+                <button onclick="event.stopPropagation(); toggleReaction(${msg.id}, '😮')" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; transition: transform 0.1s;" onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform='scale(1)'">😮</button>
+                <button onclick="event.stopPropagation(); toggleReaction(${msg.id}, '🔥')" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; transition: transform 0.1s;" onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform='scale(1)'">🔥</button>
+            </div>
+        `;
+
         div.innerHTML = `
             <div>${msg.body}</div>
             <div style="font-size: 10px; color: #999; text-align: right; margin-top: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
                 ${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 ${statusHtml}
             </div>
+            ${reactionsHtml}
+            ${reactionPicker}
         `;
+
+        // Improved hover handling with timeout to prevent flickering
+        let hideTimeout;
+
+        const showPicker = () => {
+            clearTimeout(hideTimeout);
+
+            // Hide all other pickers first
+            document.querySelectorAll('.reaction-picker').forEach(p => {
+                if (p !== div.querySelector('.reaction-picker')) {
+                    p.style.display = 'none';
+                }
+            });
+
+            const picker = div.querySelector('.reaction-picker');
+            if (picker) {
+                picker.style.display = 'flex';
+            }
+        };
+
+        const hidePicker = () => {
+            hideTimeout = setTimeout(() => {
+                const picker = div.querySelector('.reaction-picker');
+                if (picker) {
+                    picker.style.display = 'none';
+                }
+            }, 50); // Reduced to 50ms for faster hiding
+        };
+
+        div.addEventListener('mouseenter', showPicker);
+        div.addEventListener('mouseleave', hidePicker);
+
+        // Keep picker visible when hovering over it
+        const picker = div.querySelector('.reaction-picker');
+        if (picker) {
+            picker.addEventListener('mouseenter', showPicker);
+            picker.addEventListener('mouseleave', hidePicker);
+        }
 
 
         container.appendChild(div);
@@ -332,5 +406,49 @@ async function checkSupportNotifications() {
         }
     } catch (e) {
         console.error("Notif Error", e);
+    }
+}
+
+// --- Reaction Functions ---
+async function toggleReaction(messageId, emoji) {
+    try {
+        const response = await fetch(`/api/chat/messages/${messageId}/react`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ emoji: emoji })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+
+            // Immediate visual feedback - update just this message's reactions
+            const container = document.getElementById('chat-messages');
+            if (container) {
+                // Find the message bubble that contains this message ID
+                const allMessages = container.querySelectorAll('[data-msg-id]');
+                allMessages.forEach(msgDiv => {
+                    const picker = msgDiv.querySelector(`.reaction-picker[data-msg-id="${messageId}"]`);
+                    if (picker) {
+                        // This is our message, update its reactions
+                        // For now, just reload all messages
+                        // In future, could update inline for smoother UX
+                    }
+                });
+            }
+
+            // Reload messages to show updated reactions
+            setTimeout(() => {
+                if (currentChatUserId) {
+                    loadMessagesForSupport();
+                } else {
+                    loadMessages();
+                }
+            }, 100); // Small delay for smooth transition
+        }
+    } catch (e) {
+        console.error("Reaction Error:", e);
     }
 }
