@@ -11,9 +11,9 @@
                 "Сгенерировать"</p>
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
-            <button onclick="saveAndGenerate()" class="btn"
-                style="background: #10b981; color: white; padding: 0.75rem 1.5rem;">
-                🚀 Сгенерировать и скачать
+            <button id="generate-btn" onclick="saveAndGenerate()" class="btn"
+                style="background: #10b981; color: white; padding: 0.75rem 1.5rem; position: relative;">
+                <span id="btn-text">🚀 Сгенерировать и скачать</span>
             </button>
         </div>
     </div>
@@ -284,6 +284,15 @@
 
 
     async function saveAndGenerate() {
+        const btn = document.getElementById('generate-btn');
+        const btnText = document.getElementById('btn-text');
+
+        // Disable button and show loading state
+        btn.disabled = true;
+        btn.style.cursor = 'not-allowed';
+        btn.style.opacity = '0.7';
+        btnText.innerHTML = '⏳ Генерация справки...';
+
         // Collect all data
         const inputs = document.querySelectorAll('.char-box');
         const formData = {};
@@ -319,13 +328,25 @@
             });
             const result = await response.json();
             if (result.success) {
-                alert('✅ Справка успешно сгенерирована!');
-                window.location.href = '/stamp-tool';
+                btnText.innerHTML = '✅ Успешно!';
+                setTimeout(() => {
+                    window.location.href = '/stamp-tool';
+                }, 500);
             } else {
                 alert('Ошибка: ' + result.error);
+                // Re-enable button on error
+                btn.disabled = false;
+                btn.style.cursor = 'pointer';
+                btn.style.opacity = '1';
+                btnText.innerHTML = '🚀 Сгенерировать и скачать';
             }
         } catch (e) {
             alert('Ошибка сети: ' + e.message);
+            // Re-enable button on error
+            btn.disabled = false;
+            btn.style.cursor = 'pointer';
+            btn.style.opacity = '1';
+            btnText.innerHTML = '🚀 Сгенерировать и скачать';
         }
     }
 
