@@ -333,21 +333,19 @@ def dashboard():
         flash('Доступ к календарю запрещен для вашей роли.', 'error')
         return redirect(url_for('admin.users'))
 
-    # Calculate dates for the current week (starting Monday)
+    # Calculate dates for the current week (starting from today)
     start_date_str = request.args.get('start_date')
     if start_date_str:
         try:
-            today = datetime.strptime(start_date_str, '%Y-%m-%d')
+            start_of_week = datetime.strptime(start_date_str, '%Y-%m-%d')
         except ValueError:
-            today = (datetime.utcnow() + timedelta(hours=3))
+            start_of_week = (datetime.utcnow() + timedelta(hours=3))
     else:
-        today = (datetime.utcnow() + timedelta(hours=3))
+        start_of_week = (datetime.utcnow() + timedelta(hours=3))
     
-    start_of_week = today - timedelta(days=today.weekday())
-    
-    # Calculate Prev/Next week
-    prev_week = (start_of_week - timedelta(weeks=1)).strftime('%Y-%m-%d')
-    next_week = (start_of_week + timedelta(weeks=1)).strftime('%Y-%m-%d')
+    # Calculate Prev/Next week (7-day periods)
+    prev_week = (start_of_week - timedelta(days=7)).strftime('%Y-%m-%d')
+    next_week = (start_of_week + timedelta(days=7)).strftime('%Y-%m-%d')
 
     dates_data = []
     
