@@ -147,9 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const childCont = document.getElementById('child-service-container');
     const svcData = document.getElementById('service-hierarchy-data');
     let servicesRaw = [];
-    try {
-        servicesRaw = JSON.parse(svcData.dataset.services || '[]');
-    } catch (e) { console.error("Error parsing services:", e); }
+    if (svcData) {
+        try {
+            servicesRaw = JSON.parse(svcData.dataset.services || '[]');
+        } catch (e) { console.error("Error parsing services:", e); }
+    }
 
     window.updateChildDropdown = function (parentId, selectedChildId = null) {
         if (!childSvc || !childCont) return;

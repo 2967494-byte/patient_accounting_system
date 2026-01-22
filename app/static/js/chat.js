@@ -43,8 +43,12 @@ function closeChatModal() {
 }
 
 function startOrgPolling() {
-    loadMessages(); // Initial load
-    chatPollingInterval = setInterval(loadMessages, 5000); // Poll every 5s
+    // Only call if we have the Org chat button (means we are Org/Doctor)
+    const isOrg = document.getElementById('org-chat-btn');
+    if (isOrg) {
+        loadMessages(); // Initial load
+        chatPollingInterval = setInterval(loadMessages, 5000); // Poll every 5s
+    }
 }
 
 async function loadMessages(userId = null) {

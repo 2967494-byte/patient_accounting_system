@@ -45,7 +45,7 @@ def get_history():
         # Org/Doctor sees only their conversation with Support
         # Messages where (sender=self AND recipient=None) OR (recipient=self)
         # Get last 100 messages (descending)
-        messages_desc = Message.query.options(joinedload(Message.reactions)).filter(
+        messages_desc = Message.query.options(joinedload(Message.reactions), joinedload(Message.sender)).filter(
             ((Message.sender_id == current_user.id) & (Message.recipient_id == None)) |
             (Message.recipient_id == current_user.id)
         ).order_by(Message.timestamp.desc()).limit(100).all()
@@ -69,7 +69,7 @@ def get_history():
         # So thread is defined by the Org User's ID.
         
         # Get last 100 messages (descending)
-        messages_desc = Message.query.options(joinedload(Message.reactions)).filter(
+        messages_desc = Message.query.options(joinedload(Message.reactions), joinedload(Message.sender)).filter(
             ((Message.sender_id == view_user_id) & (Message.recipient_id == None)) |
             (Message.recipient_id == view_user_id)
         ).order_by(Message.timestamp.desc()).limit(100).all()
@@ -86,11 +86,6 @@ def get_threads():
     if current_user.role in ['org', 'doctor']:
         return jsonify({'error': 'Unauthorized'}), 403
 
-    # Get list of Users (Orgs/Doctors) who have messaged Support
-    # Or just all Orgs? Better to show only those with messages or all active.
-    # Simple: All Users with role='org' AND (have messages).
-    # For MVP: List all 'org' users, with last message preview.
-    
     from sqlalchemy import func, or_
     
     search_query = request.args.get('search', '').lower()
@@ -99,52 +94,83 @@ def get_threads():
     query = User.query.filter(User.role.in_(['org', 'doctor']))
     
     if search_query:
-        # Search by username or organization name
-        query = query.join(Organization).filter(
+        query = query.join(Organization, isouter=True).filter(
             or_(
                 func.lower(User.username).contains(search_query),
                 func.lower(Organization.name).contains(search_query)
             )
         )
     
-    orgs = query.all()
+    org_users = query.all()
+    user_ids = [u.id for u in org_users]
+    
+    if not user_ids:
+        return jsonify([])
+
+    # 1. Get unread counts for all these users (messages to Support)
+    unread_counts = db.session.query(
+        Message.sender_id, 
+        func.count(Message.id).label('count')
+    ).filter(
+        Message.sender_id.in_(user_ids),
+        Message.recipient_id == None,
+        Message.is_read == False
+    ).group_by(Message.sender_id).all()
+    
+    unread_map = {u.sender_id: u.count for u in unread_counts}
+    
+    # 2. Get last messages for all these users
+    # Subquery to find max message ID for each "thread" (User <-> Support)
+    # A thread is messages where user is sender (to support) OR recipient (from support)
+    last_msg_ids = db.session.query(
+        func.max(Message.id)
+    ).filter(
+        or_(
+            (Message.sender_id.in_(user_ids)) & (Message.recipient_id == None),
+            (Message.recipient_id.in_(user_ids))
+        )
+    ).group_by(
+        func.coalesce(Message.recipient_id, Message.sender_id)
+    ).all()
+    
+    last_msg_ids = [mid[0] for mid in last_msg_ids if mid[0]]
+    last_messages_list = Message.query.filter(Message.id.in_(last_msg_ids)).all()
+    
+    # Map messages to users
+    last_msg_map = {}
+    for m in last_messages_list:
+        uid = m.recipient_id if m.recipient_id else m.sender_id
+        # Note: if both are set (not possible in our support schema where one side is always None), 
+        # we'd need more complex logic. But here recipient_id=None means sent to Support.
+        last_msg_map[uid] = m
     
     threads = []
-    for org in orgs:
-        # Get last message
-        last_msg = Message.query.filter(
-            ((Message.sender_id == org.id) & (Message.recipient_id == None)) |
-            (Message.recipient_id == org.id)
-        ).order_by(Message.timestamp.desc()).first()
+    for user in org_users:
+        last_msg = last_msg_map.get(user.id)
         
         # Filter: If no search query, only show active threads (with messages)
-        # If searching, show all matches (to allow starting new chat)
         if not search_query and not last_msg:
             continue
             
-        # Count unread (sent by Org, recipient=None, is_read=False)
-        unread_count = Message.query.filter_by(
-            sender_id=org.id,
-            recipient_id=None,
-            is_read=False
-        ).count()
+        unread_count = unread_map.get(user.id, 0)
         
-        if org.role == 'org' and org.organization:
-            org_name = org.organization.name
+        if user.role == 'org' and user.organization:
+            org_name = user.organization.name
         else:
-            org_name = "Врач" if org.role == 'doctor' else "Пользователь"
+            org_name = "Врач" if user.role == 'doctor' else "Пользователь"
             
-        display_name = f"{org.username} - {org_name}"
-        
         threads.append({
-            'user_id': org.id,
-            'username': org.username,
+            'user_id': user.id,
+            'username': user.username,
             'org_name': org_name,
-            'display_name': display_name,
+            'display_name': f"{user.username} - {org_name}",
             'last_message': last_msg.body if last_msg else '',
             'last_timestamp': last_msg.timestamp.isoformat() if last_msg else None,
             'unread_count': unread_count
         })
+    
+    # Sort: unread first, then timestamp
+    threads.sort(key=lambda x: (x['unread_count'], x['last_timestamp'] or ''), reverse=True)
     
     return jsonify(threads)
 

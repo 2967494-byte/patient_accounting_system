@@ -717,7 +717,7 @@
     </script>
     {% endif %}
 
-    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}?v={{ range(1, 10000) | random }}"></script>
     <!-- Notification Modal -->
     <!-- Notification Modal DISABLED as per request
     {% if current_user.is_authenticated %}
