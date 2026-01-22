@@ -105,6 +105,49 @@
             transform: translateY(-1px);
             border-color: transparent;
         }
+
+        /* New Nav Icon Styling */
+        .nav-icon-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            transition: all 0.2s;
+            position: relative;
+            color: #6b7280;
+            border-bottom: none !important;
+            text-decoration: none;
+        }
+
+        .nav-icon-link:hover {
+            background-color: #f3f4f6;
+            color: #111827;
+        }
+
+        .nav-icon-link.active {
+            background-color: #9333ae;
+            color: white !important;
+        }
+
+        /* Sub-indicator line */
+        .nav-icon-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 44px;
+            height: 3px;
+            background-color: #9333ae;
+            border-radius: 2px;
+        }
+
+        .nav-icon-link svg {
+            width: 32px;
+            height: 32px;
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -126,14 +169,6 @@
                     style="max-height: 40px; width: auto;">
 
 
-                {% if current_user.role != 'manager' %}
-                <a href="{{ url_for('main.dashboard') }}"
-                    class="nav-tab {% if request.endpoint == 'main.dashboard' %}active{% endif %}">Календарь</a>
-                {% if current_user.role not in ['org', 'admin', 'doctor'] %}
-                <a href="{{ url_for('main.journal') }}"
-                    class="nav-tab {% if request.endpoint == 'main.journal' %}active{% endif %}">Журнал</a>
-                {% endif %}
-                {% endif %}
                 <div
                     style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; margin-left: 2rem;">
                     <div class="contact-phone"
@@ -145,6 +180,33 @@
                         orbital.3d.lab@gmail.com
                     </a>
                 </div>
+
+                {% if current_user.role != 'manager' %}
+                <a href="{{ url_for('main.dashboard') }}"
+                    class="nav-icon-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}"
+                    title="Календарь">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                </a>
+                {% if current_user.role not in ['org', 'admin', 'doctor'] %}
+                <a href="{{ url_for('main.journal') }}"
+                    class="nav-icon-link {% if request.endpoint == 'main.journal' %}active{% endif %}" title="Журнал">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        <path d="M9 12h6"></path>
+                        <path d="M9 16h6"></path>
+                        <path d="M9 8h6"></path>
+                    </svg>
+                </a>
+                {% endif %}
+                {% endif %}
             </div>
 
             <div class="user-controls header-actions">

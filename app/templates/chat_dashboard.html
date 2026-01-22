@@ -288,25 +288,16 @@
         });
 
         // Load Messages
-        loadMessagesForSupport();
+        loadMessages(userId);
 
         // Highlight
         loadThreads(); // Re-render to show active state
     }
 
-    async function loadMessagesForSupport() {
-        if (!currentChatUserId) return;
-        try {
-            const response = await fetch(`/api/chat/messages/history?user_id=${currentChatUserId}`);
-            const messages = await response.json();
-            renderMessages(messages, 'support'); // Use shared render function from chat.js
-        } catch (e) { console.error(e); }
-    }
-
     // Override chat.js polling for Support Dashboard
     // We need to poll the ACTIVE thread if one is selected
     setInterval(() => {
-        if (currentChatUserId) loadMessagesForSupport();
+        if (currentChatUserId) loadMessages(currentChatUserId);
     }, 3000);
 
 </script>
