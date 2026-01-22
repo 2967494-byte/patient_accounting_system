@@ -146,9 +146,6 @@ def get_threads():
             'unread_count': unread_count
         })
     
-    # Sort by unread count desc, then timestamp desc
-    threads.sort(key=lambda x: (x['unread_count'], x['last_timestamp'] or ''), reverse=True)
-    
     return jsonify(threads)
 
 @chat.route('/messages/read', methods=['POST'])
