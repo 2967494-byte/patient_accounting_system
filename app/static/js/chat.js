@@ -51,7 +51,10 @@ async function loadMessages(userId = null) {
     try {
         const url = userId ? `/api/chat/messages/history?user_id=${userId}` : '/api/chat/messages/history';
         const response = await fetch(url);
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.error("Chat Server Error:", response.status);
+            return;
+        }
         const messages = await response.json();
 
         // Determine mode based on whether userId was passed
@@ -136,14 +139,14 @@ function renderMessages(messages, role) {
     if (!container) return;
 
     // Store current scroll position to check if we are at bottom
-    const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+    const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
 
     container.innerHTML = '';
 
     messages.forEach(msg => {
         const div = document.createElement('div');
         div.setAttribute('data-msg-id', msg.id);
-        div.className = 'chat-message-bubble'; // Optional class for styling
+        div.className = 'chat-message-bubble';
         div.style.maxWidth = '80%';
         div.style.minWidth = '80px';
         div.style.padding = '8px 12px';
@@ -157,16 +160,14 @@ function renderMessages(messages, role) {
 
         let isMe = false;
         if (role === 'org') {
-            // Org View: Sent to Support (recipient_id is null) -> IT IS ME.
             isMe = (msg.recipient_id === null);
         } else {
-            // Support View: Sent by Support (recipient_id is NOT null, i.e. sent to Org) -> IT IS ME.
             isMe = (msg.recipient_id !== null);
         }
 
         if (isMe) {
             div.style.alignSelf = 'flex-end';
-            div.style.backgroundColor = '#dcf8c6'; // Whatsapp Green
+            div.style.backgroundColor = '#dcf8c6';
             div.style.marginLeft = 'auto';
         } else {
             div.style.alignSelf = 'flex-start';
