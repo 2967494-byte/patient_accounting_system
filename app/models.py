@@ -525,7 +525,7 @@ class Message(db.Model):
             'sender_name': self.sender.username,
             'recipient_id': self.recipient_id,
             'body': self.body,
-            'timestamp': self.timestamp.isoformat(),
+            'timestamp': self.timestamp.isoformat() + 'Z',
             'is_read': self.is_read,
             'reactions': self.get_reactions_summary()
         }

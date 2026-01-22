@@ -165,7 +165,7 @@ def get_threads():
             'org_name': org_name,
             'display_name': f"{user.username} - {org_name}",
             'last_message': last_msg.body if last_msg else '',
-            'last_timestamp': last_msg.timestamp.isoformat() if last_msg else None,
+            'last_timestamp': last_msg.timestamp.isoformat() + 'Z' if last_msg else None,
             'unread_count': unread_count
         })
     
